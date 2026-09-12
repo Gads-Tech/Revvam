@@ -43,6 +43,7 @@ model Vehicle {
   model         String
   year          Int?
   image         String?
+  isFeatured    Boolean               @default(false)
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   type          String?

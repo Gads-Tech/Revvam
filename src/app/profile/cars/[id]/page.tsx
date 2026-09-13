@@ -1904,8 +1904,8 @@ const [deletingModificationId, setDeletingModificationId] =
               </h2>
 
               <p className="mt-2 max-w-xl text-sm leading-6 text-white/30">
-                Keep track of the work you've
-                done to this vehicle, from
+                Keep track of the work you&apos;ve
+done to this vehicle, from
                 performance upgrades to visual
                 changes.
               </p>
@@ -2060,7 +2060,7 @@ const [deletingModificationId, setDeletingModificationId] =
 
                 <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-white/15">
                   Start documenting the work
-                  you've done to this vehicle.
+you&apos;ve done to this vehicle.
                 </p>
 
                 <button

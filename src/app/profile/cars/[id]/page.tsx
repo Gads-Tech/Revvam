@@ -23,6 +23,7 @@ type Vehicle = {
   year: number | null;
   type: string | null;
   image?: string | null;
+  isFeatured: boolean;
   createdAt: string;
   photos?: VehiclePhoto[];
 };
@@ -344,12 +345,14 @@ export default function VehiclePage() {
   const [deletingPhotoId, setDeletingPhotoId] =
     useState<string | null>(null);
 
-  const [settingMainPhotoId, setSettingMainPhotoId] =
-    useState<string | null>(null);
+ const [settingMainPhotoId, setSettingMainPhotoId] =
+  useState<string | null>(null);
 
-  const [deletingModificationId, setDeletingModificationId] =
-    useState<string | null>(null);
+const [settingFeatured, setSettingFeatured] =
+  useState(false);
 
+const [deletingModificationId, setDeletingModificationId] =
+  useState<string | null>(null);
   const [deleting, setDeleting] =
     useState(false);
 
@@ -3098,7 +3101,7 @@ export default function VehiclePage() {
               "
               aria-label="Close photo viewer"
             >
-              ×
+              
             </button>
 
             <div

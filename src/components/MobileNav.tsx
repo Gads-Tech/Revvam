@@ -22,6 +22,11 @@ export default function MobileNav() {
     else router.push("/home");
   };
 
+  const toggleMobileNav = () => {
+    setProfileMenuOpen(false);
+    setMobileNavOpen((open) => !open);
+  };
+
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
@@ -47,9 +52,35 @@ export default function MobileNav() {
 
   return createPortal(
     <>
+      {/* One persistent handle: it stays clickable when the nav is hidden. */}
+      <button
+        type="button"
+        onClick={toggleMobileNav}
+        aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
+        aria-expanded={mobileNavOpen}
+        className={`mobile-nav-root fixed left-1/2 z-[2147483647] flex h-6 w-16 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808] shadow-[0_8px_30px_rgba(0,0,0,0.85)] transition-[bottom] duration-300 ease-out active:bg-red-500/15 ${
+          mobileNavOpen
+            ? "bottom-[max(72px,calc(72px+env(safe-area-inset-bottom)))]"
+            : "bottom-[max(12px,env(safe-area-inset-bottom))]"
+        }`}
+        style={{
+          pointerEvents: "auto",
+          touchAction: "manipulation",
+          zIndex: 2147483647,
+          WebkitTapHighlightColor: "transparent",
+        }}
+      >
+        <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-white/65" />
+      </button>
+
       <div
         className={`mobile-nav-root fixed inset-x-0 bottom-0 z-[2147483646] px-3 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-300 ease-out ${mobileNavOpen ? "translate-y-0" : "translate-y-full"}`}
-        style={{ pointerEvents: "none", touchAction: "manipulation", isolation: "isolate", zIndex: 2147483646 }}
+        style={{
+          pointerEvents: mobileNavOpen ? "auto" : "none",
+          touchAction: "manipulation",
+          isolation: "isolate",
+          zIndex: 2147483646,
+        }}
       >
         <div className="relative mx-auto w-full max-w-[520px]">
           {profileMenuOpen && mobileNavOpen && (
@@ -64,10 +95,6 @@ export default function MobileNav() {
             </div>
           )}
 
-          <button type="button" onClick={() => { setProfileMenuOpen(false); setMobileNavOpen(false); }} aria-label="Hide navigation" className="absolute -top-7 left-1/2 z-[2147483647] flex h-5 w-16 -translate-x-1/2 items-center justify-center rounded-t-xl border border-b-0 border-white/[0.14] bg-[#080808] text-white/55 shadow-[0_-5px_22px_rgba(0,0,0,0.6)] active:bg-red-500/15 active:text-white" style={{ pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>
-            <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-current" />
-          </button>
-
           <nav aria-label="Mobile navigation" className="relative z-[2147483647] flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.12] bg-[#080808] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)]" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
             <MobileNavItem icon="←" label="Back" onClick={handleBack} />
             <MobileNavItem icon="⌂" label="Discover" href="/home" active={pathname === "/home"} />
@@ -81,12 +108,6 @@ export default function MobileNav() {
           </nav>
         </div>
       </div>
-
-      {!mobileNavOpen && (
-        <button type="button" onClick={() => setMobileNavOpen(true)} aria-label="Show navigation" className="mobile-nav-root fixed bottom-[max(12px,env(safe-area-inset-bottom))] right-4 z-[2147483647] flex h-6 w-16 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808]/95 shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all active:bg-red-500/15" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647, WebkitTapHighlightColor: "transparent" }}>
-          <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-white/60" />
-        </button>
-      )}
     </>,
     document.body
   );

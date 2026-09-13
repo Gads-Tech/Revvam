@@ -57,7 +57,7 @@ export default function MobileNav() {
   return createPortal(
     <>
       <div
-        className={`fixed inset-x-0 bottom-0 z-[2147483646] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden transition-transform duration-300 ease-out ${
+        className={`mobile-nav-root fixed inset-x-0 bottom-0 z-[2147483646] px-3 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-300 ease-out ${
           mobileNavOpen ? "translate-y-0" : "translate-y-full"
         }`}
         style={{
@@ -146,7 +146,7 @@ export default function MobileNav() {
           type="button"
           onClick={() => setMobileNavOpen(true)}
           aria-label="Show navigation"
-          className="fixed bottom-[max(12px,env(safe-area-inset-bottom))] right-4 z-[2147483647] flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808]/95 text-sm text-white/65 shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all active:scale-95 active:bg-red-500/15 active:text-white md:hidden"
+          className="mobile-nav-root fixed bottom-[max(12px,env(safe-area-inset-bottom))] right-4 z-[2147483647] flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808]/95 text-sm text-white/65 shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all active:scale-95 active:bg-red-500/15 active:text-white"
           style={{
             WebkitTapHighlightColor: "transparent",
             touchAction: "manipulation",

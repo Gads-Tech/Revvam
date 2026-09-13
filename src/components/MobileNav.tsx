@@ -3,19 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function MobileNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleBack = () => {
     if (window.history.length > 1) router.back();
@@ -52,7 +47,9 @@ export default function MobileNav() {
     }
   };
 
-  if (!mounted) return null;
+  // Portaling directly once the browser is available avoids a second render
+  // after hydration, which previously made the bar intermittently vanish.
+  if (typeof document === "undefined") return null;
 
   return createPortal(
     <>

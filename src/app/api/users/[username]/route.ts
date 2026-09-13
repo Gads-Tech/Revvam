@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
 
 type RouteContext = {
-  params: Promise<{
-    username: string;
-  }>;
+  params: Promise<{ username: string }>;
 };
 
 export async function GET(
@@ -14,88 +13,96 @@ export async function GET(
 ) {
   try {
     const { username } = await context.params;
-
-    const cleanUsername = decodeURIComponent(username)
-      .trim()
-      .replace(/^@/, "");
+    const cleanUsername = decodeURIComponent(username).trim().replace(/^@/, "");
 
     if (!cleanUsername) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "Username is required.",
-        },
+        { success: false, error: "Username is required." },
         { status: 400 }
       );
     }
 
-    /*
-     * =========================================================
-     * FIND USERNAME CASE-INSENSITIVELY
-     * =========================================================
-     *
-     * This allows all of these URLs to resolve to the same
-     * account:
-     *
-     * /users/dEMIgD
-     * /users/dEmigD
-     * /users/demigd
-     * /users/DEMiGD
-     *
-     * The actual username stored in the database remains
-     * unchanged.
-     */
-
     const user = await prisma.user.findFirst({
       where: {
-        username: {
-          equals: cleanUsername,
-          mode: "insensitive",
-        },
+        username: { equals: cleanUsername, mode: "insensitive" },
       },
-
       select: {
         id: true,
         name: true,
         username: true,
         image: true,
         bio: true,
+        location: true,
         role: true,
         onboardingType: true,
+        createdAt: true,
+        vehicles: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            photos: { orderBy: { createdAt: "asc" } },
+            modifications: {
+              orderBy: { createdAt: "desc" },
+              include: {
+                photos: { orderBy: { createdAt: "asc" } },
+                mentions: {
+                  include: {
+                    mentionedUser: {
+                      select: { id: true, username: true, name: true, image: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        posts: {
+          orderBy: { createdAt: "desc" },
+          take: 30,
+        },
+        _count: {
+          select: {
+            vehicles: true,
+            posts: true,
+            followers: true,
+            following: true,
+          },
+        },
       },
     });
 
     if (!user) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "User not found.",
-        },
+        { success: false, error: "User not found." },
         { status: 404 }
       );
     }
 
-    /*
-     * IMPORTANT:
-     *
-     * Return the username exactly as it exists in the database.
-     * This gives the frontend the canonical capitalization.
-     */
+    const currentUser = await getCurrentUser();
+    let following = false;
+
+    if (currentUser && currentUser.id !== user.id) {
+      const relation = await prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUser.id,
+            followingId: user.id,
+          },
+        },
+        select: { id: true },
+      });
+      following = Boolean(relation);
+    }
+
     return NextResponse.json({
       success: true,
       user,
+      following,
+      isOwnProfile: currentUser?.id === user.id,
     });
   } catch (error) {
-    console.error(
-      "Public user profile fetch error:",
-      error
-    );
-
+    console.error("Public user profile fetch error:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Unable to load this profile.",
-      },
+      { success: false, error: "Unable to load this profile." },
       { status: 500 }
     );
   }

@@ -102,7 +102,7 @@ export default async function HomePage() {
                     </Link>
 
                     <div className="px-5 pb-5">
-                      <Link href={`/users/${encodeURIComponent(vehicle.user.username)}`} className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-sm text-white/40 transition-all hover:border-red-400/20 hover:bg-red-500/[0.08] hover:text-red-300" onClick={(event) => event.stopPropagation()}>
+                      <Link href={`/users/${encodeURIComponent(vehicle.user.username)}`} className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-sm text-white/40 transition-all hover:border-red-400/20 hover:bg-red-500/[0.08] hover:text-red-300">
                         <span className="h-5 w-5 overflow-hidden rounded-full bg-red-600/15 text-center text-[9px] leading-5 text-red-300">{vehicle.user.image ? <img src={vehicle.user.image} alt="" className="h-full w-full object-cover" /> : vehicle.user.username.charAt(0).toUpperCase()}</span>
                         @{vehicle.user.username}
                       </Link>

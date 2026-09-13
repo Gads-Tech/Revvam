@@ -48,21 +48,24 @@ export default function MobileNav() {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-[9999] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden pointer-events-none transition-transform duration-300 ease-out ${
+      className={`fixed inset-x-0 bottom-0 z-[2147483647] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden transition-transform duration-300 ease-out ${
         mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-14px)]"
       }`}
       style={{
         WebkitTapHighlightColor: "transparent",
+        pointerEvents: "auto",
         touchAction: "manipulation",
+        isolation: "isolate",
       }}
     >
-      <div className="pointer-events-auto relative mx-auto w-full max-w-[520px]">
+      <div className="relative mx-auto w-full max-w-[520px]">
         {profileMenuOpen && mobileNavOpen && (
-          <div className="absolute bottom-[74px] right-0 z-40 w-[190px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#090909]/[0.97] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.75)] backdrop-blur-2xl">
+          <div className="absolute bottom-[74px] right-0 z-50 w-[190px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#090909]/[0.97] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.75)] backdrop-blur-2xl">
             <Link
               href="/profile"
               onClick={() => setProfileMenuOpen(false)}
               className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/75 transition-colors active:bg-white/[0.08] active:text-white"
+              style={{ touchAction: "manipulation" }}
             >
               <span className="mr-3 text-white/40">◉</span>
               View profile
@@ -75,6 +78,7 @@ export default function MobileNav() {
               onClick={handleLogout}
               disabled={loggingOut}
               className="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-semibold text-red-300 transition-colors active:bg-red-500/[0.12] active:text-red-200 disabled:opacity-50"
+              style={{ touchAction: "manipulation" }}
             >
               <span className="mr-3 text-red-400/70">↪</span>
               {loggingOut ? "Logging out…" : "Log out"}
@@ -89,8 +93,11 @@ export default function MobileNav() {
             if (mobileNavOpen) setProfileMenuOpen(false);
           }}
           aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
-          className="absolute left-1/2 top-[-9px] z-30 flex h-5 w-12 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#101010] shadow-[0_4px_18px_rgba(0,0,0,0.55)] backdrop-blur-xl"
-          style={{ touchAction: "manipulation" }}
+          className="absolute left-1/2 top-[-9px] z-50 flex h-5 w-12 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#101010] shadow-[0_4px_18px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          style={{
+            WebkitTapHighlightColor: "transparent",
+            touchAction: "manipulation",
+          }}
         >
           <span
             className={`h-1 w-6 rounded-full transition-all duration-200 ${
@@ -101,12 +108,12 @@ export default function MobileNav() {
 
         <nav
           aria-label="Mobile navigation"
-          className="flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.10] bg-[#080808]/[0.96] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
+          className="relative z-40 flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.10] bg-[#080808]/[0.96] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
           style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "stretch",
+            WebkitTapHighlightColor: "transparent",
             WebkitBackfaceVisibility: "hidden",
+            pointerEvents: "auto",
+            touchAction: "manipulation",
           }}
         >
           <MobileNavItem icon="←" label="Back" onClick={handleBack} />
@@ -130,7 +137,10 @@ export default function MobileNav() {
                 ? "bg-red-500/[0.10] text-red-300"
                 : "text-white/50 active:bg-white/[0.05]"
             }`}
-            style={{ touchAction: "manipulation" }}
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              touchAction: "manipulation",
+            }}
           >
             <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current/20 bg-white/[0.05] text-[10px] font-bold leading-none">
               ◉
@@ -181,7 +191,10 @@ function MobileNavItem({
         type="button"
         onClick={onClick}
         className={className}
-        style={{ touchAction: "manipulation" }}
+        style={{
+          WebkitTapHighlightColor: "transparent",
+          touchAction: "manipulation",
+        }}
       >
         {content}
       </button>
@@ -192,7 +205,10 @@ function MobileNavItem({
     <Link
       href={href ?? "#"}
       className={className}
-      style={{ touchAction: "manipulation" }}
+      style={{
+        WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
+      }}
     >
       {content}
     </Link>

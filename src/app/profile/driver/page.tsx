@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import MobileNav from "@/components/MobileNav";
+
 type User = {
   name: string;
   username: string;
@@ -83,7 +85,7 @@ export default function DriverGaragePage() {
     : vehicles;
 
   return (
-    <main className="min-h-screen bg-black px-5 py-8 text-white sm:px-8">
+    <main className="min-h-screen bg-black px-5 py-8 pb-32 text-white sm:px-8">
       <div className="pointer-events-none fixed left-1/2 top-[-280px] h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-red-600/[0.07] blur-[150px]" />
       <div className="pointer-events-none fixed bottom-[-250px] right-[-200px] h-[500px] w-[500px] rounded-full bg-red-950/[0.08] blur-[160px]" />
 
@@ -307,6 +309,8 @@ export default function DriverGaragePage() {
           </>
         )}
       </div>
+
+      <MobileNav />
     </main>
   );
 }

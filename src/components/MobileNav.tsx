@@ -73,7 +73,7 @@ export default function MobileNav() {
             onClick={() => setProfileMenuOpen((open) => !open)}
             aria-expanded={profileMenuOpen}
             className={`flex min-w-0 flex-col items-center justify-center rounded-[16px] px-0.5 py-1.5 transition-all active:scale-95 touch-manipulation ${
-              pathname.startsWith("/profile") || profileMenuOpen
+              pathname?.startsWith("/profile") || profileMenuOpen
                 ? "bg-red-500/[0.10] text-red-300"
                 : "text-white/45 active:bg-white/[0.05]"
             }`}

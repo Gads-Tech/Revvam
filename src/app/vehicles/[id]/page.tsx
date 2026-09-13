@@ -36,7 +36,7 @@ export default async function PublicVehiclePage({
     },
   });
 
-  if (!vehicle || !vehicle.isFeatured) {
+  if (!vehicle) {
     notFound();
   }
 
@@ -57,9 +57,11 @@ export default async function PublicVehiclePage({
             <span>Discover</span>
           </Link>
 
-          <div className="rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-red-300">
-            Featured vehicle
-          </div>
+          {vehicle.isFeatured && (
+            <div className="rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-red-300">
+              Featured vehicle
+            </div>
+          )}
         </div>
 
         <section className="mt-6 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025] shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-2xl">

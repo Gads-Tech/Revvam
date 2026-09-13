@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import GlassCard from "@/components/GlassCard";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
+import PhotoLightbox from "@/components/PhotoLightbox";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -22,7 +23,6 @@ export default async function HomePage() {
       },
       photos: {
         orderBy: { createdAt: "asc" },
-        take: 1,
       },
     },
     orderBy: { updatedAt: "desc" },
@@ -86,19 +86,34 @@ export default async function HomePage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {featuredVehicles.map((vehicle) => {
                 const image = vehicle.image ?? vehicle.photos[0]?.url ?? null;
+                const galleryImages = [
+                  ...(image ? [{ url: image, alt: `${vehicle.make} ${vehicle.model}` }] : []),
+                  ...vehicle.photos
+                    .filter((photo) => photo.url !== image)
+                    .map((photo) => ({
+                      url: photo.url,
+                      alt: `${vehicle.make} ${vehicle.model}`,
+                    })),
+                ];
 
                 return (
                   <article key={vehicle.id} className="group overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.025] transition-all duration-300 hover:-translate-y-1 hover:border-red-400/20 hover:bg-white/[0.04] hover:shadow-[0_20px_70px_rgba(0,0,0,0.35)]">
-                    <Link href={`/vehicles/${vehicle.id}`} className="block">
-                      <div className="relative h-52 overflow-hidden bg-black">
-                        {image ? <img src={image} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-6xl opacity-20">🚗</div>}
-                        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                        <div className="absolute left-4 top-4 rounded-full border border-red-400/20 bg-red-600/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-white backdrop-blur-xl">Featured</div>
-                      </div>
-                      <div className="p-5">
-                        <p className="text-xs uppercase tracking-[0.18em] text-red-400/60">{vehicle.year ?? "Year unknown"} · {vehicle.type ?? "Vehicle"}</p>
-                        <h3 className="mt-1 text-xl font-semibold">{vehicle.make} {vehicle.model}</h3>
-                      </div>
+                    <div className="relative h-52 overflow-hidden bg-black">
+                      {image ? (
+                        <PhotoLightbox
+                          images={galleryImages}
+                          className="h-full w-full"
+                        />
+                      ) : (
+                        <Link href={`/vehicles/${vehicle.id}`} className="flex h-full items-center justify-center text-6xl opacity-20">🚗</Link>
+                      )}
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                      <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-red-400/20 bg-red-600/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-white backdrop-blur-xl">Featured</div>
+                    </div>
+
+                    <Link href={`/vehicles/${vehicle.id}`} className="block p-5">
+                      <p className="text-xs uppercase tracking-[0.18em] text-red-400/60">{vehicle.year ?? "Year unknown"} · {vehicle.type ?? "Vehicle"}</p>
+                      <h3 className="mt-1 text-xl font-semibold">{vehicle.make} {vehicle.model}</h3>
                     </Link>
 
                     <div className="px-5 pb-5">

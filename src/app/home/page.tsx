@@ -136,5 +136,5 @@ export default async function HomePage() {
 }
 
 function ComingSoon({ icon, title }: { icon: string; title: string }) {
-  return <div className="flex items-center gap-3"><span className="text-lg">{icon}</span><span className="text-sm text-white/45">{title}</span><span className="ml-auto text-[9px] uppercase tracking-wider text-white/15">Soon</span></div>;
+  return <div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-sm">{icon}</div><span className="text-sm text-white/40">{title}</span><span className="ml-auto text-[9px] uppercase tracking-widest text-white/20">Soon</span></div>;
 }

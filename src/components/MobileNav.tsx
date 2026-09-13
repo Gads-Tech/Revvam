@@ -42,18 +42,22 @@ export default function MobileNav() {
 
   return (
     <div
-      className={`fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-[9999] flex justify-center md:hidden ${
-        mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-18px)]"
-      } transition-transform duration-300 ease-out`}
+      className={`fixed inset-x-0 bottom-0 z-[9999] px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 md:hidden pointer-events-none transition-transform duration-300 ease-out ${
+        mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-22px)]"
+      }`}
     >
-      <div className="relative w-full max-w-sm overflow-hidden rounded-[22px] border border-white/[0.11] bg-black/[0.86] px-2 pb-2 pt-7 shadow-[0_16px_55px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+      <div className="pointer-events-auto relative mx-auto w-full max-w-[420px] rounded-[20px] border border-white/[0.11] bg-black/[0.92] px-2 pb-2 pt-7 shadow-[0_12px_45px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
         <button
           type="button"
           onClick={() => setMobileNavOpen((open) => !open)}
           aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
-          className="absolute left-1/2 top-1 flex h-6 w-14 -translate-x-1/2 items-center justify-center"
+          className="absolute left-1/2 top-1 flex h-6 w-14 -translate-x-1/2 items-center justify-center touch-manipulation"
         >
-          <span className={`h-1 w-8 rounded-full ${mobileNavOpen ? "bg-white/25" : "bg-red-500/80"}`} />
+          <span
+            className={`h-1 w-8 rounded-full transition-colors ${
+              mobileNavOpen ? "bg-white/25" : "bg-red-500/80"
+            }`}
+          />
         </button>
 
         <div className="grid grid-cols-5 gap-0.5">
@@ -100,12 +104,24 @@ function MobileNavItem({
   active?: boolean;
 }) {
   const className = `flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-2 transition-all active:scale-95 touch-manipulation ${
-    active ? "bg-red-500/[0.10] text-red-300" : "text-white/45 active:bg-white/[0.05]"
+    active
+      ? "bg-red-500/[0.10] text-red-300"
+      : "text-white/45 active:bg-white/[0.05]"
   }`;
 
   if (onClick) {
-    return <button type="button" onClick={onClick} className={className}><span className="text-base leading-5">{icon}</span><span className="text-[8px] font-medium tracking-wide">{label}</span></button>;
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        <span className="text-base leading-5">{icon}</span>
+        <span className="text-[8px] font-medium tracking-wide">{label}</span>
+      </button>
+    );
   }
 
-  return <Link href={href ?? "#"} className={className}><span className="text-base leading-5">{icon}</span><span className="text-[8px] font-medium tracking-wide">{label}</span></Link>;
+  return (
+    <Link href={href ?? "#"} className={className}>
+      <span className="text-base leading-5">{icon}</span>
+      <span className="text-[8px] font-medium tracking-wide">{label}</span>
+    </Link>
+  );
 }

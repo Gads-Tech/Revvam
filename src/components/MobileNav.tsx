@@ -48,30 +48,17 @@ export default function MobileNav() {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-[9999] px-2 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden pointer-events-none transition-transform duration-300 ease-out ${
-        mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-18px)]"
+      className={`fixed inset-x-0 bottom-0 z-[9999] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden pointer-events-none transition-transform duration-300 ease-out ${
+        mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-14px)]"
       }`}
-      style={{ WebkitTapHighlightColor: "transparent" }}
+      style={{
+        WebkitTapHighlightColor: "transparent",
+        touchAction: "manipulation",
+      }}
     >
-      <div className="pointer-events-auto relative mx-auto w-full max-w-[520px] overflow-visible">
-        <button
-          type="button"
-          onClick={() => {
-            setMobileNavOpen((open) => !open);
-            if (mobileNavOpen) setProfileMenuOpen(false);
-          }}
-          aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
-          className="absolute left-1/2 top-[-12px] z-30 flex h-6 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-[#101010]/95 shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-xl touch-manipulation"
-        >
-          <span
-            className={`h-1 w-7 rounded-full transition-all duration-200 ${
-              mobileNavOpen ? "bg-white/35" : "bg-red-400/80"
-            }`}
-          />
-        </button>
-
+      <div className="pointer-events-auto relative mx-auto w-full max-w-[520px]">
         {profileMenuOpen && mobileNavOpen && (
-          <div className="absolute bottom-[calc(100%+10px)] right-1 z-40 w-[180px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#0b0b0b]/95 p-1.5 shadow-[0_16px_45px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
+          <div className="absolute bottom-[74px] right-0 z-40 w-[190px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#090909]/[0.97] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.75)] backdrop-blur-2xl">
             <Link
               href="/profile"
               onClick={() => setProfileMenuOpen(false)}
@@ -95,9 +82,32 @@ export default function MobileNav() {
           </div>
         )}
 
+        <button
+          type="button"
+          onClick={() => {
+            setMobileNavOpen((open) => !open);
+            if (mobileNavOpen) setProfileMenuOpen(false);
+          }}
+          aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
+          className="absolute left-1/2 top-[-9px] z-30 flex h-5 w-12 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#101010] shadow-[0_4px_18px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          style={{ touchAction: "manipulation" }}
+        >
+          <span
+            className={`h-1 w-6 rounded-full transition-all duration-200 ${
+              mobileNavOpen ? "bg-white/35" : "bg-red-400/80"
+            }`}
+          />
+        </button>
+
         <nav
           aria-label="Mobile navigation"
-          className="grid h-[68px] w-full grid-cols-[repeat(6,minmax(0,1fr))] items-stretch rounded-[22px] border border-white/[0.09] bg-[#090909]/94 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
+          className="flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.10] bg-[#080808]/[0.96] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "stretch",
+            WebkitBackfaceVisibility: "hidden",
+          }}
         >
           <MobileNavItem icon="←" label="Back" onClick={handleBack} />
           <MobileNavItem
@@ -115,11 +125,12 @@ export default function MobileNav() {
             onClick={() => setProfileMenuOpen((open) => !open)}
             aria-expanded={profileMenuOpen}
             aria-label="Profile menu"
-            className={`flex min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[17px] px-0.5 py-1 transition-all active:scale-[0.96] ${
+            className={`flex h-full min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[15px] px-0.5 py-1 transition-all active:scale-[0.96] ${
               pathname?.startsWith("/profile") || profileMenuOpen
                 ? "bg-red-500/[0.10] text-red-300"
                 : "text-white/50 active:bg-white/[0.05]"
             }`}
+            style={{ touchAction: "manipulation" }}
           >
             <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current/20 bg-white/[0.05] text-[10px] font-bold leading-none">
               ◉
@@ -147,7 +158,7 @@ function MobileNavItem({
   onClick?: () => void;
   active?: boolean;
 }) {
-  const className = `flex min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[17px] px-0.5 py-1 transition-all active:scale-[0.96] ${
+  const className = `flex h-full min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[15px] px-0.5 py-1 transition-all active:scale-[0.96] ${
     active
       ? "bg-red-500/[0.10] text-red-300"
       : "text-white/50 active:bg-white/[0.05]"
@@ -155,10 +166,10 @@ function MobileNavItem({
 
   const content = (
     <>
-      <span className="flex h-5 items-center justify-center text-[15px] leading-none">
+      <span className="flex h-5 items-center justify-center text-[14px] leading-none">
         {icon}
       </span>
-      <span className="mt-1 w-full truncate text-center text-[9px] font-medium leading-none tracking-tight">
+      <span className="mt-1 w-full truncate text-center text-[8px] font-medium leading-none tracking-tight sm:text-[9px]">
         {label}
       </span>
     </>
@@ -166,14 +177,23 @@ function MobileNavItem({
 
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={className}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={className}
+        style={{ touchAction: "manipulation" }}
+      >
         {content}
       </button>
     );
   }
 
   return (
-    <Link href={href ?? "#"} className={className}>
+    <Link
+      href={href ?? "#"}
+      className={className}
+      style={{ touchAction: "manipulation" }}
+    >
       {content}
     </Link>
   );

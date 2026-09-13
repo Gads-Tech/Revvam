@@ -894,6 +894,73 @@ const [deletingModificationId, setDeletingModificationId] =
     }
   }
 
+   /*
+   * =========================================================
+   * SET / UNSET FEATURED VEHICLE
+   * =========================================================
+   */
+
+  async function handleToggleFeatured() {
+    if (!vehicle) {
+      return;
+    }
+
+    try {
+      setSettingFeatured(true);
+      setError("");
+
+      const featured =
+        !vehicle.isFeatured;
+
+      const response = await fetch(
+        `/api/vehicles/${vehicleId}/featured`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            featured,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(
+          data.error ||
+            "Unable to update featured vehicle."
+        );
+        return;
+      }
+
+      setVehicle((current) =>
+        current
+          ? {
+              ...current,
+              isFeatured:
+                data.vehicle?.isFeatured ??
+                featured,
+            }
+          : current
+      );
+    } catch (error) {
+      console.error(
+        "Toggle featured vehicle error:",
+        error
+      );
+
+      setError(
+        "Unable to update featured vehicle."
+      );
+    } finally {
+      setSettingFeatured(false);
+    }
+  }
+
+  
   /*
    * =========================================================
    * OPEN ADD MODIFICATION

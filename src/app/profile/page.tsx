@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/session";
 import GlassCard from "@/components/GlassCard";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
+import MobileProfileLogout from "@/components/MobileProfileLogout";
 
 const roleLabels: Record<string, string> = {
   USER: "Driver / Car Enthusiast",
@@ -1206,6 +1207,8 @@ export default async function ProfilePage() {
             </div>
           </div>
         </GlassCard>
+
+        <MobileProfileLogout />
       </div>
 
       <MobileNav />

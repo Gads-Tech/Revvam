@@ -27,9 +27,7 @@ body {
 
 /* Keep mobile navigation visibility independent from Tailwind breakpoints. */
 .mobile-nav-root {
-  display: block;
   visibility: visible;
-  pointer-events: auto;
   -webkit-user-select: none;
   user-select: none;
 }

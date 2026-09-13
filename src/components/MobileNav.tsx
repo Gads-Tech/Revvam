@@ -62,20 +62,26 @@ export default function MobileNav() {
         }`}
         style={{
           WebkitTapHighlightColor: "transparent",
-          pointerEvents: mobileNavOpen ? "auto" : "none",
+          // The full-width wrapper must never block the page. Only the visible
+          // navigation and its controls are allowed to receive touch events.
+          pointerEvents: "none",
           touchAction: "manipulation",
           isolation: "isolate",
+          zIndex: 2147483646,
         }}
       >
         <div className="relative mx-auto w-full max-w-[520px]">
           {profileMenuOpen && mobileNavOpen && (
-            <div className="absolute bottom-[74px] right-0 z-[2147483647] w-[190px] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#080808] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]">
+            <div
+              className="absolute bottom-[74px] right-0 z-[2147483647] w-[190px] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#080808] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]"
+              style={{ pointerEvents: "auto", touchAction: "manipulation" }}
+            >
               <Link
                 href="/profile"
                 onClick={() => setProfileMenuOpen(false)}
                 className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/80 transition-colors active:bg-white/[0.08] active:text-white"
-                style={{ touchAction: "manipulation" }}
-              >
+              style={{ touchAction: "manipulation" }}
+            >
                 <span className="mr-3 text-white/50">◉</span>
                 View profile
               </Link>
@@ -95,6 +101,23 @@ export default function MobileNav() {
             </div>
           )}
 
+          <button
+            type="button"
+            onClick={() => {
+              setProfileMenuOpen(false);
+              setMobileNavOpen(false);
+            }}
+            aria-label="Hide navigation"
+            className="absolute -top-11 left-1/2 z-[2147483647] flex h-11 w-14 -translate-x-1/2 items-center justify-center rounded-t-2xl border border-b-0 border-white/[0.14] bg-[#080808] text-sm text-white/65 shadow-[0_-5px_22px_rgba(0,0,0,0.6)] active:bg-red-500/15 active:text-white"
+            style={{
+              WebkitTapHighlightColor: "transparent",
+              pointerEvents: "auto",
+              touchAction: "manipulation",
+            }}
+          >
+            ↓
+          </button>
+
           <nav
             aria-label="Mobile navigation"
             className="relative z-[2147483647] flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.12] bg-[#080808] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)]"
@@ -102,6 +125,7 @@ export default function MobileNav() {
               WebkitTapHighlightColor: "transparent",
               pointerEvents: "auto",
               touchAction: "manipulation",
+              zIndex: 2147483647,
             }}
           >
             <MobileNavItem icon="←" label="Back" onClick={handleBack} />
@@ -149,7 +173,9 @@ export default function MobileNav() {
           className="mobile-nav-root fixed bottom-[max(12px,env(safe-area-inset-bottom))] right-4 z-[2147483647] flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808]/95 text-sm text-white/65 shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all active:scale-95 active:bg-red-500/15 active:text-white"
           style={{
             WebkitTapHighlightColor: "transparent",
+            pointerEvents: "auto",
             touchAction: "manipulation",
+            zIndex: 2147483647,
           }}
         >
           ↑

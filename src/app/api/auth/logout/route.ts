@@ -6,19 +6,13 @@ export async function POST() {
   try {
     await deleteSession();
 
-    const response = NextResponse.redirect(
-      new URL(
-        "/login",
-        process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-      ),
-      303
+    const response = NextResponse.json(
+      { success: true },
+      { status: 200 }
     );
 
-    response.headers.set(
-      "Cache-Control",
-      "no-store, no-cache, must-revalidate, proxy-revalidate"
-    );
-
+    response.cookies.delete("revvam_session");
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     response.headers.set("Pragma", "no-cache");
     response.headers.set("Expires", "0");
 

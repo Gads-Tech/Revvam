@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
+import ModificationPhotoManager from "@/components/ModificationPhotoManager";
 
 type VehiclePhoto = {
   id: string;
@@ -42,6 +43,12 @@ type VehicleModificationMention = {
 };
 
 type VehicleModification = {
+  photos?: {
+    id: string;
+    modificationId: string;
+    url: string;
+    createdAt: string;
+  }[];
   id: string;
   vehicleId: string;
   title: string;
@@ -1160,14 +1167,27 @@ const [deletingModificationId, setDeletingModificationId] =
               : item
           )
         );
+
+        closeModificationForm();
       } else {
         setModifications((current) => [
           data.modification,
           ...current,
         ]);
-      }
 
-      closeModificationForm();
+        setEditingModificationId(data.modification.id);
+        setModificationForm({
+          title: data.modification.title,
+          category: data.modification.category,
+          description: data.modification.description || "",
+          cost: data.modification.cost !== null ? String(data.modification.cost) : "",
+          installedAt: data.modification.installedAt ? data.modification.installedAt.slice(0, 10) : "",
+          notes: data.modification.notes || "",
+        });
+        setModificationError(
+          "Modification saved. Add photos below, then close when you are done."
+        );
+      }
     } catch (error) {
       console.error(
         "Save modification error:",
@@ -2167,6 +2187,24 @@ you&apos;ve done to this vehicle.
                         </div>
                       </div>
 
+                      {modification.photos &&
+                        modification.photos.length > 0 && (
+                        <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          {modification.photos.map((photo) => (
+                            <div
+                              key={photo.id}
+                              className="aspect-[4/3] overflow-hidden rounded-2xl border border-white/[0.07] bg-black"
+                            >
+                              <img
+                                src={photo.url}
+                                alt={`${modification.title} photo`}
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {modification.notes && (
                         <div
                           className="
@@ -3098,6 +3136,34 @@ you&apos;ve done to this vehicle.
                     "
                   />
                 </div>
+
+                {editingModificationId && (
+                  <div className="sm:col-span-2">
+                    <ModificationPhotoManager
+                      vehicleId={vehicleId}
+                      modificationId={editingModificationId}
+                      photos={
+                        modifications.find(
+                          (item) =>
+                            item.id ===
+                            editingModificationId
+                        )?.photos || []
+                      }
+                      onPhotosChange={(nextPhotos) => {
+                        setModifications((current) =>
+                          current.map((item) =>
+                            item.id === editingModificationId
+                              ? {
+                                  ...item,
+                                  photos: nextPhotos,
+                                }
+                              : item
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Buttons */}

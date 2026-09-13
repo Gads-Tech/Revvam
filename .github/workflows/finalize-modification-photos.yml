@@ -1,0 +1,88 @@
+name: Finalize modification photos
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch vehicle page
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/app/profile/cars/[id]/page.tsx")
+          text = path.read_text()
+
+          import_line = 'import { useParams, useRouter } from "next/navigation";\n'
+          component_import = 'import ModificationPhotoManager from "@/components/ModificationPhotoManager";\n'
+          if "@/components/ModificationPhotoManager" not in text:
+              if import_line not in text:
+                  raise SystemExit("navigation import anchor not found")
+              text = text.replace(import_line, import_line + "\n" + component_import, 1)
+
+          type_anchor = 'type VehicleModification = {\n'
+          type_fields = '''type VehicleModification = {
+  photos?: {
+    id: string;
+    modificationId: string;
+    url: string;
+    createdAt: string;
+  }[];
+'''
+          if "  photos?: {" not in text:
+              if type_anchor not in text:
+                  raise SystemExit("VehicleModification type anchor not found")
+              text = text.replace(type_anchor, type_fields, 1)
+
+          display_anchor = '''                      {modification.notes && (
+'''
+          display_block = '''                      <ModificationPhotoManager
+                        vehicleId={vehicleId}
+                        modificationId={modification.id}
+                        photos={modification.photos || []}
+                        onPhotosChange={(nextPhotos) => {
+                          setModifications((current) =>
+                            current.map((item) =>
+                              item.id === modification.id
+                                ? { ...item, photos: nextPhotos }
+                                : item
+                            )
+                          );
+                        }}
+                      />
+
+'''
+          if "<ModificationPhotoManager" not in text:
+              if display_anchor not in text:
+                  raise SystemExit("modification display anchor not found")
+              text = text.replace(display_anchor, display_block + display_anchor, 1)
+
+          path.write_text(text)
+
+      - name: Commit page integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'src/app/profile/cars/[id]/page.tsx'
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Integrate modification photo manager"
+          git push origin main
+
+      - name: Remove temporary workflow
+        shell: bash
+        run: |
+          git rm .github/workflows/finalize-modification-photos.yml
+          git commit -m "Remove temporary modification photo workflow"
+          git push origin main

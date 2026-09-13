@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import MobileNav from "@/components/MobileNav";
+import PhotoLightbox from "@/components/PhotoLightbox";
 
 export default async function PublicVehiclePage({
   params,
@@ -30,7 +31,6 @@ export default async function PublicVehiclePage({
         include: {
           photos: {
             orderBy: { createdAt: "asc" },
-            take: 1,
           },
           mentions: {
             include: {
@@ -57,6 +57,10 @@ export default async function PublicVehiclePage({
   }
 
   const mainImage = vehicle.image ?? vehicle.photos[0]?.url ?? null;
+  const galleryImages = vehicle.photos.map((photo) => ({
+    url: photo.url,
+    alt: `${vehicle.make} ${vehicle.model}`,
+  }));
 
   return (
     <main className="min-h-screen bg-black pb-28 text-white md:pb-12">
@@ -83,13 +87,19 @@ export default async function PublicVehiclePage({
         <section className="mt-6 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025] shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
           <div className="relative aspect-[16/9] max-h-[620px] overflow-hidden bg-black sm:aspect-[2/1]">
             {mainImage ? (
-              <img src={mainImage} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover" />
+              <PhotoLightbox
+                images={[{
+                  url: mainImage,
+                  alt: `${vehicle.make} ${vehicle.model}`,
+                }]}
+                className="h-full w-full"
+              />
             ) : (
               <div className="flex h-full items-center justify-center text-8xl opacity-20">🚗</div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
 
-            <div className="absolute bottom-5 left-5 right-5 sm:bottom-8 sm:left-8 sm:right-8">
+            <div className="pointer-events-none absolute bottom-5 left-5 right-5 sm:bottom-8 sm:left-8 sm:right-8">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300/80">
                 {vehicle.year ?? "Year unknown"} · {vehicle.type ?? "Vehicle"}
               </p>
@@ -122,56 +132,96 @@ export default async function PublicVehiclePage({
                 <div className="mt-8">
                   <p className="text-xs uppercase tracking-[0.2em] text-red-400/60">Build details</p>
                   <div className="mt-4 space-y-3">
-                    {vehicle.modifications.map((modification) => (
-                      <div key={modification.id} className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
-                        <div className="flex gap-4">
-                          {modification.photos[0]?.url ? (
-                            <img src={modification.photos[0].url} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-                          ) : (
-                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-xl">🔧</div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="text-sm font-semibold">{modification.title}</p>
-                            <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-red-300/60">{modification.category.replaceAll("_", " ")}</p>
-                            {modification.description && (
-                              <MentionedText text={modification.description} mentions={modification.mentions} />
+                    {vehicle.modifications.map((modification) => {
+                      const modificationImages = modification.photos.map((photo) => ({
+                        url: photo.url,
+                        alt: `${modification.title} on ${vehicle.make} ${vehicle.model}`,
+                      }));
+
+                      return (
+                        <div key={modification.id} className="rounded-2xl border border-white/[0.07] bg-black/25 p-4">
+                          <div className="flex gap-4">
+                            {modificationImages.length > 0 ? (
+                              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/[0.07] bg-black">
+                                <PhotoLightbox
+                                  images={modificationImages}
+                                  className="h-full w-full"
+                                  imageClassName="h-full w-full"
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-xl">🔧</div>
                             )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-sm font-semibold">{modification.title}</p>
+                                  <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-red-300/60">{modification.category.replaceAll("_", " ")}</p>
+                                </div>
+                                {modificationImages.length > 0 && (
+                                  <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[9px] uppercase tracking-[0.12em] text-white/30">
+                                    {modificationImages.length} {modificationImages.length === 1 ? "photo" : "photos"}
+                                  </span>
+                                )}
+                              </div>
+                              {modification.description && (
+                                <MentionedText text={modification.description} mentions={modification.mentions} />
+                              )}
+                            </div>
                           </div>
+
+                          {modificationImages.length > 1 && (
+                            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                              {modificationImages.map((image, index) => (
+                                <div key={`${image.url}-${index}`} className="aspect-square overflow-hidden rounded-xl border border-white/[0.06] bg-black">
+                                  <PhotoLightbox
+                                    images={modificationImages}
+                                    initialIndex={index}
+                                    className="h-full w-full"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {modification.notes && (
+                            <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
+                              <p className="text-[9px] uppercase tracking-[0.14em] text-white/20">Notes</p>
+                              <MentionedText text={modification.notes} mentions={modification.mentions} />
+                            </div>
+                          )}
+
+                          {modification.mentions.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {modification.mentions.map(({ mentionedUser }) => (
+                                <Link
+                                  key={mentionedUser.id}
+                                  href={`/users/${encodeURIComponent(mentionedUser.username)}`}
+                                  className="rounded-full border border-red-400/15 bg-red-500/[0.07] px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/[0.14]"
+                                >
+                                  @{mentionedUser.username}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
                         </div>
-
-                        {modification.notes && (
-                          <div className="mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
-                            <p className="text-[9px] uppercase tracking-[0.14em] text-white/20">Notes</p>
-                            <MentionedText text={modification.notes} mentions={modification.mentions} />
-                          </div>
-                        )}
-
-                        {modification.mentions.length > 0 && (
-                          <div className="mt-4 flex flex-wrap gap-2">
-                            {modification.mentions.map(({ mentionedUser }) => (
-                              <Link
-                                key={mentionedUser.id}
-                                href={`/users/${encodeURIComponent(mentionedUser.username)}`}
-                                className="rounded-full border border-red-400/15 bg-red-500/[0.07] px-3 py-1.5 text-xs font-medium text-red-300 transition-colors hover:bg-red-500/[0.14]"
-                              >
-                                @{mentionedUser.username}
-                              </Link>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              {vehicle.photos.length > 1 && (
+              {vehicle.photos.length > 0 && (
                 <div className="mt-8">
                   <p className="text-xs uppercase tracking-[0.2em] text-red-400/60">Gallery</p>
                   <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {vehicle.photos.map((photo) => (
+                    {vehicle.photos.map((photo, index) => (
                       <div key={photo.id} className="aspect-[4/3] overflow-hidden rounded-2xl border border-white/[0.07] bg-black">
-                        <img src={photo.url} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover" />
+                        <PhotoLightbox
+                          images={galleryImages}
+                          initialIndex={index}
+                          className="h-full w-full"
+                        />
                       </div>
                     ))}
                   </div>

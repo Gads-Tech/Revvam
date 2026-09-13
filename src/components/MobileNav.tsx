@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 
 export default function MobileNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleBack = () => {
     if (window.history.length > 1) router.back();
@@ -46,9 +52,11 @@ export default function MobileNav() {
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className={`fixed inset-x-0 bottom-0 z-[2147483647] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden transition-transform duration-300 ease-out ${
+      className={`fixed inset-x-0 bottom-0 z-[99999] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden transition-transform duration-300 ease-out ${
         mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-14px)]"
       }`}
       style={{
@@ -56,22 +64,23 @@ export default function MobileNav() {
         pointerEvents: "auto",
         touchAction: "manipulation",
         isolation: "isolate",
+        transform: mobileNavOpen ? "translateZ(0)" : "translateY(calc(100% - 14px)) translateZ(0)",
       }}
     >
       <div className="relative mx-auto w-full max-w-[520px]">
         {profileMenuOpen && mobileNavOpen && (
-          <div className="absolute bottom-[74px] right-0 z-50 w-[190px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#090909]/[0.97] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.75)] backdrop-blur-2xl">
+          <div className="absolute bottom-[74px] right-0 z-[100000] w-[190px] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#080808] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]">
             <Link
               href="/profile"
               onClick={() => setProfileMenuOpen(false)}
-              className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/75 transition-colors active:bg-white/[0.08] active:text-white"
+              className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/80 transition-colors active:bg-white/[0.08] active:text-white"
               style={{ touchAction: "manipulation" }}
             >
-              <span className="mr-3 text-white/40">◉</span>
+              <span className="mr-3 text-white/50">◉</span>
               View profile
             </Link>
 
-            <div className="my-1 border-t border-white/[0.07]" />
+            <div className="my-1 border-t border-white/[0.08]" />
 
             <button
               type="button"
@@ -80,7 +89,7 @@ export default function MobileNav() {
               className="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-semibold text-red-300 transition-colors active:bg-red-500/[0.12] active:text-red-200 disabled:opacity-50"
               style={{ touchAction: "manipulation" }}
             >
-              <span className="mr-3 text-red-400/70">↪</span>
+              <span className="mr-3 text-red-400/80">↪</span>
               {loggingOut ? "Logging out…" : "Log out"}
             </button>
           </div>
@@ -93,7 +102,7 @@ export default function MobileNav() {
             if (mobileNavOpen) setProfileMenuOpen(false);
           }}
           aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
-          className="absolute left-1/2 top-[-9px] z-50 flex h-5 w-12 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#101010] shadow-[0_4px_18px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          className="absolute left-1/2 top-[-9px] z-[100001] flex h-5 w-12 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.14] bg-[#101010] shadow-[0_4px_18px_rgba(0,0,0,0.75)]"
           style={{
             WebkitTapHighlightColor: "transparent",
             touchAction: "manipulation",
@@ -101,17 +110,16 @@ export default function MobileNav() {
         >
           <span
             className={`h-1 w-6 rounded-full transition-all duration-200 ${
-              mobileNavOpen ? "bg-white/35" : "bg-red-400/80"
+              mobileNavOpen ? "bg-white/45" : "bg-red-400/90"
             }`}
           />
         </button>
 
         <nav
           aria-label="Mobile navigation"
-          className="relative z-40 flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.10] bg-[#080808]/[0.96] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.65)] backdrop-blur-2xl"
+          className="relative z-[100000] flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.12] bg-[#080808] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)]"
           style={{
             WebkitTapHighlightColor: "transparent",
-            WebkitBackfaceVisibility: "hidden",
             pointerEvents: "auto",
             touchAction: "manipulation",
           }}
@@ -151,7 +159,8 @@ export default function MobileNav() {
           </button>
         </nav>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

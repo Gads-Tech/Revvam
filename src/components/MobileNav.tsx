@@ -65,7 +65,7 @@ export default function MobileNav() {
           )}
 
           <button type="button" onClick={() => { setProfileMenuOpen(false); setMobileNavOpen(false); }} aria-label="Hide navigation" className="absolute -top-7 left-1/2 z-[2147483647] flex h-5 w-16 -translate-x-1/2 items-center justify-center rounded-t-xl border border-b-0 border-white/[0.14] bg-[#080808] text-white/55 shadow-[0_-5px_22px_rgba(0,0,0,0.6)] active:bg-red-500/15 active:text-white" style={{ pointerEvents: "auto", touchAction: "manipulation", WebkitTapHighlightColor: "transparent" }}>
-            <span aria-hidden="true" className="block h-0.5 w-7 rounded-full bg-current" />
+            <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-current" />
           </button>
 
           <nav aria-label="Mobile navigation" className="relative z-[2147483647] flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.12] bg-[#080808] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)]" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
@@ -84,7 +84,7 @@ export default function MobileNav() {
 
       {!mobileNavOpen && (
         <button type="button" onClick={() => setMobileNavOpen(true)} aria-label="Show navigation" className="mobile-nav-root fixed bottom-[max(12px,env(safe-area-inset-bottom))] right-4 z-[2147483647] flex h-6 w-16 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808]/95 shadow-[0_8px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-all active:bg-red-500/15" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647, WebkitTapHighlightColor: "transparent" }}>
-          <span aria-hidden="true" className="block h-0.5 w-7 rounded-full bg-white/60" />
+          <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-white/60" />
         </button>
       )}
     </>,

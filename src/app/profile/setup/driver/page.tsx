@@ -517,11 +517,11 @@ export default function DriverSetupPage() {
                   </div>
 
                   <h2 className="font-semibold">
-                    I don't own one yet
+                   I don&apos;t own one yet
                   </h2>
 
                   <p className="mt-2 text-sm leading-6 text-white/35">
-                    That's completely fine.
+                    That&apos;s completely fine.
                     Explore the community first.
                   </p>
                 </button>

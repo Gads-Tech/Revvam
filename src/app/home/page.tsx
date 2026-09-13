@@ -138,7 +138,7 @@ export default async function HomePage() {
                 return (
                   <Link
                     key={vehicle.id}
-                    href={`/profile/cars/${vehicle.id}`}
+                    href={`/vehicles/${vehicle.id}`}
                     className="group overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.025] transition-all duration-300 hover:-translate-y-1 hover:border-red-400/20 hover:bg-white/[0.04] hover:shadow-[0_20px_70px_rgba(0,0,0,0.35)]"
                   >
                     <div className="relative h-52 overflow-hidden bg-black">

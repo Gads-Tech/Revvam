@@ -18,6 +18,7 @@ export default function MobileNav() {
 
   const handleLogout = async () => {
     if (loggingOut) return;
+
     setLoggingOut(true);
 
     try {
@@ -25,7 +26,9 @@ export default function MobileNav() {
         method: "POST",
         credentials: "include",
         cache: "no-store",
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+        },
       });
 
       const data = await response.json().catch(() => null);
@@ -34,6 +37,7 @@ export default function MobileNav() {
         throw new Error(data?.error || "Logout failed");
       }
 
+      setProfileMenuOpen(false);
       router.replace("/login");
       router.refresh();
     } catch (error) {
@@ -44,68 +48,87 @@ export default function MobileNav() {
 
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-[9999] px-3 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden pointer-events-none transition-transform duration-300 ease-out ${
+      className={`fixed inset-x-0 bottom-0 z-[9999] px-2 pb-[max(8px,env(safe-area-inset-bottom))] md:hidden pointer-events-none transition-transform duration-300 ease-out ${
         mobileNavOpen ? "translate-y-0" : "translate-y-[calc(100%-18px)]"
       }`}
+      style={{ WebkitTapHighlightColor: "transparent" }}
     >
-      <div className="pointer-events-auto relative mx-auto w-full max-w-[480px] rounded-[22px] bg-[#090909]/95 p-1.5 shadow-[0_10px_40px_rgba(0,0,0,0.65)] backdrop-blur-2xl">
+      <div className="pointer-events-auto relative mx-auto w-full max-w-[520px] overflow-visible">
         <button
           type="button"
-          onClick={() => setMobileNavOpen((open) => !open)}
+          onClick={() => {
+            setMobileNavOpen((open) => !open);
+            if (mobileNavOpen) setProfileMenuOpen(false);
+          }}
           aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"}
-          className="absolute left-1/2 top-[-5px] flex h-4 w-12 -translate-x-1/2 items-center justify-center touch-manipulation"
+          className="absolute left-1/2 top-[-12px] z-30 flex h-6 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-[#101010]/95 shadow-[0_4px_18px_rgba(0,0,0,0.45)] backdrop-blur-xl touch-manipulation"
         >
           <span
-            className={`h-1 w-7 rounded-full transition-colors ${
-              mobileNavOpen ? "bg-white/20" : "bg-red-500/80"
+            className={`h-1 w-7 rounded-full transition-all duration-200 ${
+              mobileNavOpen ? "bg-white/35" : "bg-red-400/80"
             }`}
           />
         </button>
 
-        <nav className="grid grid-cols-6 items-stretch" aria-label="Mobile navigation">
-          <MobileNavItem icon="←" label="Back" onClick={handleBack} />
-          <MobileNavItem icon="⌂" label="Discover" href="/home" active={pathname === "/home"} />
-          <MobileNavItem icon="🔧" label="Mechanics" href="#" />
-          <MobileNavItem icon="🚗" label="Dealers" href="#" />
-          <MobileNavItem icon="📍" label="Events" href="#" />
-          <button
-            type="button"
-            onClick={() => setProfileMenuOpen((open) => !open)}
-            aria-expanded={profileMenuOpen}
-            className={`flex min-w-0 flex-col items-center justify-center rounded-[16px] px-0.5 py-1.5 transition-all active:scale-95 touch-manipulation ${
-              pathname?.startsWith("/profile") || profileMenuOpen
-                ? "bg-red-500/[0.10] text-red-300"
-                : "text-white/45 active:bg-white/[0.05]"
-            }`}
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white/[0.07] text-[10px] font-bold text-white/65">
-              ◉
-            </span>
-            <span className="mt-0.5 text-[8px] font-medium leading-none tracking-wide">
-              Profile
-            </span>
-          </button>
-        </nav>
-
-        {profileMenuOpen && (
-          <div className="absolute bottom-[calc(100%+8px)] right-1.5 w-[150px] overflow-hidden rounded-2xl bg-[#0b0b0b]/98 p-1.5 shadow-[0_12px_35px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
+        {profileMenuOpen && mobileNavOpen && (
+          <div className="absolute bottom-[calc(100%+10px)] right-1 z-40 w-[180px] overflow-hidden rounded-2xl border border-white/[0.10] bg-[#0b0b0b]/95 p-1.5 shadow-[0_16px_45px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
             <Link
               href="/profile"
               onClick={() => setProfileMenuOpen(false)}
-              className="flex min-h-10 items-center rounded-xl px-3 text-xs font-semibold text-white/70 transition-colors active:bg-white/[0.08]"
+              className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/75 transition-colors active:bg-white/[0.08] active:text-white"
             >
+              <span className="mr-3 text-white/40">◉</span>
               View profile
             </Link>
+
+            <div className="my-1 border-t border-white/[0.07]" />
+
             <button
               type="button"
               onClick={handleLogout}
               disabled={loggingOut}
-              className="flex min-h-10 w-full items-center rounded-xl px-3 text-left text-xs font-semibold text-red-300 transition-colors active:bg-red-500/[0.12] disabled:opacity-50"
+              className="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-semibold text-red-300 transition-colors active:bg-red-500/[0.12] active:text-red-200 disabled:opacity-50"
             >
+              <span className="mr-3 text-red-400/70">↪</span>
               {loggingOut ? "Logging out…" : "Log out"}
             </button>
           </div>
         )}
+
+        <nav
+          aria-label="Mobile navigation"
+          className="grid h-[68px] w-full grid-cols-[repeat(6,minmax(0,1fr))] items-stretch rounded-[22px] border border-white/[0.09] bg-[#090909]/94 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur-2xl"
+        >
+          <MobileNavItem icon="←" label="Back" onClick={handleBack} />
+          <MobileNavItem
+            icon="⌂"
+            label="Discover"
+            href="/home"
+            active={pathname === "/home"}
+          />
+          <MobileNavItem icon="⌕" label="Mechanics" href="#" />
+          <MobileNavItem icon="▣" label="Dealers" href="#" />
+          <MobileNavItem icon="•" label="Events" href="#" />
+
+          <button
+            type="button"
+            onClick={() => setProfileMenuOpen((open) => !open)}
+            aria-expanded={profileMenuOpen}
+            aria-label="Profile menu"
+            className={`flex min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[17px] px-0.5 py-1 transition-all active:scale-[0.96] ${
+              pathname?.startsWith("/profile") || profileMenuOpen
+                ? "bg-red-500/[0.10] text-red-300"
+                : "text-white/50 active:bg-white/[0.05]"
+            }`}
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current/20 bg-white/[0.05] text-[10px] font-bold leading-none">
+              ◉
+            </span>
+            <span className="mt-1 w-full truncate text-center text-[9px] font-medium leading-none tracking-tight">
+              Profile
+            </span>
+          </button>
+        </nav>
       </div>
     </div>
   );
@@ -124,16 +147,18 @@ function MobileNavItem({
   onClick?: () => void;
   active?: boolean;
 }) {
-  const className = `flex min-w-0 flex-col items-center justify-center rounded-[16px] px-0.5 py-1.5 transition-all active:scale-95 touch-manipulation ${
+  const className = `flex min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[17px] px-0.5 py-1 transition-all active:scale-[0.96] ${
     active
       ? "bg-red-500/[0.10] text-red-300"
-      : "text-white/45 active:bg-white/[0.05]"
+      : "text-white/50 active:bg-white/[0.05]"
   }`;
 
   const content = (
     <>
-      <span className="text-[15px] leading-5">{icon}</span>
-      <span className="mt-0.5 max-w-full truncate text-[8px] font-medium leading-none tracking-[0.01em]">
+      <span className="flex h-5 items-center justify-center text-[15px] leading-none">
+        {icon}
+      </span>
+      <span className="mt-1 w-full truncate text-center text-[9px] font-medium leading-none tracking-tight">
         {label}
       </span>
     </>

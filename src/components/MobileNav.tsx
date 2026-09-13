@@ -3,11 +3,20 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+
+const subscribeToMount = () => () => {};
+const getClientMountSnapshot = () => true;
+const getServerMountSnapshot = () => false;
 
 export default function MobileNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const mounted = useSyncExternalStore(
+    subscribeToMount,
+    getClientMountSnapshot,
+    getServerMountSnapshot
+  );
   const [mobileNavOpen, setMobileNavOpen] = useState(true);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -47,9 +56,9 @@ export default function MobileNav() {
     }
   };
 
-  // Portaling directly once the browser is available avoids a second render
-  // after hydration, which previously made the bar intermittently vanish.
-  if (typeof document === "undefined") return null;
+  // The first client render intentionally matches the server. React then
+  // mounts this portal without a hydration mismatch or a reload race.
+  if (!mounted) return null;
 
   return createPortal(
     <>

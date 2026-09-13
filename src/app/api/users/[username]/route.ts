@@ -77,6 +77,47 @@ export async function GET(
       );
     }
 
+    const normalizedVehicles = user.vehicles.map((vehicle) => {
+      const seenUrls = new Set<string>();
+
+      const mainPhotoUrl = vehicle.image;
+      if (mainPhotoUrl) {
+        seenUrls.add(mainPhotoUrl);
+      }
+
+      const photos = vehicle.photos.filter((photo) => {
+        if (seenUrls.has(photo.url)) {
+          return false;
+        }
+
+        seenUrls.add(photo.url);
+        return true;
+      });
+
+      const modifications = vehicle.modifications.map((modification) => ({
+        ...modification,
+        photos: modification.photos.filter((photo) => {
+          if (seenUrls.has(photo.url)) {
+            return false;
+          }
+
+          seenUrls.add(photo.url);
+          return true;
+        }),
+      }));
+
+      return {
+        ...vehicle,
+        photos,
+        modifications,
+      };
+    });
+
+    const publicUser = {
+      ...user,
+      vehicles: normalizedVehicles,
+    };
+
     const currentUser = await getCurrentUser();
     let following = false;
 
@@ -95,7 +136,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      user,
+      user: publicUser,
       following,
       isOwnProfile: currentUser?.id === user.id,
     });

@@ -1390,17 +1390,20 @@ const [deletingModificationId, setDeletingModificationId] =
    */
 
   const mainPhoto = useMemo(() => {
-    if (!vehicle?.image) {
-      return null;
-    }
+  if (!vehicle?.image) {
+    return null;
+  }
 
-    return (
-      photos.find(
-        (photo) =>
-          photo.url === vehicle.image
-      ) || null
-    );
-  }, [vehicle?.image, photos]);
+  return (
+    photos.find(
+      (photo) => photo.url === vehicle.image
+    ) || {
+      id: "main",
+      url: vehicle.image,
+      createdAt: vehicle.createdAt,
+    }
+  );
+}, [vehicle, photos]);
 
   /*
    * =========================================================

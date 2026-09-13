@@ -297,7 +297,7 @@ export default function LoginPage() {
             text-white/35
           "
         >
-          Don't have a Revvam account?{" "}
+          Don&apos;t have a Revvam account?{" "}
           <button
             type="button"
             onClick={() => router.push("/signup")}

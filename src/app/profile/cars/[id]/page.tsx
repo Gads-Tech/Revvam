@@ -1752,25 +1752,63 @@ const [deletingModificationId, setDeletingModificationId] =
                 </p>
               </div>
 
-              <Link
-                href={`/profile/cars/${vehicle.id}/edit`}
-                className="
-                  inline-flex
-                  h-12
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  border
-                  border-red-400/30
-                  bg-red-600/[0.25]
-                  px-6
-                  text-sm
-                  font-semibold
-                  text-white
-                "
-              >
-                Edit vehicle
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+  <button
+    type="button"
+    onClick={handleToggleFeatured}
+    disabled={settingFeatured}
+    className="
+      inline-flex
+      h-12
+      items-center
+      justify-center
+      gap-2
+      rounded-2xl
+      border
+      border-red-400/30
+      bg-red-600/[0.12]
+      px-5
+      text-sm
+      font-semibold
+      text-white
+      transition-all
+      hover:border-red-400/50
+      hover:bg-red-600/[0.22]
+      disabled:cursor-not-allowed
+      disabled:opacity-50
+    "
+  >
+    <span aria-hidden="true">
+      {vehicle.isFeatured ? "★" : "☆"}
+    </span>
+
+    {settingFeatured
+      ? "Saving..."
+      : vehicle.isFeatured
+        ? "Featured"
+        : "Feature vehicle"}
+  </button>
+
+  <Link
+    href={`/profile/cars/${vehicle.id}/edit`}
+    className="
+      inline-flex
+      h-12
+      items-center
+      justify-center
+      rounded-2xl
+      border
+      border-red-400/30
+      bg-red-600/[0.25]
+      px-6
+      text-sm
+      font-semibold
+      text-white
+    "
+  >
+    Edit vehicle
+  </Link>
+</div>
             </div>
           </div>
         </section>

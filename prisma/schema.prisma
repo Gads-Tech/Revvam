@@ -16,6 +16,7 @@ model User {
   image                   String?
   bio                     String?
   location                String?
+  readReceiptsEnabled     Boolean               @default(true)
   emailVerified           DateTime?
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
@@ -34,6 +35,8 @@ model User {
   messagesSent            Message[]
   chatRequestsSent        ChatRequest[]          @relation("ChatRequestSender")
   chatRequestsReceived    ChatRequest[]          @relation("ChatRequestRecipient")
+  readReceiptPreferences  ReadReceiptPreference[] @relation("ReadReceiptOwner")
+  readReceiptOverrides    ReadReceiptPreference[] @relation("ReadReceiptTarget")
 }
 
 model DriverProfile {
@@ -216,6 +219,20 @@ model Message {
 
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
+}
+
+model ReadReceiptPreference {
+  id        String   @id @default(cuid())
+  ownerId   String
+  targetId  String
+  enabled   Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  owner     User     @relation("ReadReceiptOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  target    User     @relation("ReadReceiptTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerId, targetId])
+  @@index([targetId])
 }
 
 model Session {

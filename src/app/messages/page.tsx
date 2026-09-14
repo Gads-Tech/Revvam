@@ -5,12 +5,11 @@ import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 
 type User = { id: string; name: string; username: string; image: string | null; role?: string | null; onboardingType?: string | null };
-type Conversation = { id: string; updatedAt: string; otherUser: User | null; lastMessage: { content: string; createdAt: string } | null; unreadCount: number };
+type Conversation = { id: string; updatedAt: string; otherUser: User | null; lastMessage: { content: string; createdAt: string; senderId: string; opened: boolean } | null; unreadCount: number };
 
 function timeLabel(value: string) {
   const date = new Date(value);
-  const now = Date.now();
-  const diff = Math.max(0, now - date.getTime());
+  const diff = Math.max(0, Date.now() - date.getTime());
   if (diff < 60_000) return "now";
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`;
@@ -40,7 +39,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     loadConversations();
-    const timer = window.setInterval(() => loadConversations(true), 3000);
+    const timer = window.setInterval(() => loadConversations(true), 2500);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -52,7 +51,7 @@ export default function MessagesPage() {
         const response = await fetch(`/api/users/search?q=${encodeURIComponent(search.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal });
         const data = await response.json();
         if (response.ok && data.success) setResults(data.users ?? []);
-      } catch { /* ignore aborted search */ }
+      } catch { /* aborted */ }
     }, 220);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [search]);
@@ -61,8 +60,8 @@ export default function MessagesPage() {
     <main className="min-h-screen bg-black px-4 py-6 pb-28 text-white sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-end justify-between gap-4">
-          <div><p className="text-xs uppercase tracking-[0.22em] text-red-400/70">Revvam social</p><h1 className="mt-1 text-3xl font-black tracking-[-0.045em]">Messages</h1><p className="mt-2 text-sm text-white/30">Your private conversations.</p></div>
-          <Link href="/home" className="text-sm text-white/35 hover:text-white">Discover</Link>
+          <div><Link href="/home" className="text-xs text-white/30 hover:text-white">← Back to Discover</Link><p className="mt-5 text-xs uppercase tracking-[0.22em] text-red-400/70">Revvam social</p><h1 className="mt-1 text-3xl font-black tracking-[-0.045em]">Messages</h1><p className="mt-2 text-sm text-white/30">Your private conversations.</p></div>
+          <Link href="/messages/settings" className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/50 hover:text-white">Read receipts</Link>
         </div>
 
         {error && <div className="mt-5 rounded-2xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300">{error}</div>}
@@ -76,7 +75,7 @@ export default function MessagesPage() {
 
         <section className="mt-5 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025]">
           <div className="border-b border-white/[0.07] px-5 py-4 sm:px-6"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">Conversations</p></div>
-          {loading ? <div className="flex min-h-72 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-red-500" /></div> : conversations.length === 0 ? <div className="px-6 py-20 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/[0.07] text-2xl">💬</div><h2 className="mt-5 text-lg font-semibold">No conversations yet</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/30">Search for another Revvam user above. You can send a chat request with a message before the conversation is opened.</p></div> : <div>{conversations.map((conversation) => conversation.otherUser && <Link key={conversation.id} href={`/messages/${encodeURIComponent(conversation.otherUser.username)}`} className="flex items-center gap-4 border-b border-white/[0.06] px-5 py-4 transition hover:bg-white/[0.035] sm:px-6"><span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.08] bg-red-600/10 text-sm font-bold text-red-300">{conversation.otherUser.image ? <img src={conversation.otherUser.image} alt="" className="h-full w-full object-cover" /> : conversation.otherUser.name.charAt(0).toUpperCase()}{conversation.unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1 text-[8px] font-black text-white">{conversation.unreadCount > 9 ? "9+" : conversation.unreadCount}</span>}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-3"><span className={`truncate text-sm ${conversation.unreadCount ? "font-bold text-white" : "font-semibold text-white/80"}`}>{conversation.otherUser.name}</span><span className="shrink-0 text-[10px] text-white/20">{conversation.lastMessage ? timeLabel(conversation.lastMessage.createdAt) : ""}</span></span><span className="mt-0.5 block truncate text-xs text-white/25">@{conversation.otherUser.username}</span>{conversation.lastMessage && <span className={`mt-1 block truncate text-sm ${conversation.unreadCount ? "font-medium text-white/60" : "text-white/25"}`}>{conversation.lastMessage.content}</span>}</span><span className="text-white/15">›</span></Link>)}</div>}
+          {loading ? <div className="flex min-h-72 items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-red-500" /></div> : conversations.length === 0 ? <div className="px-6 py-20 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/[0.07] text-2xl">💬</div><h2 className="mt-5 text-lg font-semibold">No conversations yet</h2><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/30">Search for another Revvam user above to start a request.</p></div> : <div>{conversations.map((conversation) => conversation.otherUser && <Link key={conversation.id} href={`/messages/${encodeURIComponent(conversation.otherUser.username)}`} className="flex items-center gap-4 border-b border-white/[0.06] px-5 py-4 transition hover:bg-white/[0.035] sm:px-6"><span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.08] bg-red-600/10 text-sm font-bold text-red-300">{conversation.otherUser.image ? <img src={conversation.otherUser.image} alt="" className="h-full w-full object-cover" /> : conversation.otherUser.name.charAt(0).toUpperCase()}{conversation.unreadCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1 text-[8px] font-black text-white" />}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-3"><span className={`truncate text-sm ${conversation.unreadCount ? "font-bold text-white" : "font-semibold text-white/80"}`}>{conversation.otherUser.name}</span><span className="shrink-0 text-[10px] text-white/20">{conversation.lastMessage ? timeLabel(conversation.lastMessage.createdAt) : ""}</span></span><span className="mt-0.5 block truncate text-xs text-white/25">@{conversation.otherUser.username}</span>{conversation.lastMessage && <span className={`mt-1 block truncate text-sm ${conversation.unreadCount ? "font-medium text-white/60" : "text-white/25"}`}>{conversation.lastMessage.content}</span>}{conversation.lastMessage?.senderId !== conversation.otherUser.id && conversation.lastMessage?.opened && <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.14em] text-red-300/70">Opened</span>}</span><span className="text-white/15">›</span></Link>)}</div>}
         </section>
       </div>
       <MobileNav />

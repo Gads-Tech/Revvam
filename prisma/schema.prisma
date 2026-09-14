@@ -7,31 +7,33 @@ datasource db {
 }
 
 model User {
-  id                     String                @id @default(cuid())
-  name                   String
-  username               String                @unique
-  email                  String                @unique
-  passwordHash           String?
-  role                   UserRole              @default(USER)
-  image                  String?
-  bio                    String?
-  location               String?
-  emailVerified          DateTime?
-  createdAt              DateTime              @default(now())
-  updatedAt              DateTime              @updatedAt
-  onboardingType         OnboardingType?
-  driverProfile          DriverProfile?
-  mentionsMade           ModificationMention[] @relation("MentionedBy")
-  mentionsReceived       ModificationMention[] @relation("MentionedUser")
-  sessions               Session[]
-  vehicles               Vehicle[]
-  posts                  Post[]
-  following              Follow[]              @relation("Following")
-  followers              Follow[]              @relation("Followers")
-  notificationsReceived  Notification[]        @relation("NotificationRecipient")
-  notificationsSent      Notification[]        @relation("NotificationActor")
+  id                      String                @id @default(cuid())
+  name                    String
+  username                String                @unique
+  email                   String                @unique
+  passwordHash            String?
+  role                    UserRole              @default(USER)
+  image                   String?
+  bio                     String?
+  location                String?
+  emailVerified           DateTime?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  onboardingType          OnboardingType?
+  driverProfile           DriverProfile?
+  mentionsMade            ModificationMention[] @relation("MentionedBy")
+  mentionsReceived        ModificationMention[] @relation("MentionedUser")
+  sessions                Session[]
+  vehicles                Vehicle[]
+  posts                   Post[]
+  following               Follow[]              @relation("Following")
+  followers               Follow[]              @relation("Followers")
+  notificationsReceived   Notification[]        @relation("NotificationRecipient")
+  notificationsSent       Notification[]        @relation("NotificationActor")
   conversationMemberships ConversationMember[]
-  messagesSent           Message[]
+  messagesSent            Message[]
+  chatRequestsSent        ChatRequest[]          @relation("ChatRequestSender")
+  chatRequestsReceived    ChatRequest[]          @relation("ChatRequestRecipient")
 }
 
 model DriverProfile {
@@ -98,8 +100,6 @@ model ModificationPhoto {
   url            String
   createdAt      DateTime            @default(now())
   modification   VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
-
-  @@index([modificationId])
 }
 
 model ModificationMention {
@@ -144,20 +144,38 @@ model Follow {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  actorId   String
-  type      NotificationType
-  title     String
-  body      String
-  href      String?
-  readAt    DateTime?
-  createdAt DateTime         @default(now())
-  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor     User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  id            String           @id @default(cuid())
+  userId        String
+  actorId       String
+  type          NotificationType
+  title         String
+  body          String
+  href          String?
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+  chatRequestId String?          @unique
+  user          User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor         User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  chatRequest   ChatRequest?     @relation(fields: [chatRequestId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+}
+
+model ChatRequest {
+  id           String            @id @default(cuid())
+  senderId     String
+  recipientId  String
+  status       ChatRequestStatus @default(PENDING)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  sender       User              @relation("ChatRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient    User              @relation("ChatRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  notification Notification?
+
+  @@unique([senderId, recipientId])
+  @@index([recipientId, status])
+  @@index([senderId, status])
 }
 
 model Conversation {
@@ -212,6 +230,14 @@ model Session {
 enum NotificationType {
   FOLLOW
   MESSAGE
+  CHAT_REQUEST
+  CHAT_ACCEPTED
+}
+
+enum ChatRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }
 
 enum ModificationCategory {

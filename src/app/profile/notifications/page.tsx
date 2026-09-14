@@ -14,6 +14,7 @@ type Notification = {
   readAt: string | null;
   createdAt: string;
   actor: Actor;
+  isFollowingActor: boolean;
 };
 
 export default function ProfileNotificationsPage() {
@@ -29,6 +30,11 @@ export default function ProfileNotificationsPage() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load notifications.");
       setNotifications(data.notifications ?? []);
+      const initial: Record<string, boolean> = {};
+      for (const item of data.notifications ?? []) {
+        if (item.type === "FOLLOW") initial[item.actor.id] = Boolean(item.isFollowingActor);
+      }
+      setFollowedBack(initial);
       if (data.unreadCount) await fetch("/api/notifications", { method: "PATCH", credentials: "include" });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load notifications.");
@@ -44,10 +50,10 @@ export default function ProfileNotificationsPage() {
     try {
       const response = await fetch(`/api/users/${encodeURIComponent(actor.username)}/follow`, { method: "POST", credentials: "include" });
       const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "Unable to follow back.");
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to update follow.");
       setFollowedBack((current) => ({ ...current, [actor.id]: Boolean(data.following) }));
     } catch (followError) {
-      setError(followError instanceof Error ? followError.message : "Unable to follow back.");
+      setError(followError instanceof Error ? followError.message : "Unable to update follow.");
     } finally {
       setBusy(null);
     }
@@ -80,7 +86,7 @@ export default function ProfileNotificationsPage() {
             <div className="space-y-3">
               {followNotifications.map((item) => {
                 const actor = item.actor;
-                const isFollowingBack = followedBack[actor.id];
+                const isFollowingBack = Boolean(followedBack[actor.id]);
                 return (
                   <div key={item.id} className="flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 p-4">
                     <Link href={`/users/${encodeURIComponent(actor.username)}`} className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.10] bg-red-600/10 text-red-300">

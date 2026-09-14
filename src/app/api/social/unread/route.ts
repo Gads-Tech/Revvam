@@ -12,7 +12,13 @@ export async function GET() {
     if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: { "Cache-Control": "no-store, max-age=0" } });
 
     const [unreadNotifications, unreadMessages] = await Promise.all([
-      prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+      prisma.notification.count({
+        where: {
+          userId: user.id,
+          readAt: null,
+          type: { not: "MESSAGE" },
+        },
+      }),
       prisma.message.count({
         where: {
           senderId: { not: user.id },

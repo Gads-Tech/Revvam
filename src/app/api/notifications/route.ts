@@ -3,10 +3,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const noStore = { "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0" };
+
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
+    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: noStore });
 
     const notifications = await prisma.notification.findMany({
       where: { userId: user.id },
@@ -33,17 +38,17 @@ export async function GET() {
         isRead: Boolean(item.readAt),
       })),
       unreadCount,
-    });
+    }, { headers: noStore });
   } catch (error) {
     console.error("Notifications error:", error);
-    return NextResponse.json({ success: false, error: "Unable to load notifications." }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to load notifications." }, { status: 500, headers: noStore });
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
+    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: noStore });
 
     const body = await request.json().catch(() => ({}));
     const notificationId = typeof body?.notificationId === "string" ? body.notificationId : "";
@@ -54,9 +59,9 @@ export async function PATCH(request: Request) {
       await prisma.notification.updateMany({ where: { userId: user.id, readAt: null }, data: { readAt: new Date() } });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: noStore });
   } catch (error) {
     console.error("Mark notifications read error:", error);
-    return NextResponse.json({ success: false, error: "Unable to update notifications." }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Unable to update notifications." }, { status: 500, headers: noStore });
   }
 }

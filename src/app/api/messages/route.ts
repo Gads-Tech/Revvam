@@ -3,44 +3,33 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
-function directKey(a: string, b: string) {
-  return [a, b].sort().join(":");
+function directKey(firstId: string, secondId: string) {
+  return [firstId, secondId].sort().join(":");
 }
 
 export async function GET() {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
-    }
+    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
 
-    const memberships = await prisma.conversationMember.findMany({
-      where: { userId: user.id },
+    const conversations = await prisma.conversation.findMany({
+      where: { members: { some: { userId: user.id } } },
+      orderBy: { updatedAt: "desc" },
       include: {
-        conversation: {
-          include: {
-            members: {
-              where: { userId: { not: user.id } },
-              include: {
-                user: { select: { id: true, name: true, username: true, image: true } },
-              },
-            },
-            messages: { orderBy: { createdAt: "desc" }, take: 1 },
-          },
-        },
+        members: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
+        messages: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
 
-    const conversations = memberships
-      .map(({ conversation }) => ({
+    return NextResponse.json({
+      success: true,
+      conversations: conversations.map((conversation) => ({
         id: conversation.id,
         updatedAt: conversation.updatedAt,
-        user: conversation.members[0]?.user ?? null,
+        otherUser: conversation.members.find((member) => member.userId !== user.id)?.user ?? null,
         lastMessage: conversation.messages[0] ?? null,
-      }))
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-    return NextResponse.json({ success: true, conversations });
+      })),
+    });
   } catch (error) {
     console.error("Messages list error:", error);
     return NextResponse.json({ success: false, error: "Unable to load messages." }, { status: 500 });
@@ -50,49 +39,62 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
-    }
+    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
 
     const body = await request.json();
-    const username = typeof body.username === "string" ? body.username.trim().replace(/^@/, "") : "";
+    const recipientUsername = typeof body?.recipientUsername === "string" ? body.recipientUsername.trim() : "";
+    const content = typeof body?.content === "string" ? body.content.trim() : "";
+    if (!recipientUsername || !content) return NextResponse.json({ success: false, error: "Recipient and message are required." }, { status: 400 });
 
-    if (!username) {
-      return NextResponse.json({ success: false, error: "Username is required." }, { status: 400 });
-    }
+    const recipient = await prisma.user.findUnique({ where: { username: recipientUsername }, select: { id: true, username: true } });
+    if (!recipient) return NextResponse.json({ success: false, error: "User not found." }, { status: 404 });
+    if (recipient.id === user.id) return NextResponse.json({ success: false, error: "You cannot message yourself." }, { status: 400 });
 
-    const target = await prisma.user.findFirst({
-      where: { username: { equals: username, mode: "insensitive" } },
-      select: { id: true, name: true, username: true, image: true },
-    });
-
-    if (!target) {
-      return NextResponse.json({ success: false, error: "User not found." }, { status: 404 });
-    }
-
-    if (target.id === user.id) {
-      return NextResponse.json({ success: false, error: "You cannot message yourself." }, { status: 400 });
-    }
-
-    const key = directKey(user.id, target.id);
-    let conversation = await prisma.conversation.findUnique({
-      where: { directKey: key },
-    });
+    const key = directKey(user.id, recipient.id);
+    let conversation = await prisma.conversation.findUnique({ where: { directKey: key }, select: { id: true } });
 
     if (!conversation) {
-      conversation = await prisma.conversation.create({
-        data: {
-          directKey: key,
-          members: {
-            create: [{ userId: user.id }, { userId: target.id }],
-          },
+      const acceptedRequest = await prisma.chatRequest.findFirst({
+        where: {
+          status: "ACCEPTED",
+          OR: [
+            { senderId: user.id, recipientId: recipient.id },
+            { senderId: recipient.id, recipientId: user.id },
+          ],
         },
+        select: { id: true },
+      });
+      if (!acceptedRequest) {
+        return NextResponse.json({ success: false, error: "You need an accepted chat request before starting a private conversation." }, { status: 403 });
+      }
+
+      conversation = await prisma.conversation.create({ data: { directKey: key }, select: { id: true } });
+      await prisma.conversationMember.createMany({
+        data: [
+          { conversationId: conversation.id, userId: user.id },
+          { conversationId: conversation.id, userId: recipient.id },
+        ],
+        skipDuplicates: true,
       });
     }
 
-    return NextResponse.json({ success: true, conversationId: conversation.id, user: target });
+    const message = await prisma.message.create({ data: { conversationId: conversation.id, senderId: user.id, content } });
+    await prisma.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
+
+    await prisma.notification.create({
+      data: {
+        userId: recipient.id,
+        actorId: user.id,
+        type: "MESSAGE",
+        title: "New message",
+        body: `${user.name} sent you a message.`,
+        href: `/messages?conversation=${encodeURIComponent(conversation.id)}`,
+      },
+    });
+
+    return NextResponse.json({ success: true, conversationId: conversation.id, message });
   } catch (error) {
-    console.error("Create conversation error:", error);
-    return NextResponse.json({ success: false, error: "Unable to start conversation." }, { status: 500 });
+    console.error("Create message error:", error);
+    return NextResponse.json({ success: false, error: "Unable to send message." }, { status: 500 });
   }
 }

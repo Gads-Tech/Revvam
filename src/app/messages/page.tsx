@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 
 type User = { id: string; name: string; username: string; image: string | null };
@@ -10,10 +9,8 @@ type Conversation = { id: string; updatedAt: string; user: User | null; lastMess
 type Message = { id: string; senderId: string; content: string; createdAt: string; sender: User };
 
 export default function MessagesPage() {
-  const searchParams = useSearchParams();
-  const initialConversation = searchParams.get("conversation");
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [conversationId, setConversationId] = useState(initialConversation ?? "");
+  const [conversationId, setConversationId] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [otherUser, setOtherUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
@@ -29,7 +26,7 @@ export default function MessagesPage() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load messages.");
       setConversations(data.conversations ?? []);
-      if (!conversationId && data.conversations?.[0]?.id) setConversationId(data.conversations[0].id);
+      setConversationId((current) => current || data.conversations?.[0]?.id || "");
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load messages.");
     } finally {
@@ -53,15 +50,21 @@ export default function MessagesPage() {
     }
   }
 
-  useEffect(() => { loadConversations(); }, []);
-  useEffect(() => { if (conversationId) loadConversation(conversationId); }, [conversationId]);
+  useEffect(() => {
+    const queryConversation = new URLSearchParams(window.location.search).get("conversation");
+    if (queryConversation) setConversationId(queryConversation);
+    loadConversations();
+  }, []);
+
+  useEffect(() => {
+    if (conversationId) loadConversation(conversationId);
+  }, [conversationId]);
+
   useEffect(() => {
     if (!conversationId) return;
     const timer = window.setInterval(() => loadConversation(conversationId, true), 3500);
     return () => window.clearInterval(timer);
   }, [conversationId]);
-
-  const selectedConversation = useMemo(() => conversations.find((item) => item.id === conversationId) ?? null, [conversations, conversationId]);
 
   async function startConversation() {
     setError("");

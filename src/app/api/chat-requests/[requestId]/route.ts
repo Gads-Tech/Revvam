@@ -37,6 +37,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ reque
     await prisma.$transaction([
       prisma.chatRequest.update({ where: { id: requestId }, data: { status: "DECLINED" } }),
       prisma.notification.updateMany({ where: { chatRequestId: requestId, userId: currentUser.id }, data: { readAt: new Date() } }),
+      prisma.notification.create({
+        data: {
+          userId: chatRequest.senderId,
+          actorId: currentUser.id,
+          type: "CHAT_ACCEPTED",
+          title: "Chat request declined",
+          body: `${currentUser.name} declined your chat request.`,
+          href: `/users/${encodeURIComponent(currentUser.username)}`,
+        },
+      }),
     ]);
     return NextResponse.json({ success: true, status: "DECLINED" });
   }
@@ -56,6 +66,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ reque
       skipDuplicates: true,
     });
 
+    if (chatRequest.message) {
+      await tx.message.create({
+        data: {
+          conversationId: existingConversation.id,
+          senderId: chatRequest.senderId,
+          content: chatRequest.message,
+        },
+      });
+      await tx.conversation.update({ where: { id: existingConversation.id }, data: { updatedAt: new Date() } });
+    }
+
     await tx.chatRequest.update({ where: { id: requestId }, data: { status: "ACCEPTED" } });
     await tx.notification.updateMany({ where: { chatRequestId: requestId, userId: currentUser.id }, data: { readAt: new Date() } });
     await tx.notification.create({
@@ -65,7 +86,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ reque
         type: "CHAT_ACCEPTED",
         title: "Chat request accepted",
         body: `${currentUser.name} accepted your chat request.`,
-        href: `/messages?conversation=${encodeURIComponent(existingConversation.id)}`,
+        href: `/messages/${encodeURIComponent(currentUser.username)}`,
       },
     });
 

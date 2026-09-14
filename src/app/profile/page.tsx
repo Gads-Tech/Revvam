@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
-import GlassCard from "@/components/GlassCard";
+import FollowBackButton from "@/components/FollowBackButton";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import MobileProfileLogout from "@/components/MobileProfileLogout";
@@ -32,1181 +32,330 @@ export default async function ProfilePage() {
     redirect("/login");
   }
 
-  /*
-   * ============================================================
-   * LOAD USER VEHICLES
-   * ============================================================
-   */
+  const [vehicles, postCount, followers, following, unreadNotifications, unreadMessages] =
+    await Promise.all([
+      prisma.vehicle.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        include: {
+          photos: {
+            orderBy: { createdAt: "asc" },
+            take: 1,
+          },
+        },
+      }),
+      prisma.post.count({ where: { authorId: user.id } }),
+      prisma.follow.findMany({
+        where: { followingId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          createdAt: true,
+          follower: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              image: true,
+              role: true,
+            },
+          },
+        },
+      }),
+      prisma.follow.findMany({
+        where: { followerId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: {
+          id: true,
+          createdAt: true,
+          following: {
+            select: {
+              id: true,
+              name: true,
+              username: true,
+              image: true,
+              role: true,
+            },
+          },
+        },
+      }),
+      prisma.notification.count({
+        where: { userId: user.id, readAt: null },
+      }),
+      prisma.message.count({
+        where: {
+          senderId: { not: user.id },
+          readAt: null,
+          conversation: {
+            members: {
+              some: { userId: user.id },
+            },
+          },
+        },
+      }),
+    ]);
 
-  const vehicles = await prisma.vehicle.findMany({
-    where: {
-      userId: user.id,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const followerIds = followers.map((item) => item.follower.id);
+  const followedBack = followerIds.length
+    ? await prisma.follow.findMany({
+        where: {
+          followerId: user.id,
+          followingId: { in: followerIds },
+        },
+        select: { followingId: true },
+      })
+    : [];
 
-  /*
-   * ============================================================
-   * PROFILE DATA
-   * ============================================================
-   */
+  const followedBackIds = new Set(
+    followedBack.map((item) => item.followingId)
+  );
 
-  const firstLetter =
-    user.name?.charAt(0).toUpperCase() || "R";
-
-  const roleLabel =
-    roleLabels[user.role] ?? "Revvam Member";
-
-  const roleIcon =
-    roleIcons[user.role] ?? "🚗";
-
+  const firstLetter = user.name?.charAt(0).toUpperCase() || "R";
+  const roleLabel = roleLabels[user.role] ?? "Revvam Member";
+  const roleIcon = roleIcons[user.role] ?? "🚗";
   const vehicleCount = vehicles.length;
+  const featuredVehicle =
+    vehicles.find((vehicle) => vehicle.isFeatured) ?? vehicles[0] ?? null;
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-black text-white">
-      {/* ========================================================
-          BACKGROUND
-      ========================================================= */}
+    <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.10),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(127,29,29,0.10),transparent_30%)]" />
+      <div className="pointer-events-none fixed left-1/2 top-[-320px] z-0 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-red-600/[0.05] blur-[170px]" />
 
-      <div
-        className="
-          pointer-events-none
-          fixed
-          left-1/2
-          top-[-300px]
-          z-0
-          h-[600px]
-          w-[600px]
-          -translate-x-1/2
-          rounded-full
-          bg-red-600/[0.06]
-          blur-[160px]
-        "
-      />
+      <header className="sticky top-0 z-50 hidden border-b border-white/[0.07] bg-black/75 backdrop-blur-2xl md:block">
+        <div className="mx-auto flex h-[76px] max-w-7xl items-center gap-8 px-6 lg:px-8">
+          <Logo className="h-11 w-auto shrink-0" />
 
-      <div
-        className="
-          pointer-events-none
-          fixed
-          bottom-[-300px]
-          right-[-200px]
-          z-0
-          h-[500px]
-          w-[500px]
-          rounded-full
-          bg-red-950/[0.08]
-          blur-[150px]
-        "
-      />
-
-      {/* ========================================================
-          DESKTOP HEADER
-      ========================================================= */}
-
-      <header
-        className="
-          sticky
-          top-0
-          z-50
-          hidden
-          border-b
-          border-white/[0.06]
-          bg-black/70
-          backdrop-blur-2xl
-          md:block
-        "
-      >
-        <div
-          className="
-            mx-auto
-            flex
-            h-20
-            max-w-7xl
-            items-center
-            justify-between
-            px-6
-            lg:px-8
-          "
-        >
-          <Logo className="h-12 w-auto" />
-
-          <nav className="flex items-center gap-8">
-            <Link
-              href="/home"
-              className="
-                text-sm
-                font-medium
-                text-white/45
-                transition-colors
-                hover:text-white
-              "
-            >
+          <nav className="flex flex-1 items-center justify-center gap-8">
+            <Link href="/home" className="text-sm font-medium text-white/45 transition hover:text-white">
               Discover
             </Link>
-
-            <Link
-              href="#"
-              className="
-                text-sm
-                font-medium
-                text-white/45
-                transition-colors
-                hover:text-white
-              "
-            >
+            <Link href="#" className="text-sm font-medium text-white/45 transition hover:text-white">
               Mechanics
             </Link>
-
-            <Link
-              href="#"
-              className="
-                text-sm
-                font-medium
-                text-white/45
-                transition-colors
-                hover:text-white
-              "
-            >
+            <Link href="#" className="text-sm font-medium text-white/45 transition hover:text-white">
               Dealerships
             </Link>
-
-            <Link
-              href="#"
-              className="
-                text-sm
-                font-medium
-                text-white/45
-                transition-colors
-                hover:text-white
-              "
-            >
+            <Link href="#" className="text-sm font-medium text-white/45 transition hover:text-white">
               Events
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
-            {/* User pill */}
+          <div className="flex items-center gap-2">
+            <HeaderAction href="/profile/notifications" label="Notifications" icon="♢" count={unreadNotifications} />
+            <HeaderAction href="/messages" label="Messages" icon="✉" count={unreadMessages} />
 
-            <Link
-              href="/profile"
-              className="
-                flex
-                items-center
-                gap-3
-                rounded-full
-                border
-                border-red-500/20
-                bg-red-500/[0.05]
-                px-4
-                py-2
-                transition-all
-                hover:border-red-500/30
-                hover:bg-red-500/[0.08]
-              "
-            >
-              <div
-                className="
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-red-600/20
-                  text-xs
-                  font-bold
-                  text-red-300
-                "
-              >
-                {firstLetter}
-              </div>
-
-              <span
-                className="
-                  max-w-28
-                  truncate
-                  text-sm
-                  text-white/70
-                "
-              >
-                {user.username}
-              </span>
+            <Link href="/profile" className="ml-1 flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] py-1.5 pl-1.5 pr-3 transition hover:border-red-500/25 hover:bg-red-500/[0.06]">
+              <Avatar image={user.image} fallback={firstLetter} size="sm" />
+              <span className="max-w-28 truncate text-xs font-medium text-white/70">@{user.username}</span>
             </Link>
-
-            <form
-              action="/api/auth/logout"
-              method="POST"
-            >
-              <button
-                type="submit"
-                className="
-                  rounded-full
-                  px-4
-                  py-2
-                  text-xs
-                  font-medium
-                  text-white/35
-                  transition-colors
-                  hover:text-white
-                "
-              >
-                Log out
-              </button>
-            </form>
           </div>
         </div>
       </header>
 
-      {/* ========================================================
-          MAIN
-      ========================================================= */}
-
-      <div
-        className="
-          relative
-          z-10
-          mx-auto
-          max-w-6xl
-          px-5
-          pb-32
-          pt-8
-          sm:px-6
-          md:pb-20
-          md:pt-12
-          lg:px-8
-        "
-      >
-        {/* ======================================================
-            MOBILE HEADER
-        ======================================================= */}
-
-        <div
-          className="
-            mb-8
-            flex
-            items-center
-            justify-between
-            md:hidden
-          "
-        >
-          <Logo className="h-11 w-auto" />
-
-          <Link
-            href="/home"
-            className="
-              rounded-full
-              border
-              border-white/[0.08]
-              bg-white/[0.025]
-              px-4
-              py-2
-              text-xs
-              font-medium
-              text-white/50
-              transition-all
-              hover:border-white/[0.16]
-              hover:text-white
-            "
-          >
-            Home
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-32 pt-6 sm:px-6 sm:pt-10 lg:px-8">
+        <div className="mb-6 flex items-center justify-between gap-4 md:mb-8">
+          <Link href="/home" className="inline-flex items-center gap-2 text-sm text-white/35 transition hover:text-white">
+            <span>←</span>
+            <span>Discover</span>
           </Link>
-        </div>
 
-        {/* ======================================================
-            BACK
-        ======================================================= */}
-
-        <Link
-          href="/home"
-          className="
-            mb-6
-            inline-flex
-            items-center
-            gap-2
-            text-sm
-            text-white/35
-            transition-colors
-            hover:text-white
-          "
-        >
-          <span>←</span>
-          Back to Discover
-        </Link>
-
-        {/* ======================================================
-            PROFILE HERO
-        ======================================================= */}
-
-        <GlassCard className="overflow-hidden">
-          <div
-            className="
-              relative
-              px-6
-              pb-8
-              pt-8
-              sm:px-8
-              sm:pt-10
-            "
-          >
-            {/* Top glow */}
-
-            <div
-              className="
-                pointer-events-none
-                absolute
-                left-1/2
-                top-0
-                h-px
-                w-48
-                -translate-x-1/2
-                bg-gradient-to-r
-                from-transparent
-                via-red-500/70
-                to-transparent
-              "
-            />
-
-            <div
-              className="
-                flex
-                flex-col
-                gap-7
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-              "
-            >
-              {/* Profile identity */}
-
-              <div
-                className="
-                  flex
-                  flex-col
-                  items-start
-                  gap-5
-                  sm:flex-row
-                  sm:items-center
-                "
-              >
-                <div
-                  className="
-                    flex
-                    h-24
-                    w-24
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-[28px]
-                    border
-                    border-red-500/20
-                    bg-red-600/[0.12]
-                    text-3xl
-                    font-black
-                    text-red-300
-                    shadow-[0_0_50px_rgba(239,68,68,0.08)]
-                  "
-                >
-                  {firstLetter}
-                </div>
-
-                <div>
-                  <p
-                    className="
-                      text-xs
-                      uppercase
-                      tracking-[0.25em]
-                      text-red-400/70
-                    "
-                  >
-                    Revvam Profile
-                  </p>
-
-                  <h1
-                    className="
-                      mt-2
-                      text-3xl
-                      font-black
-                      tracking-[-0.04em]
-                      sm:text-4xl
-                    "
-                  >
-                    {user.name}
-                  </h1>
-
-                  <p className="mt-1 text-sm text-white/30">
-                    @{user.username}
-                  </p>
-                </div>
-              </div>
-
-              {/* Edit */}
-
-              <Link
-                href="/profile/edit"
-                className="
-                  inline-flex
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  border
-                  border-white/[0.10]
-                  bg-white/[0.025]
-                  px-5
-                  py-3
-                  text-sm
-                  font-medium
-                  text-white/60
-                  backdrop-blur-xl
-                  transition-all
-                  duration-300
-                  hover:border-red-500/25
-                  hover:bg-red-500/[0.05]
-                  hover:text-white
-                "
-              >
-                Edit profile
-              </Link>
-            </div>
-
-            {/* ==================================================
-                PROFILE TYPE
-            =================================================== */}
-
-            <div
-              className="
-                mt-7
-                flex
-                items-center
-                gap-3
-                rounded-2xl
-                border
-                border-red-500/15
-                bg-red-500/[0.045]
-                px-4
-                py-3
-              "
-            >
-              <span className="text-lg">
-                {roleIcon}
-              </span>
-
-              <div>
-                <p
-                  className="
-                    text-[10px]
-                    uppercase
-                    tracking-[0.18em]
-                    text-white/25
-                  "
-                >
-                  Profile type
-                </p>
-
-                <p
-                  className="
-                    mt-0.5
-                    text-sm
-                    font-medium
-                    text-white/75
-                  "
-                >
-                  {roleLabel}
-                </p>
-              </div>
-            </div>
-
-            {/* ==================================================
-                BIO
-            =================================================== */}
-
-            <div className="mt-7">
-              <p
-                className="
-                  text-xs
-                  uppercase
-                  tracking-[0.2em]
-                  text-white/25
-                "
-              >
-                About
-              </p>
-
-              <p
-                className="
-                  mt-3
-                  max-w-2xl
-                  text-sm
-                  leading-6
-                  text-white/40
-                "
-              >
-                {user.bio ||
-                  "This Revvam member hasn't added a bio yet."}
-              </p>
-            </div>
+          <div className="flex items-center gap-2 md:hidden">
+            <HeaderAction href="/profile/notifications" label="Notifications" icon="♢" count={unreadNotifications} compact />
+            <HeaderAction href="/messages" label="Messages" icon="✉" count={unreadMessages} compact />
           </div>
-        </GlassCard>
-
-        {/* ========================================================
-            PROFILE STATS
-        ========================================================= */}
-
-        <div
-          className="
-            mt-5
-            grid
-            grid-cols-3
-            gap-3
-          "
-        >
-          <GlassCard className="p-5 text-center">
-            <p className="text-2xl font-black">
-              0
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-[10px]
-                uppercase
-                tracking-[0.18em]
-                text-white/25
-              "
-            >
-              Posts
-            </p>
-          </GlassCard>
-
-          <GlassCard className="p-5 text-center">
-            <p className="text-2xl font-black">
-              0
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-[10px]
-                uppercase
-                tracking-[0.18em]
-                text-white/25
-              "
-            >
-              Followers
-            </p>
-          </GlassCard>
-
-          <GlassCard className="p-5 text-center">
-            <p className="text-2xl font-black">
-              0
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-[10px]
-                uppercase
-                tracking-[0.18em]
-                text-white/25
-              "
-            >
-              Following
-            </p>
-          </GlassCard>
         </div>
 
-        {/* ========================================================
-            GARAGE + ACTIVITY
-        ========================================================= */}
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/[0.09] bg-white/[0.025] shadow-[0_25px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
+          <div className="h-28 bg-gradient-to-br from-red-600/[0.18] via-red-950/[0.10] to-transparent sm:h-36" />
 
-        <div
-          className="
-            mt-8
-            grid
-            gap-5
-            lg:grid-cols-[1.35fr_1fr]
-          "
-        >
-          {/* ======================================================
-              GARAGE
-          ======================================================= */}
+          <div className="relative px-5 pb-6 sm:px-8 sm:pb-8">
+            <div className="-mt-12 flex flex-col gap-6 sm:-mt-14 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex min-w-0 items-end gap-4">
+                <Avatar image={user.image} fallback={firstLetter} size="xl" />
 
-          <GlassCard className="p-6 sm:p-7">
-            <div className="flex items-center justify-between">
-              <div>
-                <p
-                  className="
-                    text-xs
-                    uppercase
-                    tracking-[0.2em]
-                    text-white/25
-                  "
-                >
-                  Your garage
-                </p>
-
-                <p className="mt-1 text-sm text-white/25">
-                  Your cars on Revvam
-                </p>
+                <div className="min-w-0 pb-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-red-400/75">Your Revvam profile</p>
+                  <h1 className="mt-1 truncate text-3xl font-black tracking-[-0.045em] sm:text-4xl">{user.name}</h1>
+                  <p className="mt-1 text-sm text-white/35">@{user.username}</p>
+                </div>
               </div>
 
-              {vehicleCount > 0 && (
-                <span
-                  className="
-                    rounded-full
-                    border
-                    border-red-500/15
-                    bg-red-500/[0.05]
-                    px-3
-                    py-1.5
-                    text-xs
-                    text-red-300/60
-                  "
-                >
-                  {vehicleCount}{" "}
-                  {vehicleCount === 1
-                    ? "vehicle"
-                    : "vehicles"}
+              <div className="flex shrink-0 items-center gap-2">
+                <Link href={`/users/${encodeURIComponent(user.username)}`} className="inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 text-xs font-semibold text-white/60 transition hover:border-white/[0.16] hover:text-white">
+                  View public profile
+                </Link>
+                <Link href="/profile/edit" className="inline-flex h-10 items-center justify-center rounded-xl border border-red-500/25 bg-red-500/10 px-4 text-xs font-semibold text-red-100 transition hover:border-red-400/40 hover:bg-red-500/15">
+                  Edit profile
+                </Link>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-red-300">
+                {roleIcon} {roleLabel}
+              </span>
+              {user.location && (
+                <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-white/45">
+                  📍 {user.location}
                 </span>
               )}
             </div>
 
-            {/* ==================================================
-                EMPTY GARAGE
-            =================================================== */}
-
-            {vehicles.length === 0 ? (
-              <div
-                className="
-                  mt-7
-                  rounded-3xl
-                  border
-                  border-dashed
-                  border-white/[0.08]
-                  bg-white/[0.015]
-                  px-6
-                  py-10
-                  text-center
-                "
-              >
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-red-500/[0.06]
-                    text-3xl
-                  "
-                >
-                  🚗
-                </div>
-
-                <h2 className="mt-5 text-lg font-semibold">
-                  Your garage is empty
-                </h2>
-
-                <p
-                  className="
-                    mx-auto
-                    mt-2
-                    max-w-sm
-                    text-sm
-                    leading-6
-                    text-white/30
-                  "
-                >
-                  Add your first vehicle and start
-                  building your Revvam garage.
-                </p>
-
-                <Link
-                  href="/profile/driver"
-                  className="
-                    mt-6
-                    inline-flex
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-red-500/20
-                    bg-red-500/[0.07]
-                    px-5
-                    py-3
-                    text-sm
-                    font-medium
-                    text-red-300/70
-                    transition-all
-                    hover:border-red-500/35
-                    hover:bg-red-500/[0.12]
-                    hover:text-red-200
-                  "
-                >
-                  + Add your first car
-                </Link>
-              </div>
-            ) : (
-              <div className="mt-7 space-y-3">
-                {vehicles.map((vehicle) => (
-                  <Link
-                    key={vehicle.id}
-                    href={`/profile/driver?vehicle=${vehicle.id}`}
-                    className="
-                      group
-                      block
-                      rounded-3xl
-                      border
-                      border-white/[0.08]
-                      bg-white/[0.025]
-                      p-4
-                      transition-all
-                      duration-300
-                      hover:-translate-y-0.5
-                      hover:border-red-500/25
-                      hover:bg-white/[0.045]
-                    "
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* Vehicle visual */}
-
-                      <div
-                        className="
-                          relative
-                          flex
-                          h-20
-                          w-20
-                          shrink-0
-                          items-center
-                          justify-center
-                          overflow-hidden
-                          rounded-2xl
-                          border
-                          border-red-500/10
-                          bg-gradient-to-br
-                          from-red-500/[0.12]
-                          to-white/[0.02]
-                          text-4xl
-                        "
-                      >
-                        🚗
-
-                        <div
-                          className="
-                            pointer-events-none
-                            absolute
-                            inset-0
-                            bg-gradient-to-br
-                            from-white/[0.04]
-                            to-transparent
-                          "
-                        />
-                      </div>
-
-                      {/* Vehicle information */}
-
-                      <div className="min-w-0 flex-1">
-                        <div
-                          className="
-                            flex
-                            items-start
-                            justify-between
-                            gap-3
-                          "
-                        >
-                          <div className="min-w-0">
-                            <h2
-                              className="
-                                truncate
-                                text-lg
-                                font-bold
-                                tracking-tight
-                                text-white
-                                transition-colors
-                                group-hover:text-red-100
-                              "
-                            >
-                              {vehicle.make}{" "}
-                              {vehicle.model}
-                            </h2>
-
-                            <p className="mt-1 text-xs text-white/25">
-                              Personal vehicle
-                            </p>
-                          </div>
-
-                          <span
-                            className="
-                              shrink-0
-                              text-white/20
-                              transition-colors
-                              group-hover:text-red-300/70
-                            "
-                          >
-                            →
-                          </span>
-                        </div>
-
-                        <div
-                          className="
-                            mt-3
-                            flex
-                            flex-wrap
-                            gap-2
-                          "
-                        >
-                          {vehicle.year && (
-                            <span
-                              className="
-                                rounded-full
-                                border
-                                border-white/[0.08]
-                                bg-white/[0.03]
-                                px-2.5
-                                py-1
-                                text-[11px]
-                                text-white/40
-                              "
-                            >
-                              {vehicle.year}
-                            </span>
-                          )}
-
-                          {vehicle.type && (
-                            <span
-                              className="
-                                rounded-full
-                                border
-                                border-red-500/15
-                                bg-red-500/[0.05]
-                                px-2.5
-                                py-1
-                                text-[11px]
-                                text-red-300/60
-                              "
-                            >
-                              {vehicle.type}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-
-                {/* Add vehicle */}
-
-                <Link
-                  href="/profile/driver"
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-dashed
-                    border-white/[0.10]
-                    bg-white/[0.015]
-                    px-4
-                    py-3
-                    text-sm
-                    font-medium
-                    text-white/30
-                    transition-all
-                    hover:border-red-500/25
-                    hover:bg-red-500/[0.04]
-                    hover:text-white
-                  "
-                >
-                  + Add another vehicle
-                </Link>
-              </div>
-            )}
-          </GlassCard>
-
-          {/* ======================================================
-              ACTIVITY
-          ======================================================= */}
-
-          <GlassCard className="p-6 sm:p-7">
-            <p
-              className="
-                text-xs
-                uppercase
-                tracking-[0.2em]
-                text-white/25
-              "
-            >
-              Your activity
+            <p className="mt-5 max-w-3xl text-sm leading-7 text-white/45">
+              {user.bio || "Your profile is ready for your story, your cars and your Revvam community."}
             </p>
 
-            <div
-              className="
-                mt-7
-                rounded-3xl
-                border
-                border-white/[0.06]
-                bg-white/[0.015]
-                px-6
-                py-10
-                text-center
-              "
-            >
-              <div
-                className="
-                  mx-auto
-                  flex
-                  h-16
-                  w-16
-                  items-center
-                  justify-center
-                  rounded-2xl
-                  bg-white/[0.04]
-                  text-2xl
-                "
-              >
-                ✦
-              </div>
-
-              <h2 className="mt-5 text-lg font-semibold">
-                Nothing here yet
-              </h2>
-
-              <p
-                className="
-                  mx-auto
-                  mt-2
-                  max-w-sm
-                  text-sm
-                  leading-6
-                  text-white/30
-                "
-              >
-                Your posts, likes, comments,
-                and other activity will appear
-                here.
-              </p>
-
-              <Link
-                href="/home"
-                className="
-                  mt-6
-                  inline-flex
-                  rounded-2xl
-                  border
-                  border-white/[0.08]
-                  bg-white/[0.025]
-                  px-4
-                  py-3
-                  text-sm
-                  font-medium
-                  text-white/50
-                  transition-all
-                  hover:border-red-500/25
-                  hover:bg-red-500/[0.05]
-                  hover:text-white
-                "
-              >
-                Discover Revvam
+            <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Stat value={postCount} label="Posts" />
+              <Stat value={vehicleCount} label="Vehicles" />
+              <Link href="#followers" className="rounded-2xl border border-white/[0.07] bg-black/20 px-4 py-4 text-center transition hover:border-red-500/20 hover:bg-red-500/[0.04]">
+                <p className="text-xl font-black">{followers.length}</p>
+                <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/25">Followers</p>
+              </Link>
+              <Link href="#following" className="rounded-2xl border border-white/[0.07] bg-black/20 px-4 py-4 text-center transition hover:border-red-500/20 hover:bg-red-500/[0.04]">
+                <p className="text-xl font-black">{following.length}</p>
+                <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/25">Following</p>
               </Link>
             </div>
-          </GlassCard>
-        </div>
+          </div>
+        </section>
 
-        {/* ========================================================
-            GARAGE SUMMARY
-        ========================================================= */}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1.18fr_0.82fr]">
+          <section className="overflow-hidden rounded-[2rem] border border-red-500/15 bg-gradient-to-br from-red-600/[0.09] via-white/[0.025] to-transparent">
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-5 sm:px-7">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/75">Garage spotlight</p>
+                <h2 className="mt-1 text-xl font-bold">{featuredVehicle ? `${featuredVehicle.make} ${featuredVehicle.model}` : "Build your garage"}</h2>
+              </div>
+              <Link href="/profile/driver" className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45 transition hover:border-red-500/25 hover:text-white">
+                Manage
+              </Link>
+            </div>
 
-        {vehicles.length > 0 && (
-          <GlassCard className="mt-5 overflow-hidden">
-            <div className="p-6 sm:p-7">
-              <div
-                className="
-                  flex
-                  flex-col
-                  gap-4
-                  sm:flex-row
-                  sm:items-center
-                  sm:justify-between
-                "
-              >
-                <div>
-                  <p
-                    className="
-                      text-xs
-                      uppercase
-                      tracking-[0.2em]
-                      text-white/25
-                    "
-                  >
-                    Garage status
-                  </p>
-
-                  <h2 className="mt-2 text-xl font-bold">
-                    {vehicleCount === 1
-                      ? "1 vehicle in your garage"
-                      : `${vehicleCount} vehicles in your garage`}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-white/30">
-                    Keep adding vehicles as your collection grows.
-                  </p>
+            {featuredVehicle ? (
+              <Link href={`/profile/cars/${featuredVehicle.id}`} className="group grid sm:grid-cols-[1.05fr_0.95fr]">
+                <div className="relative h-56 overflow-hidden bg-black sm:h-64">
+                  {featuredVehicle.image || featuredVehicle.photos[0]?.url ? (
+                    <img src={featuredVehicle.image || featuredVehicle.photos[0].url} alt={`${featuredVehicle.make} ${featuredVehicle.model}`} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-7xl opacity-20">🚗</div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                  {featuredVehicle.isFeatured && <span className="absolute left-4 top-4 rounded-full bg-red-600/85 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.13em]">Featured vehicle</span>}
                 </div>
 
-                <Link
-                  href="/profile/driver"
-                  className="
-                    inline-flex
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    border
-                    border-white/[0.08]
-                    bg-white/[0.025]
-                    px-5
-                    py-3
-                    text-sm
-                    font-medium
-                    text-white/50
-                    transition-all
-                    hover:border-red-500/25
-                    hover:bg-red-500/[0.05]
-                    hover:text-white
-                  "
-                >
-                  Manage garage
-                </Link>
+                <div className="flex flex-col justify-center p-6 sm:p-7">
+                  <p className="text-[10px] uppercase tracking-[0.17em] text-red-400/60">{featuredVehicle.year ?? "Year unknown"} · {featuredVehicle.type ?? "Vehicle"}</p>
+                  <p className="mt-4 text-sm leading-6 text-white/35">Keep your main build, photos and modifications easy to discover from your profile.</p>
+                  <span className="mt-5 inline-flex w-fit rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-2.5 text-xs font-semibold text-white/55 transition group-hover:border-red-500/20 group-hover:bg-red-500/[0.07] group-hover:text-white">Open build →</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="px-6 py-12 text-center sm:px-8">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/[0.07] text-2xl">🚗</div>
+                <h3 className="mt-4 text-lg font-semibold">Your garage is empty</h3>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-white/30">Add your first vehicle and start building your public automotive identity.</p>
+                <Link href="/profile/cars/add" className="mt-5 inline-flex rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-100 hover:bg-red-500/15">+ Add vehicle</Link>
               </div>
-            </div>
-          </GlassCard>
-        )}
+            )}
+          </section>
 
-        {/* ========================================================
-            ACCOUNT
-        ========================================================= */}
-
-        <GlassCard className="mt-5 p-6 sm:p-7">
-          <p
-            className="
-              text-xs
-              uppercase
-              tracking-[0.2em]
-              text-white/25
-            "
-          >
-            Account
-          </p>
-
-          <div className="mt-5 divide-y divide-white/[0.06]">
-            {/* Email */}
-
-            <div
-              className="
-                flex
-                flex-col
-                gap-2
-                py-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-                sm:gap-4
-              "
-            >
-              <span className="text-sm text-white/35">
-                Email
-              </span>
-
-              <span
-                className="
-                  max-w-full
-                  truncate
-                  text-sm
-                  text-white/60
-                  sm:max-w-[65%]
-                "
-              >
-                {user.email}
-              </span>
+          <section className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">Account center</p>
+                <h2 className="mt-1 text-xl font-bold">Stay connected</h2>
+              </div>
+              <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.7)]" />
             </div>
 
-            {/* Username */}
-
-            <div
-              className="
-                flex
-                flex-col
-                gap-2
-                py-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-                sm:gap-4
-              "
-            >
-              <span className="text-sm text-white/35">
-                Username
-              </span>
-
-              <span className="text-sm text-white/60">
-                @{user.username}
-              </span>
+            <div className="mt-6 space-y-2">
+              <QuickLink href="/profile/notifications" icon="♢" title="Notifications" description={unreadNotifications ? `${unreadNotifications} unread` : "You're all caught up"} badge={unreadNotifications} />
+              <QuickLink href="/messages" icon="✉" title="Messages" description={unreadMessages ? `${unreadMessages} unread` : "No unread messages"} badge={unreadMessages} />
+              <QuickLink href="/profile/avatar" icon="◌" title="Profile photo" description={user.image ? "Photo is set" : "Add your profile photo"} />
             </div>
+          </section>
+        </div>
 
-            {/* Profile type */}
-
-            <div
-              className="
-                flex
-                flex-col
-                gap-2
-                py-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-                sm:gap-4
-              "
-            >
-              <span className="text-sm text-white/35">
-                Profile type
-              </span>
-
-              <span className="text-sm text-white/60">
-                {roleLabel}
-              </span>
+        <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">Your garage</p>
+              <h2 className="mt-1 text-xl font-bold">Vehicles on Revvam</h2>
+              <p className="mt-1 text-sm text-white/30">Manage the vehicles people can explore on your public profile.</p>
             </div>
-
-            {/* Vehicles */}
-
-            <div
-              className="
-                flex
-                flex-col
-                gap-2
-                py-4
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-                sm:gap-4
-              "
-            >
-              <span className="text-sm text-white/35">
-                Garage
-              </span>
-
-              <span className="text-sm text-white/60">
-                {vehicleCount}{" "}
-                {vehicleCount === 1
-                  ? "vehicle"
-                  : "vehicles"}
-              </span>
-            </div>
+            <Link href="/profile/driver" className="inline-flex w-fit rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-white/55 transition hover:border-red-500/20 hover:text-white">Manage garage</Link>
           </div>
-        </GlassCard>
+
+          {vehicles.length > 0 ? (
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              {vehicles.map((vehicle) => {
+                const image = vehicle.image || vehicle.photos[0]?.url;
+                return (
+                  <Link key={vehicle.id} href={`/profile/cars/${vehicle.id}`} className="group flex min-w-0 items-center gap-4 rounded-2xl border border-white/[0.07] bg-black/20 p-3.5 transition hover:-translate-y-0.5 hover:border-red-500/20 hover:bg-red-500/[0.035]">
+                    <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.025]">
+                      {image ? <img src={image} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-2xl opacity-30">🚗</div>}
+                      {vehicle.isFeatured && <span className="absolute bottom-1 left-1 rounded bg-red-600/85 px-1.5 py-0.5 text-[7px] font-bold uppercase">Featured</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-sm font-semibold text-white/85 group-hover:text-white">{vehicle.make} {vehicle.model}</h3>
+                      <p className="mt-1 text-xs text-white/25">{vehicle.year ?? "Year unknown"} · {vehicle.type ?? "Vehicle"}</p>
+                    </div>
+                    <span className="text-white/20 transition group-hover:text-red-300">→</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-dashed border-white/[0.09] px-6 py-10 text-center text-sm text-white/30">No vehicles yet.</div>
+          )}
+        </section>
+
+        <section className="mt-6 grid gap-6 lg:grid-cols-2">
+          <SocialList
+            id="followers"
+            title="Followers"
+            subtitle="People following you"
+            count={followers.length}
+          >
+            {followers.length > 0 ? (
+              followers.map((item) => (
+                <PersonRow key={item.id} image={item.follower.image} name={item.follower.name} username={item.follower.username} role={item.follower.role} action={<FollowBackButton username={item.follower.username} following={followedBackIds.has(item.follower.id)} />} />
+              ))
+            ) : (
+              <EmptySocial text="No one is following you yet." />
+            )}
+          </SocialList>
+
+          <SocialList
+            id="following"
+            title="Following"
+            subtitle="People you follow"
+            count={following.length}
+          >
+            {following.length > 0 ? (
+              following.map((item) => (
+                <PersonRow key={item.id} image={item.following.image} name={item.following.name} username={item.following.username} role={item.following.role} />
+              ))
+            ) : (
+              <EmptySocial text="You are not following anyone yet." />
+            )}
+          </SocialList>
+        </section>
+
+        <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.02] p-5 sm:p-7">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">Account</p>
+              <h2 className="mt-1 text-lg font-semibold">{user.email}</h2>
+              <p className="mt-1 text-sm text-white/25">@{user.username} · {roleLabel}</p>
+            </div>
+            <Link href="/profile/edit" className="inline-flex w-fit rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-white/50 hover:border-red-500/20 hover:text-white">Account settings</Link>
+          </div>
+        </section>
 
         <MobileProfileLogout />
       </div>
@@ -1214,4 +363,139 @@ export default async function ProfilePage() {
       <MobileNav />
     </main>
   );
+}
+
+function HeaderAction({
+  href,
+  label,
+  icon,
+  count,
+  compact = false,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  count: number;
+  compact?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className={`relative inline-flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/55 transition hover:border-red-500/25 hover:bg-red-500/[0.06] hover:text-white ${compact ? "h-10 w-10" : "h-10 min-w-10 px-3"}`}
+    >
+      <span className={compact ? "text-base" : "text-sm"}>{icon}</span>
+      {!compact && <span className="ml-2 text-[10px] font-semibold uppercase tracking-[0.08em]">{label}</span>}
+      {count > 0 && <span className="absolute -right-1.5 -top-1.5 flex min-w-4 items-center justify-center rounded-full border border-black bg-red-600 px-1 text-[8px] font-black text-white">{count > 99 ? "99+" : count}</span>}
+    </Link>
+  );
+}
+
+function Avatar({
+  image,
+  fallback,
+  size,
+}: {
+  image: string | null;
+  fallback: string;
+  size: "sm" | "xl";
+}) {
+  const classes = size === "sm" ? "h-8 w-8 rounded-full text-xs" : "h-24 w-24 rounded-[1.7rem] text-3xl sm:h-28 sm:w-28";
+  return image ? (
+    <img src={image} alt="Profile" className={`${classes} shrink-0 border border-white/[0.13] bg-black object-cover shadow-2xl`} />
+  ) : (
+    <div className={`${classes} flex shrink-0 items-center justify-center border border-red-500/20 bg-red-600/[0.12] font-black text-red-200 shadow-[0_0_50px_rgba(239,68,68,0.10)]`}>{fallback}</div>
+  );
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.07] bg-black/20 px-4 py-4 text-center">
+      <p className="text-xl font-black">{value}</p>
+      <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/25">{label}</p>
+    </div>
+  );
+}
+
+function QuickLink({
+  href,
+  icon,
+  title,
+  description,
+  badge = 0,
+}: {
+  href: string;
+  icon: string;
+  title: string;
+  description: string;
+  badge?: number;
+}) {
+  return (
+    <Link href={href} className="group flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-3.5 transition hover:border-red-500/20 hover:bg-red-500/[0.035]">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-white/55 group-hover:bg-red-500/[0.08] group-hover:text-red-200">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-white/80 group-hover:text-white">{title}</span>
+        <span className="mt-0.5 block truncate text-xs text-white/25">{description}</span>
+      </span>
+      {badge > 0 ? <span className="rounded-full bg-red-600/15 px-2 py-1 text-[9px] font-bold text-red-300">{badge}</span> : <span className="text-white/20 group-hover:text-red-300">→</span>}
+    </Link>
+  );
+}
+
+function SocialList({
+  id,
+  title,
+  subtitle,
+  count,
+  children,
+}: {
+  id: string;
+  title: string;
+  subtitle: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} className="scroll-mt-28 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/65">Social circle</p>
+          <h2 className="mt-1 text-xl font-bold">{title}</h2>
+          <p className="mt-1 text-sm text-white/25">{subtitle}</p>
+        </div>
+        <span className="rounded-full border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 text-[10px] font-bold text-white/35">{count}</span>
+      </div>
+      <div className="mt-5 space-y-2">{children}</div>
+    </section>
+  );
+}
+
+function PersonRow({
+  image,
+  name,
+  username,
+  role,
+  action,
+}: {
+  image: string | null;
+  name: string;
+  username: string;
+  role: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-3">
+      {image ? <img src={image} alt={name} className="h-11 w-11 shrink-0 rounded-full border border-white/[0.10] bg-black object-cover" /> : <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-red-500/15 bg-red-500/[0.08] text-sm font-bold text-red-200">{name.charAt(0).toUpperCase()}</div>}
+      <Link href={`/users/${encodeURIComponent(username)}`} className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-white/80 hover:text-white">{name}</span>
+        <span className="mt-0.5 block truncate text-xs text-white/25">@{username} · {roleLabels[role] ?? "Revvam Member"}</span>
+      </Link>
+      {action}
+    </div>
+  );
+}
+
+function EmptySocial({ text }: { text: string }) {
+  return <div className="rounded-2xl border border-dashed border-white/[0.08] px-5 py-8 text-center text-sm text-white/25">{text}</div>;
 }

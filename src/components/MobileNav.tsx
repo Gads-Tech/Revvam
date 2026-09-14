@@ -52,7 +52,6 @@ export default function MobileNav() {
 
   return createPortal(
     <>
-      {/* One persistent handle: it stays clickable when the nav is hidden. */}
       <button
         type="button"
         onClick={toggleMobileNav}
@@ -63,30 +62,29 @@ export default function MobileNav() {
             ? "bottom-[max(72px,calc(72px+env(safe-area-inset-bottom)))]"
             : "bottom-[max(12px,env(safe-area-inset-bottom))]"
         }`}
-        style={{
-          pointerEvents: "auto",
-          touchAction: "manipulation",
-          zIndex: 2147483647,
-          WebkitTapHighlightColor: "transparent",
-        }}
+        style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647, WebkitTapHighlightColor: "transparent" }}
       >
         <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-white/65" />
       </button>
 
       <div
         className={`mobile-nav-root fixed inset-x-0 bottom-0 z-[2147483646] px-3 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-300 ease-out ${mobileNavOpen ? "translate-y-0" : "translate-y-full"}`}
-        style={{
-          pointerEvents: mobileNavOpen ? "auto" : "none",
-          touchAction: "manipulation",
-          isolation: "isolate",
-          zIndex: 2147483646,
-        }}
+        style={{ pointerEvents: mobileNavOpen ? "auto" : "none", touchAction: "manipulation", isolation: "isolate", zIndex: 2147483646 }}
       >
         <div className="relative mx-auto w-full max-w-[520px]">
           {profileMenuOpen && mobileNavOpen && (
-            <div className="absolute bottom-[74px] right-0 z-[2147483647] w-[190px] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#080808] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]" style={{ pointerEvents: "auto", touchAction: "manipulation" }}>
+            <div className="absolute bottom-[74px] right-0 z-[2147483647] w-[210px] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#080808] p-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.9)]" style={{ pointerEvents: "auto", touchAction: "manipulation" }}>
               <Link href="/profile" onClick={() => setProfileMenuOpen(false)} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/80 transition-colors active:bg-white/[0.08] active:text-white" style={{ touchAction: "manipulation" }}>
                 <span className="mr-3 text-white/50">◉</span>View profile
+              </Link>
+              <Link href="/profile/notifications" onClick={() => setProfileMenuOpen(false)} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/80 transition-colors active:bg-white/[0.08] active:text-white" style={{ touchAction: "manipulation" }}>
+                <span className="mr-3 text-red-400/80">●</span>Notifications
+              </Link>
+              <Link href="/messages" onClick={() => setProfileMenuOpen(false)} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/80 transition-colors active:bg-white/[0.08] active:text-white" style={{ touchAction: "manipulation" }}>
+                <span className="mr-3 text-white/50">✉</span>Messages
+              </Link>
+              <Link href="/profile/avatar" onClick={() => setProfileMenuOpen(false)} className="flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-white/80 transition-colors active:bg-white/[0.08] active:text-white" style={{ touchAction: "manipulation" }}>
+                <span className="mr-3 text-white/50">◌</span>Profile photo
               </Link>
               <div className="my-1 border-t border-white/[0.08]" />
               <button type="button" onClick={handleLogout} disabled={loggingOut} className="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-semibold text-red-300 transition-colors active:bg-red-500/[0.12] active:text-red-200 disabled:opacity-50" style={{ touchAction: "manipulation" }}>
@@ -108,9 +106,8 @@ export default function MobileNav() {
           </nav>
         </div>
       </div>
-    </>,
-    document.body
-  );
+    </>
+  , document.body);
 }
 
 function MobileNavItem({ icon, label, href, onClick, active = false }: { icon: string; label: string; href?: string; onClick?: () => void; active?: boolean }) {
@@ -121,8 +118,6 @@ function MobileNavItem({ icon, label, href, onClick, active = false }: { icon: s
       <span className="mt-1 w-full truncate text-center text-[8px] font-medium leading-none tracking-tight sm:text-[9px]">{label}</span>
     </>
   );
-  if (onClick) {
-    return <button type="button" onClick={onClick} className={className} style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>{content}</button>;
-  }
+  if (onClick) return <button type="button" onClick={onClick} className={className} style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>{content}</button>;
   return <Link href={href ?? "#"} className={className} style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>{content}</Link>;
 }

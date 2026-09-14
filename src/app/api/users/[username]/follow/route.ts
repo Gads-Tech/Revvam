@@ -25,7 +25,7 @@ export async function POST(
 
     const target = await prisma.user.findFirst({
       where: { username: { equals: cleanUsername, mode: "insensitive" } },
-      select: { id: true, username: true },
+      select: { id: true, username: true, name: true },
     });
 
     if (!target) {
@@ -53,13 +53,33 @@ export async function POST(
 
     if (existing) {
       await prisma.follow.delete({ where: { id: existing.id } });
-    } else {
-      await prisma.follow.create({
-        data: {
-          followerId: currentUser.id,
-          followingId: target.id,
+      await prisma.notification.deleteMany({
+        where: {
+          userId: target.id,
+          actorId: currentUser.id,
+          type: "FOLLOW",
+          readAt: null,
         },
       });
+    } else {
+      await prisma.$transaction([
+        prisma.follow.create({
+          data: {
+            followerId: currentUser.id,
+            followingId: target.id,
+          },
+        }),
+        prisma.notification.create({
+          data: {
+            userId: target.id,
+            actorId: currentUser.id,
+            type: "FOLLOW",
+            title: "New follower",
+            body: `@${currentUser.username} followed you.`,
+            href: `/users/${encodeURIComponent(currentUser.username)}`,
+          },
+        }),
+      ]);
     }
 
     const followers = await prisma.follow.count({

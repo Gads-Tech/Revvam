@@ -14,7 +14,7 @@ export async function GET() {
       );
     }
 
-    const [followers, following, postCount, unreadNotifications] =
+    const [followers, following, followerCount, followingCount, postCount, unreadNotifications] =
       await Promise.all([
         prisma.follow.findMany({
           where: { followingId: user.id },
@@ -50,6 +50,8 @@ export async function GET() {
             },
           },
         }),
+        prisma.follow.count({ where: { followingId: user.id } }),
+        prisma.follow.count({ where: { followerId: user.id } }),
         prisma.post.count({ where: { authorId: user.id } }),
         prisma.notification.count({
           where: { userId: user.id, readAt: null },
@@ -75,8 +77,8 @@ export async function GET() {
       success: true,
       counts: {
         posts: postCount,
-        followers: followers.length,
-        following: following.length,
+        followers: followerCount,
+        following: followingCount,
       },
       unreadNotifications,
       followers: followers.map((item) => ({

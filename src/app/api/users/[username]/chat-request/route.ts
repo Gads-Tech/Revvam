@@ -19,12 +19,12 @@ export async function GET(request: Request, context: { params: Promise<{ usernam
   const conversation = await prisma.conversation.findUnique({ where: { directKey: directKey(currentUser.id, target.id) }, select: { id: true } });
   if (conversation) return NextResponse.json({ success: true, status: "ACCEPTED", conversationId: conversation.id });
 
-  const sent = await prisma.chatRequest.findUnique({ where: { senderId_recipientId: { senderId: currentUser.id, recipientId: target.id } }, select: { id: true, status: true } });
-  if (sent?.status === "PENDING") return NextResponse.json({ success: true, status: "PENDING_SENT", requestId: sent.id });
+  const sent = await prisma.chatRequest.findUnique({ where: { senderId_recipientId: { senderId: currentUser.id, recipientId: target.id } }, select: { id: true, status: true, message: true } });
+  if (sent?.status === "PENDING") return NextResponse.json({ success: true, status: "PENDING_SENT", requestId: sent.id, message: sent.message });
   if (sent?.status === "DECLINED") return NextResponse.json({ success: true, status: "DECLINED", requestId: sent.id });
 
-  const received = await prisma.chatRequest.findUnique({ where: { senderId_recipientId: { senderId: target.id, recipientId: currentUser.id } }, select: { id: true, status: true } });
-  if (received?.status === "PENDING") return NextResponse.json({ success: true, status: "PENDING_RECEIVED", requestId: received.id });
+  const received = await prisma.chatRequest.findUnique({ where: { senderId_recipientId: { senderId: target.id, recipientId: currentUser.id } }, select: { id: true, status: true, message: true } });
+  if (received?.status === "PENDING") return NextResponse.json({ success: true, status: "PENDING_RECEIVED", requestId: received.id, message: received.message });
   if (received?.status === "DECLINED") return NextResponse.json({ success: true, status: "DECLINED_BY_TARGET", requestId: received.id });
 
   return NextResponse.json({ success: true, status: "NONE" });
@@ -39,6 +39,10 @@ export async function POST(request: Request, context: { params: Promise<{ userna
   if (!target) return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
   if (target.id === currentUser.id) return NextResponse.json({ success: false, error: "You cannot message yourself." }, { status: 400 });
 
+  const body = await request.json().catch(() => ({}));
+  const message = typeof body?.message === "string" ? body.message.trim() : "";
+  if (message.length > 1000) return NextResponse.json({ success: false, error: "Chat request message must be 1000 characters or less." }, { status: 400 });
+
   const key = directKey(currentUser.id, target.id);
   const conversation = await prisma.conversation.findUnique({ where: { directKey: key }, select: { id: true } });
   if (conversation) return NextResponse.json({ success: true, status: "ACCEPTED", conversationId: conversation.id });
@@ -50,8 +54,8 @@ export async function POST(request: Request, context: { params: Promise<{ userna
 
   const existing = await prisma.chatRequest.findUnique({ where: { senderId_recipientId: { senderId: currentUser.id, recipientId: target.id } } });
   const chatRequest = existing
-    ? await prisma.chatRequest.update({ where: { id: existing.id }, data: { status: "PENDING" } })
-    : await prisma.chatRequest.create({ data: { senderId: currentUser.id, recipientId: target.id } });
+    ? await prisma.chatRequest.update({ where: { id: existing.id }, data: { status: "PENDING", message: message || null } })
+    : await prisma.chatRequest.create({ data: { senderId: currentUser.id, recipientId: target.id, message: message || null } });
 
   await prisma.notification.upsert({
     where: { chatRequestId: chatRequest.id },
@@ -60,7 +64,7 @@ export async function POST(request: Request, context: { params: Promise<{ userna
       actorId: currentUser.id,
       type: "CHAT_REQUEST",
       title: "New chat request",
-      body: `${currentUser.name} wants to chat with you.`,
+      body: message ? `${currentUser.name}: ${message}` : `${currentUser.name} wants to chat with you.`,
       href: "/profile/notifications",
       chatRequestId: chatRequest.id,
     },
@@ -69,11 +73,11 @@ export async function POST(request: Request, context: { params: Promise<{ userna
       actorId: currentUser.id,
       type: "CHAT_REQUEST",
       title: "New chat request",
-      body: `${currentUser.name} wants to chat with you.`,
+      body: message ? `${currentUser.name}: ${message}` : `${currentUser.name} wants to chat with you.`,
       href: "/profile/notifications",
       readAt: null,
     },
   });
 
-  return NextResponse.json({ success: true, status: "PENDING_SENT", requestId: chatRequest.id });
+  return NextResponse.json({ success: true, status: "PENDING_SENT", requestId: chatRequest.id, message: chatRequest.message });
 }

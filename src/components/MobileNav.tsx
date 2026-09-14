@@ -48,7 +48,7 @@ export default function MobileNav() {
 
   return createPortal(
     <>
-      <div className="mobile-nav-root fixed right-3 top-3 z-[2147483647] md:hidden" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
+      <div className="pointer-events-none fixed left-0 top-0 h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
         <LiveSocialActions compact />
       </div>
 

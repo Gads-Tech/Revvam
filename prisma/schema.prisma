@@ -7,27 +7,31 @@ datasource db {
 }
 
 model User {
-  id               String                @id @default(cuid())
-  name             String
-  username         String                @unique
-  email            String                @unique
-  passwordHash     String?
-  role             UserRole              @default(USER)
-  image            String?
-  bio              String?
-  location         String?
-  emailVerified    DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
-  onboardingType   OnboardingType?
-  driverProfile    DriverProfile?
-  mentionsMade     ModificationMention[] @relation("MentionedBy")
-  mentionsReceived ModificationMention[] @relation("MentionedUser")
-  sessions         Session[]
-  vehicles         Vehicle[]
-  posts            Post[]
-  following        Follow[]              @relation("Following")
-  followers        Follow[]              @relation("Followers")
+  id                     String                @id @default(cuid())
+  name                   String
+  username               String                @unique
+  email                  String                @unique
+  passwordHash           String?
+  role                   UserRole              @default(USER)
+  image                  String?
+  bio                    String?
+  location               String?
+  emailVerified          DateTime?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  onboardingType         OnboardingType?
+  driverProfile          DriverProfile?
+  mentionsMade           ModificationMention[] @relation("MentionedBy")
+  mentionsReceived       ModificationMention[] @relation("MentionedUser")
+  sessions               Session[]
+  vehicles               Vehicle[]
+  posts                  Post[]
+  following              Follow[]              @relation("Following")
+  followers              Follow[]              @relation("Followers")
+  notificationsReceived  Notification[]        @relation("NotificationRecipient")
+  notificationsSent      Notification[]        @relation("NotificationActor")
+  conversationMemberships ConversationMember[]
+  messagesSent           Message[]
 }
 
 model DriverProfile {
@@ -139,6 +143,60 @@ model Follow {
   @@index([followerId])
 }
 
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  actorId   String
+  type      NotificationType
+  title     String
+  body      String
+  href      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor     User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model Conversation {
+  id        String              @id @default(cuid())
+  directKey String              @unique
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  members   ConversationMember[]
+  messages  Message[]
+
+  @@index([updatedAt])
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@index([senderId, createdAt])
+}
+
 model Session {
   id        String   @id @default(cuid())
   token     String   @unique
@@ -149,6 +207,11 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+enum NotificationType {
+  FOLLOW
+  MESSAGE
 }
 
 enum ModificationCategory {

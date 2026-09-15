@@ -6,7 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 
 type User = { id: string; name: string; username: string; image: string | null; role?: string | null; onboardingType?: string | null };
-type Message = { id: string; senderId: string; content: string; createdAt: string; sender: User; opened?: boolean };
+type Reply = { id: string; content: string; senderId: string; sender: { id: string; name: string; username: string } };
+type Message = { id: string; senderId: string; content: string; createdAt: string; sender: User; opened?: boolean; replyTo?: Reply | null };
 type ChatStatus = "NONE" | "PENDING_SENT" | "PENDING_RECEIVED" | "DECLINED" | "DECLINED_BY_TARGET" | "ACCEPTED" | "SELF";
 
 export default function IndividualMessagePage() {
@@ -26,8 +27,13 @@ export default function IndividualMessagePage() {
   const [requestBusy, setRequestBusy] = useState(false);
   const [receiptVisible, setReceiptVisible] = useState(true);
   const [error, setError] = useState("");
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [swipingId, setSwipingId] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const initialScrollRef = useRef(true);
+  const stickToBottomRef = useRef(true);
+  const touchStartXRef = useRef(0);
   const isComposer = username === "new";
 
   async function loadTarget() {
@@ -61,24 +67,32 @@ export default function IndividualMessagePage() {
   }
 
   useEffect(() => { loadTarget(); }, [username]);
+
   useEffect(() => {
     if (!conversationId) return;
     initialScrollRef.current = true;
+    stickToBottomRef.current = true;
     loadConversation(conversationId);
     const timer = window.setInterval(() => loadConversation(conversationId, true), 1500);
     return () => window.clearInterval(timer);
   }, [conversationId]);
 
-  // Put the conversation at the newest message once when it opens.
-  // After that, polling must never take control of the user's scroll position.
+  // Opening a conversation always starts at the newest message. Once the user scrolls,
+  // polling never steals control from them. If they are at the bottom, new messages keep it there.
   useEffect(() => {
-    if (!initialScrollRef.current) return;
     const container = messagesContainerRef.current;
     if (!container) return;
-
-    container.scrollTop = container.scrollHeight;
-    initialScrollRef.current = false;
+    if (initialScrollRef.current || stickToBottomRef.current) {
+      requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+      initialScrollRef.current = false;
+    }
   }, [messages]);
+
+  useEffect(() => {
+    if (!conversationId || chatStatus !== "ACCEPTED") return;
+    const focusTimer = window.setTimeout(() => composerRef.current?.focus(), 100);
+    return () => window.clearTimeout(focusTimer);
+  }, [conversationId, chatStatus]);
 
   useEffect(() => {
     if (!isComposer || search.trim().length < 1) { setResults([]); return; }
@@ -110,14 +124,46 @@ export default function IndividualMessagePage() {
   async function sendMessage() {
     const clean = content.trim();
     if (!conversationId || !clean || sending) return;
+    const replyId = replyTo?.id ?? null;
     setSending(true); setError("");
+    // Sending is an explicit bottom-following action: new message should always be visible.
+    stickToBottomRef.current = true;
     try {
-      const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: clean }) });
+      const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: clean, replyToId: replyId }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to send message.");
-      setContent(""); await loadConversation(conversationId, true);
+      setContent(""); setReplyTo(null);
+      await loadConversation(conversationId, true);
+      requestAnimationFrame(() => {
+        const container = messagesContainerRef.current;
+        if (container) container.scrollTop = container.scrollHeight;
+        composerRef.current?.focus();
+      });
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to send message."); }
     finally { setSending(false); }
+  }
+
+  function handleMessageScroll() {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
+    stickToBottomRef.current = distance < 48;
+  }
+
+  function startSwipe(event: React.TouchEvent, messageId: string) {
+    touchStartXRef.current = event.touches[0]?.clientX ?? 0;
+    setSwipingId(messageId);
+  }
+
+  function finishSwipe(event: React.TouchEvent, message: Message) {
+    const endX = event.changedTouches[0]?.clientX ?? touchStartXRef.current;
+    const delta = touchStartXRef.current - endX;
+    setSwipingId(null);
+    touchStartXRef.current = 0;
+    if (delta >= 65) {
+      setReplyTo(message);
+      requestAnimationFrame(() => composerRef.current?.focus());
+    }
   }
 
   if (isComposer) return (
@@ -137,10 +183,39 @@ export default function IndividualMessagePage() {
         {error && <div className="mx-4 mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300 sm:mx-6">{error}</div>}
 
         {chatStatus !== "ACCEPTED" ? <div className="flex flex-1 items-center justify-center p-5 sm:p-10"><div className="w-full max-w-xl rounded-[2rem] border border-red-400/15 bg-red-500/[0.035] p-6 sm:p-8"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/70">Private chat request</p><h1 className="mt-2 text-2xl font-black">Say hello to {title}</h1><p className="mt-3 text-sm leading-6 text-white/35">Send a short message with your request. They must accept before the private chat opens.</p>{chatStatus === "PENDING_SENT" ? <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5"><p className="text-sm font-semibold text-white/70">Request sent</p><p className="mt-2 text-sm text-white/30">Waiting for @{user?.username} to accept.</p></div> : chatStatus === "PENDING_RECEIVED" ? <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5"><p className="text-sm font-semibold text-white/70">They already sent you a request.</p><Link href="/profile/notifications" className="mt-4 inline-flex rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-200">Review request</Link></div> : <><textarea value={requestMessage} onChange={(event) => setRequestMessage(event.target.value)} maxLength={1000} rows={5} placeholder="Write a message with your request..." className="mt-7 w-full resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/20 focus:border-red-400/30" /><div className="mt-3 flex justify-end"><button type="button" onClick={sendRequest} disabled={requestBusy || !requestMessage.trim()} className="rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-2.5 text-xs font-semibold text-red-200 disabled:opacity-40">{requestBusy ? "Sending..." : "Send chat request"}</button></div></>}</div></div> : <>
-          <div ref={messagesContainerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-7">
-            {messages.length === 0 ? <p className="py-16 text-center text-sm text-white/25">No messages yet. Say hello.</p> : messages.map((message) => { const mine = message.sender.id !== user?.id; const opened = mine && message.opened && receiptVisible; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? "rounded-br-md bg-red-600/20 text-white" : "rounded-bl-md bg-white/[0.06] text-white/75"}`}><div>{message.content}</div>{mine && <div className={`mt-1 text-right text-[9px] font-bold uppercase tracking-[0.14em] ${opened ? "text-red-300/70" : "text-white/25"}`}>{opened ? "Opened" : "Sent"}</div>}</div></div>; })}
+          <div ref={messagesContainerRef} onScroll={handleMessageScroll} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-7">
+            {messages.length === 0 ? <p className="py-16 text-center text-sm text-white/25">No messages yet. Say hello.</p> : messages.map((message) => {
+              const mine = message.sender.id !== user?.id;
+              const opened = mine && message.opened && receiptVisible;
+              const swiping = swipingId === message.id;
+              return (
+                <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className="relative max-w-[88%] touch-pan-y"
+                    onTouchStart={(event) => startSwipe(event, message.id)}
+                    onTouchEnd={(event) => finishSwipe(event, message)}
+                    style={{ transform: swiping ? "translateX(-8px)" : undefined, transition: "transform 120ms ease" }}
+                  >
+                    <div className="pointer-events-none absolute -left-10 top-1/2 -translate-y-1/2 text-red-400/70 opacity-0 transition-opacity group-active:opacity-100">↩</div>
+                    <div className={`rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? "rounded-br-md bg-red-600/20 text-white" : "rounded-bl-md bg-white/[0.06] text-white/75"}`}>
+                      {message.replyTo && <div className="mb-2 rounded-xl border-l-2 border-red-400/50 bg-black/20 px-3 py-2 text-xs text-white/40"><p className="font-semibold text-red-300/70">Replying to @{message.replyTo.sender.username}</p><p className="mt-0.5 truncate">{message.replyTo.content}</p></div>}
+                      <div>{message.content}</div>
+                      {mine && <div className={`mt-1 text-right text-[9px] font-bold uppercase tracking-[0.14em] ${opened ? "text-red-300/70" : "text-white/25"}`}>{opened ? "Opened" : "Sent"}</div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          <div className="shrink-0 border-t border-white/[0.07] bg-[#080808] p-4 sm:p-5"><div className="flex gap-2"><textarea value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." className="min-h-11 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" /><button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="shrink-0 rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button></div></div>
+
+          <div className="shrink-0 border-t border-white/[0.07] bg-[#080808] p-3 sm:p-5">
+            {replyTo && <div className="mb-2 flex items-center gap-3 rounded-2xl border border-red-400/15 bg-red-500/[0.045] px-3 py-2.5"><span className="h-8 w-0.5 rounded-full bg-red-400" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-red-300/75">Replying to @{replyTo.sender.username}</p><p className="truncate text-xs text-white/35">{replyTo.content}</p></div><button type="button" onClick={() => { setReplyTo(null); composerRef.current?.focus(); }} className="h-8 w-8 shrink-0 rounded-lg text-white/35 hover:bg-white/[0.05] hover:text-white">×</button></div>}
+            <div className="flex items-end gap-2">
+              <textarea ref={composerRef} value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." aria-label="Write a message" className="min-h-11 max-h-32 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" />
+              <button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="min-h-11 shrink-0 rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button>
+            </div>
+            <p className="mt-1.5 px-1 text-[9px] text-white/15">Swipe any message left to reply · Enter to send · Shift + Enter for a new line</p>
+          </div>
         </>}
       </div>
       <MobileNav />

@@ -156,16 +156,11 @@ export default async function ProfilePage() {
       </header>
 
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-32 pt-6 sm:px-6 sm:pt-10 lg:px-8">
-        <div className="mb-6 flex items-center justify-between gap-4 md:mb-8">
+        <div className="mb-6 flex items-center justify-start gap-4 md:mb-8">
           <Link href="/home" className="inline-flex items-center gap-2 text-sm text-white/35 transition hover:text-white">
             <span>←</span>
             <span>Discover</span>
           </Link>
-
-          <div className="flex items-center gap-2 md:hidden">
-            <HeaderAction href="/profile/notifications" label="Notifications" icon="♢" count={unreadNotifications} compact />
-            <HeaderAction href="/messages" label="Messages" icon="✉" count={unreadMessages} compact />
-          </div>
         </div>
 
         <section className="relative overflow-hidden rounded-[2rem] border border-white/[0.09] bg-white/[0.025] shadow-[0_25px_80px_rgba(0,0,0,0.35)] backdrop-blur-2xl">
@@ -223,7 +218,7 @@ export default async function ProfilePage() {
           </div>
         </section>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.18fr_0.82fr]">
+        <div className="mt-6">
           <section className="overflow-hidden rounded-[2rem] border border-red-500/15 bg-gradient-to-br from-red-600/[0.09] via-white/[0.025] to-transparent">
             <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-5 sm:px-7">
               <div>
@@ -261,22 +256,6 @@ export default async function ProfilePage() {
                 <Link href="/profile/cars/add" className="mt-5 inline-flex rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-100 hover:bg-red-500/15">+ Add vehicle</Link>
               </div>
             )}
-          </section>
-
-          <section className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">Account center</p>
-                <h2 className="mt-1 text-xl font-bold">Stay connected</h2>
-              </div>
-              <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_14px_rgba(239,68,68,0.7)]" />
-            </div>
-
-            <div className="mt-6 space-y-2">
-              <QuickLink href="/profile/notifications" icon="♢" title="Notifications" description={unreadNotifications ? `${unreadNotifications} unread` : "You're all caught up"} badge={unreadNotifications} />
-              <QuickLink href="/messages" icon="✉" title="Messages" description={unreadMessages ? `${unreadMessages} unread` : "No unread messages"} badge={unreadMessages} />
-              <QuickLink href="/profile/avatar" icon="◌" title="Profile photo" description={user.image ? "Photo is set" : "Add your profile photo"} />
-            </div>
           </section>
         </div>
 
@@ -415,31 +394,6 @@ function Stat({ value, label }: { value: number; label: string }) {
       <p className="text-xl font-black">{value}</p>
       <p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/25">{label}</p>
     </div>
-  );
-}
-
-function QuickLink({
-  href,
-  icon,
-  title,
-  description,
-  badge = 0,
-}: {
-  href: string;
-  icon: string;
-  title: string;
-  description: string;
-  badge?: number;
-}) {
-  return (
-    <Link href={href} className="group flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-black/20 p-3.5 transition hover:border-red-500/20 hover:bg-red-500/[0.035]">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.04] text-white/55 group-hover:bg-red-500/[0.08] group-hover:text-red-200">{icon}</span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-white/80 group-hover:text-white">{title}</span>
-        <span className="mt-0.5 block truncate text-xs text-white/25">{description}</span>
-      </span>
-      {badge > 0 ? <span className="rounded-full bg-red-600/15 px-2 py-1 text-[9px] font-bold text-red-300">{badge}</span> : <span className="text-white/20 group-hover:text-red-300">→</span>}
-    </Link>
   );
 }
 

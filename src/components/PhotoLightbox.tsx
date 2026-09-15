@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type LightboxImage = {
@@ -17,6 +17,7 @@ type PhotoLightboxProps = {
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
+const SWIPE_THRESHOLD = 50;
 
 export default function PhotoLightbox({
   images,
@@ -28,6 +29,8 @@ export default function PhotoLightbox({
   const [index, setIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
   const [mounted, setMounted] = useState(false);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const currentImage = images[index] ?? images[0];
 
@@ -36,9 +39,7 @@ export default function PhotoLightbox({
   }, []);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     const scrollY = window.scrollY;
     const body = document.body;
@@ -59,14 +60,10 @@ export default function PhotoLightbox({
       if (event.key === "Escape") {
         setOpen(false);
       } else if (event.key === "ArrowLeft" && images.length > 1) {
-        setIndex((current) =>
-          current === 0 ? images.length - 1 : current - 1
-        );
+        setIndex((current) => (current === 0 ? images.length - 1 : current - 1));
         setZoom(1);
       } else if (event.key === "ArrowRight" && images.length > 1) {
-        setIndex((current) =>
-          current === images.length - 1 ? 0 : current + 1
-        );
+        setIndex((current) => (current === images.length - 1 ? 0 : current + 1));
         setZoom(1);
       }
     }
@@ -85,17 +82,19 @@ export default function PhotoLightbox({
   }, [open, images.length]);
 
   useEffect(() => {
-    if (open) {
-      setZoom(1);
-    }
+    if (open) setZoom(1);
   }, [index, open]);
 
-  if (images.length === 0 || !currentImage) {
-    return null;
-  }
+  useEffect(() => {
+    if (index >= images.length && images.length > 0) {
+      setIndex(images.length - 1);
+    }
+  }, [images.length, index]);
+
+  if (images.length === 0 || !currentImage) return null;
 
   function openViewer() {
-    setIndex(Math.min(initialIndex, images.length - 1));
+    setIndex(Math.min(Math.max(initialIndex, 0), images.length - 1));
     setZoom(1);
     setOpen(true);
   }
@@ -105,21 +104,36 @@ export default function PhotoLightbox({
   }
 
   function showPrevious() {
-    setIndex((current) =>
-      current === 0 ? images.length - 1 : current - 1
-    );
+    setIndex((current) => (current === 0 ? images.length - 1 : current - 1));
   }
 
   function showNext() {
-    setIndex((current) =>
-      current === images.length - 1 ? 0 : current + 1
-    );
+    setIndex((current) => (current === images.length - 1 ? 0 : current + 1));
   }
 
   function changeZoom(amount: number) {
-    setZoom((current) =>
-      Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current + amount))
-    );
+    setZoom((current) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current + amount)));
+  }
+
+  function handleTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    if (zoom > MIN_ZOOM || images.length < 2) return;
+    const touch = event.changedTouches[0];
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+  }
+
+  function handleTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    if (zoom > MIN_ZOOM || images.length < 2 || touchStartX.current === null || touchStartY.current === null) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX.current;
+    const deltaY = touch.clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    if (deltaX < 0) showNext();
+    else showPrevious();
   }
 
   const viewer = open && mounted
@@ -136,9 +150,7 @@ export default function PhotoLightbox({
             paddingLeft: "max(0.75rem, env(safe-area-inset-left))",
           }}
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closeViewer();
-            }
+            if (event.target === event.currentTarget) closeViewer();
           }}
           onWheel={(event) => {
             event.preventDefault();
@@ -164,9 +176,7 @@ export default function PhotoLightbox({
             >
               −
             </button>
-            <span className="min-w-12 text-center text-[10px] font-semibold text-white/55">
-              {Math.round(zoom * 100)}%
-            </span>
+            <span className="min-w-12 text-center text-[10px] font-semibold text-white/55">{Math.round(zoom * 100)}%</span>
             <button
               type="button"
               onClick={() => changeZoom(0.5)}
@@ -210,7 +220,9 @@ export default function PhotoLightbox({
 
           <div
             className="flex h-full w-full min-h-0 min-w-0 items-center justify-center overflow-hidden px-12 py-14 sm:px-16 sm:py-16"
-            style={{ touchAction: "none" }}
+            style={{ touchAction: zoom > MIN_ZOOM ? "none" : "pan-y" }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
           >
             <img
               src={currentImage.url}

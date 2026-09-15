@@ -19,10 +19,33 @@
   }
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  overscroll-behavior-x: none;
+}
+
+/* The site itself must not pinch/zoom on phones. PhotoLightbox remains independently zoomable. */
+@media (max-width: 767px) {
+  html,
+  body {
+    touch-action: pan-x pan-y;
+    overscroll-behavior-x: none;
+  }
+
+  input,
+  textarea,
+  select,
+  button,
+  a {
+    touch-action: manipulation;
+  }
 }
 
 /* Keep mobile navigation visibility independent from Tailwind breakpoints. */

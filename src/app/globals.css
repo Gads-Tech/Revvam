@@ -89,3 +89,23 @@ body {
     background-color: rgba(239, 68, 68, 0.42);
   }
 }
+
+/*
+ * New-message control must stay visible while the user reads older messages.
+ * The button is rendered inside the scroll container, so make it viewport-fixed
+ * rather than letting it travel away with the message list. The existing React
+ * scroll handler still removes it once the user reaches the current messages.
+ */
+.revvam-chat-scroll > button[aria-label^="Jump to "] {
+  position: fixed !important;
+  right: max(1rem, env(safe-area-inset-right)) !important;
+  bottom: max(1.25rem, env(safe-area-inset-bottom)) !important;
+  z-index: 2147483640 !important;
+}
+
+@media (max-width: 767px) {
+  .revvam-chat-scroll > button[aria-label^="Jump to "] {
+    right: max(1rem, env(safe-area-inset-right)) !important;
+    bottom: max(5.75rem, calc(5.75rem + env(safe-area-inset-bottom))) !important;
+  }
+}

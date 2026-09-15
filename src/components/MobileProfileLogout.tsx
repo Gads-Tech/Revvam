@@ -23,7 +23,6 @@ type SocialData = {
     followers: number;
     following: number;
   };
-  unreadNotifications: number;
   followers: Follower[];
   following: Array<{ id: string; user: SocialUser }>;
 };
@@ -153,30 +152,16 @@ export default function MobileProfileLogout() {
   return (
     <section className="mt-5 pb-28" aria-label="Social and account actions">
       <div className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 backdrop-blur-2xl sm:p-7">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-red-400/65">
-              Your social circle
-            </p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight">
-              Followers & following
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-white/30">
-              See who follows you, follow them back, and keep track of your Revvam connections.
-            </p>
-          </div>
-
-          <Link
-            href="/profile/notifications"
-            className="inline-flex shrink-0 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/[0.07] px-4 py-3 text-sm font-semibold text-red-300 transition hover:border-red-500/35 hover:bg-red-500/[0.12]"
-          >
-            Notifications
-            {social?.unreadNotifications ? (
-              <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-[10px] text-white">
-                {social.unreadNotifications}
-              </span>
-            ) : null}
-          </Link>
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-red-400/65">
+            Your social circle
+          </p>
+          <h2 className="mt-2 text-2xl font-black tracking-tight">
+            Followers & following
+          </h2>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/30">
+            See who follows you, follow them back, and keep track of your Revvam connections.
+          </p>
         </div>
 
         {loadingSocial ? (

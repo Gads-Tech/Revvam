@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 
 type User = { id: string; name: string; username: string; image: string | null; role?: string | null; onboardingType?: string | null };
 type Reply = { id: string; content: string; senderId: string; sender: { id: string; name: string; username: string } };
 type Message = { id: string; senderId: string; content: string; createdAt: string; sender: User; opened?: boolean; replyTo?: Reply | null };
 type ChatStatus = "NONE" | "PENDING_SENT" | "PENDING_RECEIVED" | "DECLINED" | "DECLINED_BY_TARGET" | "ACCEPTED" | "SELF";
-
 type ContextMenu = { x: number; y: number; message: Message } | null;
 
 export default function IndividualMessagePage() {
@@ -34,6 +33,7 @@ export default function IndividualMessagePage() {
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
   const initialScrollRef = useRef(true);
   const stickToBottomRef = useRef(true);
   const touchStartXRef = useRef(0);
@@ -83,17 +83,23 @@ export default function IndividualMessagePage() {
   function scrollConversationToBottom(repeat = false) {
     const container = messagesContainerRef.current;
     if (!container) return;
-    const move = () => { container.scrollTop = container.scrollHeight; };
+    const move = () => {
+      if (bottomAnchorRef.current) {
+        bottomAnchorRef.current.scrollIntoView({ block: "end", behavior: "auto" });
+      }
+      container.scrollTop = container.scrollHeight;
+    };
     move();
     requestAnimationFrame(move);
     requestAnimationFrame(() => requestAnimationFrame(move));
     if (repeat) {
       window.setTimeout(move, 50);
       window.setTimeout(move, 150);
+      window.setTimeout(move, 300);
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!messagesContainerRef.current) return;
     if (initialScrollRef.current) {
       scrollConversationToBottom(true);
@@ -105,7 +111,10 @@ export default function IndividualMessagePage() {
 
   useEffect(() => {
     if (!conversationId || chatStatus !== "ACCEPTED") return;
-    const focusTimer = window.setTimeout(() => composerRef.current?.focus(), 150);
+    const focusTimer = window.setTimeout(() => {
+      composerRef.current?.focus();
+      scrollConversationToBottom(true);
+    }, 150);
     return () => window.clearTimeout(focusTimer);
   }, [conversationId, chatStatus]);
 
@@ -175,7 +184,7 @@ export default function IndividualMessagePage() {
       setContent(""); setReplyTo(null);
       await loadConversation(conversationId, true);
       scrollConversationToBottom(true);
-      window.setTimeout(() => composerRef.current?.focus(), 0);
+      window.setTimeout(() => { composerRef.current?.focus(); scrollConversationToBottom(true); }, 0);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to send message."); }
     finally { setSending(false); }
   }
@@ -224,14 +233,8 @@ export default function IndividualMessagePage() {
               const swiping = swipingId === message.id;
               return (
                 <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div
-                    className="group relative max-w-[88%] touch-pan-y"
-                    onTouchStart={(event) => startSwipe(event, message.id)}
-                    onTouchEnd={(event) => finishSwipe(event, message)}
-                    onContextMenu={(event) => handleMessageContextMenu(event, message)}
-                    style={{ transform: swiping ? "translateX(-8px)" : undefined, transition: "transform 120ms ease" }}
-                  >
-                    <button type="button" onClick={() => chooseReply(message)} aria-label={`Reply to message from @${message.sender.username}`} title="Reply" className={`absolute top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#0b0b0b] text-xs text-white/45 shadow-lg transition-opacity hover:border-red-400/30 hover:text-red-300 sm:opacity-0 sm:group-hover:opacity-100 ${mine ? "-left-9" : "-right-9"}`}>↩</button>
+                  <div className="group relative max-w-[88%] touch-pan-y" onTouchStart={(event) => startSwipe(event, message.id)} onTouchEnd={(event) => finishSwipe(event, message)} onContextMenu={(event) => handleMessageContextMenu(event, message)} style={{ transform: swiping ? "translateX(-8px)" : undefined, transition: "transform 120ms ease" }}>
+                    <button type="button" onClick={() => chooseReply(message)} aria-label={`Reply to message from @${message.sender.username}`} title="Reply" className={`absolute top-1/2 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#0b0b0b] text-xs text-white/45 shadow-lg transition-opacity hover:border-red-400/30 hover:text-red-300 sm:flex sm:opacity-0 sm:group-hover:opacity-100 ${mine ? "-left-9" : "-right-9"}`}>↩</button>
                     <div className={`rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? "rounded-br-md bg-red-600/20 text-white" : "rounded-bl-md bg-white/[0.06] text-white/75"}`}>
                       {message.replyTo && <div className="mb-2 rounded-xl border-l-2 border-red-400/50 bg-black/20 px-3 py-2 text-xs text-white/40"><p className="font-semibold text-red-300/70">Replying to @{message.replyTo.sender.username}</p><p className="mt-0.5 truncate">{message.replyTo.content}</p></div>}
                       <div>{message.content}</div>
@@ -241,6 +244,7 @@ export default function IndividualMessagePage() {
                 </div>
               );
             })}
+            <div ref={bottomAnchorRef} aria-hidden="true" className="h-px w-full" />
           </div>
 
           {contextMenu && <div role="menu" className="fixed z-[2147483647] min-w-[150px] rounded-xl border border-white/[0.12] bg-[#0b0b0b] p-1.5 shadow-2xl" style={{ left: contextMenu.x, top: contextMenu.y }} onPointerDown={(event) => event.stopPropagation()}><button type="button" role="menuitem" onClick={() => chooseReply(contextMenu.message)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06] hover:text-white">↩ <span>Reply</span></button></div>}
@@ -251,7 +255,7 @@ export default function IndividualMessagePage() {
               <textarea ref={composerRef} value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." aria-label="Write a message" className="min-h-11 max-h-32 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" />
               <button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="min-h-11 shrink-0 rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button>
             </div>
-            <p className="mt-1.5 px-1 text-[9px] text-white/15">Swipe left or tap ↩ to reply · Right-click a message on desktop · Enter to send · Shift + Enter for a new line</p>
+            <p className="mt-1.5 px-1 text-[9px] text-white/15"><span className="sm:hidden">Swipe left to reply · Enter to send · Shift + Enter for a new line</span><span className="hidden sm:inline">Click ↩ or right-click a message to reply · Enter to send · Shift + Enter for a new line</span></p>
           </div>
         </>}
       </div>

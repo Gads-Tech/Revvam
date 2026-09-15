@@ -10,6 +10,7 @@ type Reply = { id: string; content: string; senderId: string; sender: { id: stri
 type Message = { id: string; senderId: string; content: string; createdAt: string; sender: User; opened?: boolean; replyTo?: Reply | null };
 type ChatStatus = "NONE" | "PENDING_SENT" | "PENDING_RECEIVED" | "DECLINED" | "DECLINED_BY_TARGET" | "ACCEPTED" | "SELF";
 type ContextMenu = { x: number; y: number; message: Message } | null;
+type EntryScrollMode = "restore" | "bottom";
 
 export default function IndividualMessagePage() {
   const params = useParams();
@@ -35,11 +36,15 @@ export default function IndividualMessagePage() {
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
-  const initialScrollRef = useRef(true);
-  const stickToBottomRef = useRef(true);
-  const freshChatEntryRef = useRef(true);
+  const entryScrollModeRef = useRef<EntryScrollMode>("restore");
+  const entryScrollHandledRef = useRef(false);
+  const firstConversationLoadRef = useRef(true);
   const touchStartXRef = useRef(0);
   const isComposer = username === "new";
+
+  function scrollStorageKey(id: string) {
+    return `revvam:chat-scroll:${id}`;
+  }
 
   async function loadTarget() {
     if (!username || isComposer) return;
@@ -65,6 +70,10 @@ export default function IndividualMessagePage() {
       const response = await fetch(`/api/messages/${encodeURIComponent(id)}?_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json", "Cache-Control": "no-cache" } });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load chat.");
+      if (!silent && firstConversationLoadRef.current) {
+        entryScrollModeRef.current = Number(data.unreadBeforeOpen) > 0 ? "bottom" : "restore";
+        firstConversationLoadRef.current = false;
+      }
       setMessages(data.messages ?? []);
       setReceiptVisible(data.readReceiptsEnabledForOtherUser ?? true);
       if (data.otherUser) setUser(data.otherUser);
@@ -75,9 +84,9 @@ export default function IndividualMessagePage() {
 
   useEffect(() => {
     if (!conversationId) return;
-    initialScrollRef.current = true;
-    stickToBottomRef.current = true;
-    freshChatEntryRef.current = true;
+    entryScrollModeRef.current = "restore";
+    entryScrollHandledRef.current = false;
+    firstConversationLoadRef.current = true;
     loadConversation(conversationId);
     const timer = window.setInterval(() => loadConversation(conversationId, true), 1500);
     return () => window.clearInterval(timer);
@@ -87,9 +96,7 @@ export default function IndividualMessagePage() {
     const container = messagesContainerRef.current;
     if (!container) return;
     const move = () => {
-      if (bottomAnchorRef.current) {
-        bottomAnchorRef.current.scrollIntoView({ block: "end", behavior: "auto" });
-      }
+      if (bottomAnchorRef.current) bottomAnchorRef.current.scrollIntoView({ block: "end", behavior: "auto" });
       container.scrollTop = container.scrollHeight;
     };
     move();
@@ -102,25 +109,38 @@ export default function IndividualMessagePage() {
     }
   }
 
-  useLayoutEffect(() => {
-    if (!messagesContainerRef.current) return;
-    if (initialScrollRef.current) {
-      scrollConversationToBottom(true);
-      initialScrollRef.current = false;
-    } else if (stickToBottomRef.current) {
-      scrollConversationToBottom(false);
+  function restoreConversationScroll() {
+    const container = messagesContainerRef.current;
+    if (!container || !conversationId) return;
+    const raw = window.sessionStorage.getItem(scrollStorageKey(conversationId));
+    const saved = raw === null ? null : Number(raw);
+    if (saved !== null && Number.isFinite(saved)) {
+      const restore = () => { container.scrollTop = Math.min(saved, Math.max(0, container.scrollHeight - container.clientHeight)); };
+      restore();
+      requestAnimationFrame(restore);
+      return;
     }
-  }, [messages]);
+    scrollConversationToBottom(false);
+  }
+
+  useLayoutEffect(() => {
+    if (!messagesContainerRef.current || entryScrollHandledRef.current) return;
+    entryScrollHandledRef.current = true;
+    if (entryScrollModeRef.current === "bottom") {
+      window.sessionStorage.removeItem(scrollStorageKey(conversationId));
+      scrollConversationToBottom(true);
+    } else {
+      restoreConversationScroll();
+    }
+  }, [messages, conversationId]);
 
   useEffect(() => {
-    if (!conversationId || chatStatus !== "ACCEPTED" || !freshChatEntryRef.current) return;
-
-    freshChatEntryRef.current = false;
+    if (!conversationId || chatStatus !== "ACCEPTED" || !entryScrollHandledRef.current) return;
+    if (entryScrollModeRef.current !== "bottom") return;
     const focusTimer = window.setTimeout(() => {
       composerRef.current?.focus({ preventScroll: true });
       scrollConversationToBottom(true);
     }, 150);
-
     return () => window.clearTimeout(focusTimer);
   }, [conversationId, chatStatus]);
 
@@ -139,13 +159,11 @@ export default function IndividualMessagePage() {
 
   useEffect(() => {
     if (!contextMenu) return;
-
     const close = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (target && contextMenuRef.current?.contains(target)) return;
       setContextMenu(null);
     };
-
     document.addEventListener("pointerdown", close);
     window.addEventListener("scroll", close, true);
     return () => {
@@ -159,9 +177,7 @@ export default function IndividualMessagePage() {
   function chooseReply(message: Message) {
     setContextMenu(null);
     setReplyTo(message);
-    requestAnimationFrame(() => {
-      composerRef.current?.focus({ preventScroll: true });
-    });
+    requestAnimationFrame(() => composerRef.current?.focus({ preventScroll: true }));
   }
 
   function handleMessageContextMenu(event: React.MouseEvent, message: Message) {
@@ -190,7 +206,6 @@ export default function IndividualMessagePage() {
     if (!conversationId || !clean || sending) return;
     const replyId = replyTo?.id ?? null;
     setSending(true); setError("");
-    stickToBottomRef.current = true;
     try {
       const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: clean, replyToId: replyId }) });
       const data = await response.json();
@@ -205,9 +220,8 @@ export default function IndividualMessagePage() {
 
   function handleMessageScroll() {
     const container = messagesContainerRef.current;
-    if (!container) return;
-    const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
-    stickToBottomRef.current = distance < 48;
+    if (!container || !conversationId) return;
+    window.sessionStorage.setItem(scrollStorageKey(conversationId), String(container.scrollTop));
   }
 
   function startSwipe(event: React.TouchEvent, messageId: string) {

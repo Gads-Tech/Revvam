@@ -55,6 +55,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json({
       success: true,
+      currentUserId: user.id,
       messages: messages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
       otherUser,
       readReceiptsEnabledForOtherUser: canShowReceipt,

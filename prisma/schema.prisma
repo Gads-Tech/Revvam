@@ -32,7 +32,8 @@ model User {
   notificationsReceived   Notification[]        @relation("NotificationRecipient")
   notificationsSent       Notification[]        @relation("NotificationActor")
   conversationMemberships ConversationMember[]
-  messagesSent            Message[]
+  messagesSent            Message[]             @relation("MessagesSent")
+  messagesRepliedTo       Message[]             @relation("MessagesRepliedTo")
   chatRequestsSent        ChatRequest[]          @relation("ChatRequestSender")
   chatRequestsReceived    ChatRequest[]          @relation("ChatRequestRecipient")
   readReceiptPreferences  ReadReceiptPreference[] @relation("ReadReceiptOwner")
@@ -63,7 +64,6 @@ model Vehicle {
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   modifications VehicleModification[]
   photos        VehiclePhoto[]
-
   @@index([userId])
 }
 
@@ -73,7 +73,6 @@ model VehiclePhoto {
   url       String
   createdAt DateTime @default(now())
   vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
   @@index([vehicleId])
 }
 
@@ -91,7 +90,6 @@ model VehicleModification {
   mentions    ModificationMention[]
   photos      ModificationPhoto[]
   vehicle     Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-
   @@index([vehicleId])
   @@index([vehicleId, category])
   @@index([installedAt])
@@ -103,7 +101,6 @@ model ModificationPhoto {
   url            String
   createdAt      DateTime            @default(now())
   modification   VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
-
   @@index([modificationId])
 }
 
@@ -116,7 +113,6 @@ model ModificationMention {
   mentionedBy     User                @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
   mentionedUser   User                @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
   modification    VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
-
   @@unique([modificationId, mentionedUserId])
   @@index([mentionedUserId])
   @@index([mentionedById])
@@ -131,7 +127,6 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-
   @@index([authorId, createdAt])
 }
 
@@ -142,7 +137,6 @@ model Follow {
   createdAt   DateTime @default(now())
   follower    User     @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
   following   User     @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
-
   @@unique([followerId, followingId])
   @@index([followingId])
   @@index([followerId])
@@ -162,7 +156,6 @@ model Notification {
   user          User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
   actor         User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   chatRequest   ChatRequest?     @relation(fields: [chatRequestId], references: [id], onDelete: Cascade)
-
   @@index([userId, createdAt])
   @@index([userId, readAt])
 }
@@ -178,20 +171,18 @@ model ChatRequest {
   sender       User              @relation("ChatRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
   recipient    User              @relation("ChatRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
   notification Notification?
-
   @@unique([senderId, recipientId])
   @@index([recipientId, status])
   @@index([senderId, status])
 }
 
 model Conversation {
-  id        String              @id @default(cuid())
-  directKey String              @unique
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id        String               @id @default(cuid())
+  directKey String               @unique
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
   members   ConversationMember[]
   messages  Message[]
-
   @@index([updatedAt])
 }
 
@@ -202,7 +193,6 @@ model ConversationMember {
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@unique([conversationId, userId])
   @@index([userId])
 }
@@ -212,13 +202,17 @@ model Message {
   conversationId String
   senderId       String
   content        String
+  replyToId      String?
   readAt         DateTime?
   createdAt      DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
-
+  sender         User         @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo        Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]    @relation("MessageReplies")
+  repliedToUser  User?        @relation("MessagesRepliedTo", fields: [replyToId], references: [id], onDelete: SetNull)
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
+  @@index([replyToId])
 }
 
 model ReadReceiptPreference {
@@ -230,7 +224,6 @@ model ReadReceiptPreference {
   updatedAt DateTime @updatedAt
   owner     User     @relation("ReadReceiptOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   target    User     @relation("ReadReceiptTarget", fields: [targetId], references: [id], onDelete: Cascade)
-
   @@unique([ownerId, targetId])
   @@index([targetId])
 }
@@ -242,7 +235,6 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId])
   @@index([expiresAt])
 }
@@ -258,34 +250,4 @@ enum ChatRequestStatus {
   PENDING
   ACCEPTED
   DECLINED
-}
-
-enum ModificationCategory {
-  PERFORMANCE
-  EXTERIOR
-  INTERIOR
-  WHEELS_TIRES
-  SUSPENSION
-  EXHAUST
-  AUDIO
-  LIGHTING
-  ENGINE
-  MAINTENANCE
-  OTHER
-}
-
-enum UserRole {
-  USER
-  MECHANIC
-  DEALERSHIP
-  ADMIN
-  MECHANIC_SHOP
-}
-
-enum OnboardingType {
-  DRIVER
-  MECHANIC
-  MECHANIC_SHOP
-  DEALERSHIP
-  EXPLORER
 }

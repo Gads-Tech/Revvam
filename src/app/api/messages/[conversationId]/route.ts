@@ -34,7 +34,11 @@ export async function GET(request: Request, context: RouteContext) {
     const canShowReceipt = otherUser ? await receiptEnabled(otherUser.id, user.id) : false;
     const messages = await prisma.message.findMany({ where: { conversationId }, orderBy: { createdAt: "asc" }, take: 200, include: messageInclude });
 
-    await prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } });
+    // Opening a chat consumes both unread message rows and any legacy MESSAGE notifications.
+    await prisma.$transaction([
+      prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } }),
+      prisma.notification.updateMany({ where: { userId: user.id, actorId: otherUser?.id, type: "MESSAGE", readAt: null }, data: { readAt: new Date() } }),
+    ]);
 
     return NextResponse.json({
       success: true,

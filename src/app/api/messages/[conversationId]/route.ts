@@ -34,6 +34,10 @@ export async function GET(request: Request, context: RouteContext) {
     const canShowReceipt = otherUser ? await receiptEnabled(otherUser.id, user.id) : false;
     const messages = await prisma.message.findMany({ where: { conversationId }, orderBy: { createdAt: "asc" }, take: 200, include: messageInclude });
 
+    // Capture this before marking messages read. The client uses it to decide whether a fresh chat entry
+    // should jump to the newest messages. Returning to a chat with nothing new preserves the prior scroll.
+    const unreadBeforeOpen = messages.filter((message) => message.senderId !== user.id && message.readAt === null).length;
+
     // Opening a chat consumes both unread message rows and any legacy MESSAGE notifications.
     await prisma.$transaction([
       prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } }),
@@ -45,6 +49,7 @@ export async function GET(request: Request, context: RouteContext) {
       messages: messages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
       otherUser,
       readReceiptsEnabledForOtherUser: canShowReceipt,
+      unreadBeforeOpen,
     });
   } catch (error) {
     console.error("Conversation load error:", error);

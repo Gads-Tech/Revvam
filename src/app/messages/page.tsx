@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
+import LiveSocialActions from "@/components/LiveSocialActions";
 
 type User = { id: string; name: string; username: string; image: string | null; role?: string | null; onboardingType?: string | null };
 type Conversation = { id: string; updatedAt: string; otherUser: User | null; lastMessage: { content: string; createdAt: string; senderId: string; opened: boolean } | null; unreadCount: number };
@@ -26,7 +27,11 @@ export default function MessagesPage() {
   async function loadConversations(silent = false) {
     try {
       if (!silent) setLoading(true);
-      const response = await fetch(`/api/messages?_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json", "Cache-Control": "no-cache" } });
+      const response = await fetch(`/api/messages?_=${Date.now()}`, {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+      });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load messages.");
       setConversations(data.conversations ?? []);
@@ -38,29 +43,58 @@ export default function MessagesPage() {
   }
 
   useEffect(() => {
-    loadConversations();
-    const timer = window.setInterval(() => loadConversations(true), 1500);
-    return () => window.clearInterval(timer);
+    void loadConversations();
+    const timer = window.setInterval(() => void loadConversations(true), 1200);
+    const onFocus = () => void loadConversations(true);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   useEffect(() => {
-    if (!search.trim()) { setResults([]); return; }
+    if (!search.trim()) {
+      setResults([]);
+      return;
+    }
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       try {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(search.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal });
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(search.trim())}`, {
+          credentials: "include",
+          cache: "no-store",
+          signal: controller.signal,
+        });
         const data = await response.json();
         if (response.ok && data.success) setResults(data.users ?? []);
-      } catch { /* aborted */ }
+      } catch {
+        // Search was cancelled.
+      }
     }, 220);
-    return () => { window.clearTimeout(timer); controller.abort(); };
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [search]);
 
   return (
     <main className="min-h-screen bg-black px-4 py-6 pb-28 text-white sm:px-6 sm:py-8">
       <div className="mx-auto max-w-5xl">
         <div className="flex items-end justify-between gap-4">
-          <div><Link href="/home" className="text-xs text-white/30 hover:text-white">← Back to Discover</Link><p className="mt-5 text-xs uppercase tracking-[0.22em] text-red-400/70">Revvam social</p><h1 className="mt-1 text-3xl font-black tracking-[-0.045em]">Messages</h1><p className="mt-2 text-sm text-white/30">Your private conversations.</p></div>
+          <div>
+            <Link href="/home" className="text-xs text-white/30 hover:text-white">← Back to Discover</Link>
+            <p className="mt-5 text-xs uppercase tracking-[0.22em] text-red-400/70">Revvam social</p>
+            <h1 className="mt-1 text-3xl font-black tracking-[-0.045em]">Messages</h1>
+            <p className="mt-2 text-sm text-white/30">Your private conversations.</p>
+          </div>
+          <div className="hidden items-center gap-3 md:flex">
+            <LiveSocialActions />
+            <Link href="/messages/settings" className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/50 hover:text-white">Read receipts</Link>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end md:hidden">
           <Link href="/messages/settings" className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs font-semibold text-white/50 hover:text-white">Read receipts</Link>
         </div>
 

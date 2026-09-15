@@ -31,7 +31,6 @@ body {
   overscroll-behavior-x: none;
 }
 
-/* The site itself must not pinch/zoom on phones. PhotoLightbox remains independently zoomable. */
 @media (max-width: 767px) {
   html,
   body {
@@ -48,7 +47,6 @@ body {
   }
 }
 
-/* Keep mobile navigation visibility independent from Tailwind breakpoints. */
 .mobile-nav-root {
   visibility: visible;
   -webkit-user-select: none;
@@ -58,5 +56,36 @@ body {
 @media (min-width: 768px) {
   .mobile-nav-root {
     display: none !important;
+  }
+}
+
+/* Revvam desktop chat scrolling: slim, soft, and easy to grab without looking like
+   the browser's default scrollbar. Mobile keeps the native touch scrolling behavior. */
+@media (min-width: 768px) {
+  .revvam-chat-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+    scrollbar-gutter: stable;
+  }
+
+  .revvam-chat-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .revvam-chat-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 10px 0;
+  }
+
+  .revvam-chat-scroll::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+    background-color: rgba(255, 255, 255, 0.13);
+    transition: background-color 160ms ease;
+  }
+
+  .revvam-chat-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(239, 68, 68, 0.42);
   }
 }

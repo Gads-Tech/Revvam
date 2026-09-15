@@ -12,6 +12,10 @@ type ChatStatus = "NONE" | "PENDING_SENT" | "PENDING_RECEIVED" | "DECLINED" | "D
 type ContextMenu = { x: number; y: number; message: Message } | null;
 type EntryScrollMode = "restore" | "bottom";
 
+const NEW_MESSAGE_THRESHOLD_PX = 80;
+const LONG_PRESS_MS = 550;
+const DELETE_FOR_BOTH_MS = 2 * 60 * 1000;
+
 export default function IndividualMessagePage() {
   const params = useParams();
   const router = useRouter();
@@ -32,6 +36,8 @@ export default function IndividualMessagePage() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [swipingId, setSwipingId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu>(null);
+  const [newMessageCount, setNewMessageCount] = useState(0);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
@@ -40,10 +46,28 @@ export default function IndividualMessagePage() {
   const entryScrollHandledRef = useRef(false);
   const firstConversationLoadRef = useRef(true);
   const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
   const isComposer = username === "new";
 
   function scrollStorageKey(id: string) {
     return `revvam:chat-scroll:${id}`;
+  }
+
+  function isNearBottom(container = messagesContainerRef.current) {
+    if (!container) return true;
+    return container.scrollHeight - container.scrollTop - container.clientHeight <= NEW_MESSAGE_THRESHOLD_PX;
+  }
+
+  async function markConversationRead(id = conversationId) {
+    if (!id) return;
+    try {
+      await fetch(`/api/messages/${encodeURIComponent(id)}`, { method: "PATCH", credentials: "include", cache: "no-store", headers: { Accept: "application/json" } });
+      setNewMessageCount(0);
+    } catch {
+      // Read state is non-blocking; polling will retry.
+    }
   }
 
   async function loadTarget() {
@@ -67,12 +91,25 @@ export default function IndividualMessagePage() {
   async function loadConversation(id: string, silent = false) {
     if (!id) return;
     try {
-      const response = await fetch(`/api/messages/${encodeURIComponent(id)}?_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json", "Cache-Control": "no-cache" } });
+      const markRead = !silent;
+      const response = await fetch(`/api/messages/${encodeURIComponent(id)}?${markRead ? "markRead=1&" : ""}_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json", "Cache-Control": "no-cache" } });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load chat.");
       if (!silent && firstConversationLoadRef.current) {
         entryScrollModeRef.current = Number(data.unreadBeforeOpen) > 0 ? "bottom" : "restore";
         firstConversationLoadRef.current = false;
+        setNewMessageCount(0);
+      }
+      if (silent) {
+        const incomingUnread = Number(data.unreadCount) || 0;
+        if (incomingUnread > 0) {
+          if (isNearBottom()) {
+            scrollConversationToBottom(true);
+            void markConversationRead(id);
+          } else {
+            setNewMessageCount(incomingUnread);
+          }
+        }
       }
       setMessages(data.messages ?? []);
       setReceiptVisible(data.readReceiptsEnabledForOtherUser ?? true);
@@ -87,6 +124,7 @@ export default function IndividualMessagePage() {
     entryScrollModeRef.current = "restore";
     entryScrollHandledRef.current = false;
     firstConversationLoadRef.current = true;
+    setNewMessageCount(0);
     loadConversation(conversationId);
     const timer = window.setInterval(() => loadConversation(conversationId, true), 1500);
     return () => window.clearInterval(timer);
@@ -180,13 +218,71 @@ export default function IndividualMessagePage() {
     requestAnimationFrame(() => composerRef.current?.focus({ preventScroll: true }));
   }
 
+  function cancelLongPress() {
+    if (longPressTimerRef.current !== null) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }
+
   function handleMessageContextMenu(event: React.MouseEvent, message: Message) {
     event.preventDefault();
-    const menuWidth = 150;
-    const menuHeight = 52;
+    const menuWidth = 190;
+    const menuHeight = message.sender.id === user?.id && Date.now() - new Date(message.createdAt).getTime() <= DELETE_FOR_BOTH_MS ? 132 : 94;
     const x = Math.min(event.clientX, window.innerWidth - menuWidth - 8);
     const y = Math.min(event.clientY, window.innerHeight - menuHeight - 8);
     setContextMenu({ x: Math.max(8, x), y: Math.max(8, y), message });
+  }
+
+  function startTouchMessage(event: React.TouchEvent, message: Message) {
+    cancelLongPress();
+    longPressTriggeredRef.current = false;
+    touchStartXRef.current = event.touches[0]?.clientX ?? 0;
+    touchStartYRef.current = event.touches[0]?.clientY ?? 0;
+    setSwipingId(message.id);
+    const touch = event.touches[0];
+    if (touch) {
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        setSwipingId(null);
+        handleMessageContextMenu({ preventDefault: () => {}, clientX: touch.clientX, clientY: touch.clientY } as React.MouseEvent, message);
+      }, LONG_PRESS_MS);
+    }
+  }
+
+  function moveTouchMessage(event: React.TouchEvent) {
+    const touch = event.touches[0];
+    if (!touch) return;
+    if (Math.abs(touch.clientX - touchStartXRef.current) > 12 || Math.abs(touch.clientY - touchStartYRef.current) > 12) cancelLongPress();
+  }
+
+  function finishSwipe(event: React.TouchEvent, message: Message) {
+    cancelLongPress();
+    const endX = event.changedTouches[0]?.clientX ?? touchStartXRef.current;
+    const delta = touchStartXRef.current - endX;
+    setSwipingId(null);
+    touchStartXRef.current = 0;
+    touchStartYRef.current = 0;
+    if (!longPressTriggeredRef.current && delta >= 65) chooseReply(message);
+    longPressTriggeredRef.current = false;
+  }
+
+  async function deleteMessage(message: Message, mode: "me" | "both") {
+    if (!conversationId || deletingMessageId) return;
+    setDeletingMessageId(message.id);
+    setContextMenu(null);
+    setError("");
+    try {
+      const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}/${encodeURIComponent(message.id)}`, { method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ mode }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to delete message.");
+      setMessages((current) => current.filter((item) => item.id !== message.id));
+      if (replyTo?.id === message.id) setReplyTo(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to delete message.");
+    } finally {
+      setDeletingMessageId(null);
+    }
   }
 
   async function sendRequest() {
@@ -213,6 +309,7 @@ export default function IndividualMessagePage() {
       setContent(""); setReplyTo(null);
       await loadConversation(conversationId, true);
       scrollConversationToBottom(true);
+      await markConversationRead(conversationId);
       window.setTimeout(() => { composerRef.current?.focus({ preventScroll: true }); scrollConversationToBottom(true); }, 0);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to send message."); }
     finally { setSending(false); }
@@ -222,19 +319,16 @@ export default function IndividualMessagePage() {
     const container = messagesContainerRef.current;
     if (!container || !conversationId) return;
     window.sessionStorage.setItem(scrollStorageKey(conversationId), String(container.scrollTop));
+    if (isNearBottom(container) && newMessageCount > 0) {
+      setNewMessageCount(0);
+      void markConversationRead(conversationId);
+    }
   }
 
-  function startSwipe(event: React.TouchEvent, messageId: string) {
-    touchStartXRef.current = event.touches[0]?.clientX ?? 0;
-    setSwipingId(messageId);
-  }
-
-  function finishSwipe(event: React.TouchEvent, message: Message) {
-    const endX = event.changedTouches[0]?.clientX ?? touchStartXRef.current;
-    const delta = touchStartXRef.current - endX;
-    setSwipingId(null);
-    touchStartXRef.current = 0;
-    if (delta >= 65) chooseReply(message);
+  function jumpToNewMessages() {
+    setNewMessageCount(0);
+    scrollConversationToBottom(true);
+    void markConversationRead(conversationId);
   }
 
   if (isComposer) return (
@@ -246,7 +340,7 @@ export default function IndividualMessagePage() {
   return (
     <main className="min-h-screen bg-black px-4 py-5 pb-28 text-white sm:px-6 sm:py-8">
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025]">
-        <header className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-4 sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/[0.07] bg-[#080808]/95 px-4 py-4 backdrop-blur-xl sm:px-6">
           <button type="button" onClick={() => router.push("/messages")} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/55 hover:text-white">←</button>
           {user && <Link href={`/users/${encodeURIComponent(user.username)}`} className="flex min-w-0 flex-1 items-center gap-3 hover:text-red-300"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/10 text-sm font-bold text-red-300">{user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0).toUpperCase()}</span><span className="min-w-0"><span className="block truncate font-semibold">{title}</span><span className="block truncate text-xs text-white/30">@{user.username}</span></span></Link>}
           {chatStatus === "ACCEPTED" && <Link href="/messages/settings" className="shrink-0 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-[10px] font-semibold text-white/40 hover:text-white">Receipts</Link>}
@@ -254,14 +348,14 @@ export default function IndividualMessagePage() {
         {error && <div className="mx-4 mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300 sm:mx-6">{error}</div>}
 
         {chatStatus !== "ACCEPTED" ? <div className="flex flex-1 items-center justify-center p-5 sm:p-10"><div className="w-full max-w-xl rounded-[2rem] border border-red-400/15 bg-red-500/[0.035] p-6 sm:p-8"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/70">Private chat request</p><h1 className="mt-2 text-2xl font-black">Say hello to {title}</h1><p className="mt-3 text-sm leading-6 text-white/35">Send a short message with your request. They must accept before the private chat opens.</p>{chatStatus === "PENDING_SENT" ? <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5"><p className="text-sm font-semibold text-white/70">Request sent</p><p className="mt-2 text-sm text-white/30">Waiting for @{user?.username} to accept.</p></div> : chatStatus === "PENDING_RECEIVED" ? <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5"><p className="text-sm font-semibold text-white/70">They already sent you a request.</p><Link href="/profile/notifications" className="mt-4 inline-flex rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-200">Review request</Link></div> : <><textarea value={requestMessage} onChange={(event) => setRequestMessage(event.target.value)} maxLength={1000} rows={5} placeholder="Write a message with your request..." className="mt-7 w-full resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/20 focus:border-red-400/30" /><div className="mt-3 flex justify-end"><button type="button" onClick={sendRequest} disabled={requestBusy || !requestMessage.trim()} className="rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-2.5 text-xs font-semibold text-red-200 disabled:opacity-40">{requestBusy ? "Sending..." : "Send chat request"}</button></div></>}</div></div> : <>
-          <div ref={messagesContainerRef} onScroll={handleMessageScroll} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-7">
+          <div ref={messagesContainerRef} onScroll={handleMessageScroll} className="relative min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-7">
             {messages.length === 0 ? <p className="py-16 text-center text-sm text-white/25">No messages yet. Say hello.</p> : messages.map((message) => {
               const mine = message.sender.id !== user?.id;
               const opened = mine && message.opened && receiptVisible;
               const swiping = swipingId === message.id;
               return (
                 <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div className="group relative max-w-[88%] touch-pan-y" onTouchStart={(event) => startSwipe(event, message.id)} onTouchEnd={(event) => finishSwipe(event, message)} onContextMenu={(event) => handleMessageContextMenu(event, message)} style={{ transform: swiping ? "translateX(-8px)" : undefined, transition: "transform 120ms ease" }}>
+                  <div className="group relative max-w-[88%] touch-pan-y" onTouchStart={(event) => startTouchMessage(event, message)} onTouchMove={moveTouchMessage} onTouchEnd={(event) => finishSwipe(event, message)} onTouchCancel={cancelLongPress} onContextMenu={(event) => handleMessageContextMenu(event, message)} style={{ transform: swiping ? "translateX(-8px)" : undefined, transition: "transform 120ms ease" }}>
                     <button type="button" onClick={() => chooseReply(message)} aria-label={`Reply to message from @${message.sender.username}`} title="Reply" className={`absolute top-1/2 z-10 hidden h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border border-white/[0.10] bg-[#0b0b0b] text-xs text-white/45 shadow-lg transition-opacity hover:border-red-400/30 hover:text-red-300 sm:flex sm:opacity-0 sm:group-hover:opacity-100 ${mine ? "-left-9" : "-right-9"}`}>↩</button>
                     <div className={`rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? "rounded-br-md bg-red-600/20 text-white" : "rounded-bl-md bg-white/[0.06] text-white/75"}`}>
                       {message.replyTo && <div className="mb-2 rounded-xl border-l-2 border-red-400/50 bg-black/20 px-3 py-2 text-xs text-white/40"><p className="font-semibold text-red-300/70">Replying to @{message.replyTo.sender.username}</p><p className="mt-0.5 truncate">{message.replyTo.content}</p></div>}
@@ -273,9 +367,14 @@ export default function IndividualMessagePage() {
               );
             })}
             <div ref={bottomAnchorRef} aria-hidden="true" className="h-px w-full" />
+            {newMessageCount > 0 && <button type="button" onClick={jumpToNewMessages} className="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-full border border-red-400/25 bg-[#0b0b0b]/95 px-3 py-2 text-xs font-bold text-white shadow-[0_10px_35px_rgba(0,0,0,0.75)] backdrop-blur-xl transition hover:border-red-400/45 hover:bg-red-500/10"><span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-[11px] text-white">↓</span><span>{newMessageCount > 99 ? "99+" : newMessageCount} new</span></button>}
           </div>
 
-          {contextMenu && <div ref={contextMenuRef} role="menu" className="fixed z-[2147483647] min-w-[150px] rounded-xl border border-white/[0.12] bg-[#0b0b0b] p-1.5 shadow-2xl" style={{ left: contextMenu.x, top: contextMenu.y }} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}><button type="button" role="menuitem" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); chooseReply(contextMenu.message); }} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06] hover:text-white">↩ <span>Reply</span></button></div>}
+          {contextMenu && <div ref={contextMenuRef} role="menu" className="fixed z-[2147483647] min-w-[190px] rounded-xl border border-white/[0.12] bg-[#0b0b0b] p-1.5 shadow-2xl" style={{ left: contextMenu.x, top: contextMenu.y }} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+            <button type="button" role="menuitem" onClick={() => chooseReply(contextMenu.message)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06] hover:text-white">↩ <span>Reply</span></button>
+            <button type="button" role="menuitem" disabled={deletingMessageId === contextMenu.message.id} onClick={() => deleteMessage(contextMenu.message, "me")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06] hover:text-white disabled:opacity-50">⌫ <span>Delete for me</span></button>
+            {contextMenu.message.sender.id === user?.id && Date.now() - new Date(contextMenu.message.createdAt).getTime() <= DELETE_FOR_BOTH_MS && <button type="button" role="menuitem" disabled={deletingMessageId === contextMenu.message.id} onClick={() => deleteMessage(contextMenu.message, "both")} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-red-300 hover:bg-red-500/[0.08] disabled:opacity-50">⌫ <span>Delete for everyone</span></button>}
+          </div>}
 
           <div className="shrink-0 border-t border-white/[0.07] bg-[#080808] p-3 sm:p-5">
             {replyTo && <div className="mb-2 flex items-center gap-3 rounded-2xl border border-red-400/15 bg-red-500/[0.045] px-3 py-2.5"><span className="h-8 w-0.5 rounded-full bg-red-400" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-red-300/75">Replying to @{replyTo.sender.username}</p><p className="truncate text-xs text-white/35">{replyTo.content}</p></div><button type="button" onClick={() => { setReplyTo(null); composerRef.current?.focus({ preventScroll: true }); }} className="h-8 w-8 shrink-0 rounded-lg text-white/35 hover:bg-white/[0.05] hover:text-white">×</button></div>}
@@ -283,7 +382,7 @@ export default function IndividualMessagePage() {
               <textarea ref={composerRef} value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." aria-label="Write a message" className="min-h-11 max-h-32 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" />
               <button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="min-h-11 shrink-0 rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button>
             </div>
-            <p className="mt-1.5 px-1 text-[9px] text-white/15"><span className="sm:hidden">Swipe left to reply · Enter to send · Shift + Enter for a new line</span><span className="hidden sm:inline">Click ↩ or right-click a message to reply · Enter to send · Shift + Enter for a new line</span></p>
+            <p className="mt-1.5 px-1 text-[9px] text-white/15"><span className="sm:hidden">Swipe left to reply · Hold a message for options · Enter to send</span><span className="hidden sm:inline">Click ↩ or right-click a message for reply/delete options · Enter to send · Shift + Enter for a new line</span></p>
           </div>
         </>}
       </div>

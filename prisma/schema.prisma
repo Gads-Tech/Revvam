@@ -33,7 +33,6 @@ model User {
   notificationsSent       Notification[]        @relation("NotificationActor")
   conversationMemberships ConversationMember[]
   messagesSent            Message[]             @relation("MessagesSent")
-  messagesRepliedTo       Message[]             @relation("MessagesRepliedTo")
   chatRequestsSent        ChatRequest[]          @relation("ChatRequestSender")
   chatRequestsReceived    ChatRequest[]          @relation("ChatRequestRecipient")
   readReceiptPreferences  ReadReceiptPreference[] @relation("ReadReceiptOwner")
@@ -209,7 +208,6 @@ model Message {
   sender         User         @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
   replyTo        Message?     @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
   replies        Message[]    @relation("MessageReplies")
-  repliedToUser  User?        @relation("MessagesRepliedTo", fields: [replyToId], references: [id], onDelete: SetNull)
   @@index([conversationId, createdAt])
   @@index([senderId, createdAt])
   @@index([replyToId])

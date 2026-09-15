@@ -5,65 +5,6 @@ import { useEffect, useState } from "react";
 
 type Props = { compact?: boolean };
 
-function updateStaticBadges(notifications: number, messages: number) {
-  if (typeof document === "undefined") return;
-
-  const targets = [
-    { selector: 'a[href="/profile/notifications"]', count: notifications },
-    { selector: 'a[href="/messages"]', count: messages },
-  ];
-
-  for (const { selector, count } of targets) {
-    document.querySelectorAll<HTMLAnchorElement>(selector).forEach((link) => {
-      const isMobile = !!link.closest(".mobile-nav-root");
-
-      let badge = link.querySelector<HTMLElement>("[data-revvam-unread-badge]");
-      if (!badge) {
-        badge = document.createElement("span");
-        badge.dataset.revvamUnreadBadge = "true";
-        badge.className = isMobile
-          ? "absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1.5 text-[11px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]"
-          : "inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border-2 border-black bg-red-500 px-2 text-[13px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]";
-        link.appendChild(badge);
-      }
-
-      badge.textContent = count > 99 ? "99+" : String(count);
-      badge.style.display = count > 0 ? (isMobile ? "flex" : "inline-flex") : "none";
-      badge.style.visibility = count > 0 ? "visible" : "hidden";
-    });
-  }
-
-  document.querySelectorAll<HTMLElement>("[data-revvam-mobile-social]").forEach((link) => {
-    const type = link.dataset.revvamMobileSocial;
-    const count = type === "notifications" ? notifications : messages;
-    let badge = link.querySelector<HTMLElement>("[data-revvam-unread-badge]");
-    if (!badge) {
-      badge = document.createElement("span");
-      badge.dataset.revvamUnreadBadge = "true";
-      badge.className = "absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1.5 text-[11px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]";
-      link.appendChild(badge);
-    }
-    badge.textContent = count > 99 ? "99+" : String(count);
-    badge.style.display = count > 0 ? "flex" : "none";
-    badge.style.visibility = count > 0 ? "visible" : "hidden";
-  });
-
-  document.querySelectorAll<HTMLElement>("[data-revvam-profile-toggle]").forEach((toggle) => {
-    const total = notifications + messages;
-    let badge = toggle.querySelector<HTMLElement>("[data-revvam-profile-badge]");
-    if (!badge) {
-      badge = document.createElement("span");
-      badge.dataset.revvamProfileBadge = "true";
-      badge.className = "absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1.5 text-[11px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]";
-      toggle.classList.add("relative");
-      toggle.appendChild(badge);
-    }
-    badge.textContent = total > 99 ? "99+" : String(total);
-    badge.style.display = total > 0 ? "flex" : "none";
-    badge.style.visibility = total > 0 ? "visible" : "hidden";
-  });
-}
-
 export default function LiveSocialActions({ compact = false }: Props) {
   const [notifications, setNotifications] = useState(0);
   const [messages, setMessages] = useState(0);
@@ -77,11 +18,8 @@ export default function LiveSocialActions({ compact = false }: Props) {
       });
       const data = await response.json();
       if (response.ok && data.success) {
-        const nextNotifications = data.unreadNotifications ?? 0;
-        const nextMessages = data.unreadMessages ?? 0;
-        setNotifications(nextNotifications);
-        setMessages(nextMessages);
-        updateStaticBadges(nextNotifications, nextMessages);
+        setNotifications(data.unreadNotifications ?? 0);
+        setMessages(data.unreadMessages ?? 0);
       }
     } catch {
       // Keep the last known counts while offline.

@@ -18,7 +18,8 @@ export default async function HomePage() {
   const [featuredVehicles, posts, unreadNotifications, unreadMessages] = await Promise.all([
     prisma.vehicle.findMany({ where: { isFeatured: true }, include: { user: { select: { name: true, username: true, image: true } }, photos: { orderBy: { createdAt: "asc" } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
     prisma.post.findMany({ include: { author: { select: { name: true, username: true, image: true } } }, orderBy: { createdAt: "desc" }, take: 12 }),
-    prisma.notification.count({ where: { userId: user.id, readAt: null } }),
+    // Message notifications belong to Messages, not the notification center.
+    prisma.notification.count({ where: { userId: user.id, readAt: null, type: { not: "MESSAGE" } } }),
     conversationIds.length === 0 ? Promise.resolve(0) : prisma.message.count({ where: { conversationId: { in: conversationIds }, senderId: { not: user.id }, readAt: null } }),
   ]);
 

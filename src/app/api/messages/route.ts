@@ -82,8 +82,8 @@ export async function POST(request: Request) {
 
     const message = await prisma.message.create({ data: { conversationId: conversation.id, senderId: user.id, content } });
     await prisma.conversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });
-    await prisma.notification.create({ data: { userId: recipient.id, actorId: user.id, type: "MESSAGE", title: "New message", body: `${user.name} sent you a message.`, href: `/messages/${encodeURIComponent(user.username)}` } });
 
+    // Messages are represented by the Messages inbox/count, never by the Notifications center.
     return NextResponse.json({ success: true, conversationId: conversation.id, message });
   } catch (error) {
     console.error("Create message error:", error);

@@ -15,29 +15,33 @@ function updateStaticBadges(notifications: number, messages: number) {
 
   for (const { selector, label, count } of targets) {
     document.querySelectorAll<HTMLAnchorElement>(selector).forEach((link) => {
-      if (link.closest(".mobile-nav-root")) return;
+      const isMobile = !!link.closest(".mobile-nav-root");
 
-      link.setAttribute("aria-label", label);
-      link.className = "relative inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-semibold text-white/65 shadow-lg transition hover:border-red-400/25 hover:bg-red-500/[0.08] hover:text-white";
+      if (!isMobile) {
+        link.setAttribute("aria-label", label);
+        link.className = "relative inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-semibold text-white/65 shadow-lg transition hover:border-red-400/25 hover:bg-red-500/[0.08] hover:text-white";
 
-      let labelNode = link.querySelector<HTMLElement>("[data-revvam-social-label]");
-      if (!labelNode) {
-        labelNode = document.createElement("span");
-        labelNode.dataset.revvamSocialLabel = "true";
-        link.prepend(labelNode);
+        let labelNode = link.querySelector<HTMLElement>("[data-revvam-social-label]");
+        if (!labelNode) {
+          labelNode = document.createElement("span");
+          labelNode.dataset.revvamSocialLabel = "true";
+          link.prepend(labelNode);
+        }
+        labelNode.textContent = label;
       }
-      labelNode.textContent = label;
 
       let badge = link.querySelector<HTMLElement>("[data-revvam-unread-badge]");
       if (!badge) {
         badge = document.createElement("span");
         badge.dataset.revvamUnreadBadge = "true";
-        badge.className = "inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border-2 border-black bg-red-500 px-2 text-[13px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]";
+        badge.className = isMobile
+          ? "absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1.5 text-[11px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]"
+          : "inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border-2 border-black bg-red-500 px-2 text-[13px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]";
         link.appendChild(badge);
       }
 
       badge.textContent = count > 99 ? "99+" : String(count);
-      badge.style.display = count > 0 ? "inline-flex" : "none";
+      badge.style.display = count > 0 ? (isMobile ? "flex" : "inline-flex") : "none";
       badge.style.visibility = count > 0 ? "visible" : "hidden";
     });
   }

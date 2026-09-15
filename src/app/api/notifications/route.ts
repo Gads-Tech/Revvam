@@ -13,8 +13,9 @@ export async function GET() {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: noStore });
 
+    // Messages have their own inbox/count. They must never appear as notifications.
     const notifications = await prisma.notification.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, type: { not: "MESSAGE" } },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {
@@ -28,7 +29,7 @@ export async function GET() {
       ? await prisma.follow.findMany({ where: { followerId: user.id, followingId: { in: actorIds } }, select: { followingId: true } })
       : [];
     const followingIds = new Set(existingFollows.map((item) => item.followingId));
-    const unreadCount = await prisma.notification.count({ where: { userId: user.id, readAt: null } });
+    const unreadCount = await prisma.notification.count({ where: { userId: user.id, readAt: null, type: { not: "MESSAGE" } } });
 
     return NextResponse.json({
       success: true,
@@ -54,9 +55,9 @@ export async function PATCH(request: Request) {
     const notificationId = typeof body?.notificationId === "string" ? body.notificationId : "";
 
     if (notificationId) {
-      await prisma.notification.updateMany({ where: { id: notificationId, userId: user.id }, data: { readAt: new Date() } });
+      await prisma.notification.updateMany({ where: { id: notificationId, userId: user.id, type: { not: "MESSAGE" } }, data: { readAt: new Date() } });
     } else {
-      await prisma.notification.updateMany({ where: { userId: user.id, readAt: null }, data: { readAt: new Date() } });
+      await prisma.notification.updateMany({ where: { userId: user.id, readAt: null, type: { not: "MESSAGE" } }, data: { readAt: new Date() } });
     }
 
     return NextResponse.json({ success: true }, { headers: noStore });

@@ -26,9 +26,8 @@ export default function IndividualMessagePage() {
   const [requestBusy, setRequestBusy] = useState(false);
   const [receiptVisible, setReceiptVisible] = useState(true);
   const [error, setError] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const initialScrollRef = useRef(true);
-
   const isComposer = username === "new";
 
   async function loadTarget() {
@@ -70,9 +69,12 @@ export default function IndividualMessagePage() {
     return () => window.clearInterval(timer);
   }, [conversationId]);
 
+  // Scroll only the message list. Do not use scrollIntoView(), because that can
+  // scroll the whole page and push the fixed composer/send bar below the viewport.
   useEffect(() => {
-    if (!messagesEndRef.current) return;
-    messagesEndRef.current.scrollIntoView({ behavior: initialScrollRef.current ? "auto" : "smooth", block: "end" });
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: initialScrollRef.current ? "auto" : "smooth" });
     initialScrollRef.current = false;
   }, [messages]);
 
@@ -133,11 +135,10 @@ export default function IndividualMessagePage() {
         {error && <div className="mx-4 mt-4 rounded-xl border border-red-500/20 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300 sm:mx-6">{error}</div>}
 
         {chatStatus !== "ACCEPTED" ? <div className="flex flex-1 items-center justify-center p-5 sm:p-10"><div className="w-full max-w-xl rounded-[2rem] border border-red-400/15 bg-red-500/[0.035] p-6 sm:p-8"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/70">Private chat request</p><h1 className="mt-2 text-2xl font-black">Say hello to {title}</h1><p className="mt-3 text-sm leading-6 text-white/35">Send a short message with your request. They must accept before the private chat opens.</p>{chatStatus === "PENDING_SENT" ? <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5"><p className="text-sm font-semibold text-white/70">Request sent</p><p className="mt-2 text-sm text-white/30">Waiting for @{user?.username} to accept.</p></div> : chatStatus === "PENDING_RECEIVED" ? <div className="mt-7 rounded-2xl border border-white/[0.08] bg-black/20 p-5"><p className="text-sm font-semibold text-white/70">They already sent you a request.</p><Link href="/profile/notifications" className="mt-4 inline-flex rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-2.5 text-xs font-semibold text-red-200">Review request</Link></div> : <><textarea value={requestMessage} onChange={(event) => setRequestMessage(event.target.value)} maxLength={1000} rows={5} placeholder="Write a message with your request..." className="mt-7 w-full resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/20 focus:border-red-400/30" /><div className="mt-3 flex justify-end"><button type="button" onClick={sendRequest} disabled={requestBusy || !requestMessage.trim()} className="rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-2.5 text-xs font-semibold text-red-200 disabled:opacity-40">{requestBusy ? "Sending..." : "Send chat request"}</button></div></>}</div></div> : <>
-          <div className="flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-7">
+          <div ref={messagesContainerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-6 sm:px-7">
             {messages.length === 0 ? <p className="py-16 text-center text-sm text-white/25">No messages yet. Say hello.</p> : messages.map((message) => { const mine = message.sender.id !== user?.id; const opened = mine && message.opened && receiptVisible; return <div key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${mine ? "rounded-br-md bg-red-600/20 text-white" : "rounded-bl-md bg-white/[0.06] text-white/75"}`}><div>{message.content}</div>{mine && <div className={`mt-1 text-right text-[9px] font-bold uppercase tracking-[0.14em] ${opened ? "text-red-300/70" : "text-white/25"}`}>{opened ? "Opened" : "Sent"}</div>}</div></div>; })}
-            <div ref={messagesEndRef} aria-hidden="true" className="h-px w-full" />
           </div>
-          <div className="border-t border-white/[0.07] p-4 sm:p-5"><div className="flex gap-2"><textarea value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." className="min-h-11 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" /><button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button></div></div>
+          <div className="shrink-0 border-t border-white/[0.07] bg-[#080808] p-4 sm:p-5"><div className="flex gap-2"><textarea value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." className="min-h-11 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" /><button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="shrink-0 rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button></div></div>
         </>}
       </div>
       <MobileNav />

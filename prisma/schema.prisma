@@ -253,6 +253,7 @@ model Session {
 
 enum UserRole {
   USER
+  ADMIN
   MECHANIC
   MECHANIC_SHOP
   DEALERSHIP

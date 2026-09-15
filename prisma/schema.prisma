@@ -7,34 +7,34 @@ datasource db {
 }
 
 model User {
-  id                      String                @id @default(cuid())
+  id                      String                  @id @default(cuid())
   name                    String
-  username                String                @unique
-  email                   String                @unique
+  username                String                  @unique
+  email                   String                  @unique
   passwordHash            String?
-  role                    UserRole              @default(USER)
+  role                    UserRole                @default(USER)
   image                   String?
   bio                     String?
   location                String?
-  readReceiptsEnabled     Boolean               @default(true)
+  readReceiptsEnabled     Boolean                 @default(true)
   emailVerified           DateTime?
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
   onboardingType          OnboardingType?
   driverProfile           DriverProfile?
-  mentionsMade            ModificationMention[] @relation("MentionedBy")
-  mentionsReceived        ModificationMention[] @relation("MentionedUser")
+  mentionsMade            ModificationMention[]  @relation("MentionedBy")
+  mentionsReceived        ModificationMention[]  @relation("MentionedUser")
   sessions                Session[]
   vehicles                Vehicle[]
   posts                   Post[]
-  following               Follow[]              @relation("Following")
-  followers               Follow[]              @relation("Followers")
-  notificationsReceived   Notification[]        @relation("NotificationRecipient")
-  notificationsSent       Notification[]        @relation("NotificationActor")
+  following               Follow[]                @relation("Following")
+  followers               Follow[]                @relation("Followers")
+  notificationsReceived   Notification[]          @relation("NotificationRecipient")
+  notificationsSent       Notification[]          @relation("NotificationActor")
   conversationMemberships ConversationMember[]
-  messagesSent            Message[]             @relation("MessagesSent")
-  chatRequestsSent        ChatRequest[]          @relation("ChatRequestSender")
-  chatRequestsReceived    ChatRequest[]          @relation("ChatRequestRecipient")
+  messagesSent            Message[]               @relation("MessagesSent")
+  chatRequestsSent        ChatRequest[]            @relation("ChatRequestSender")
+  chatRequestsReceived    ChatRequest[]            @relation("ChatRequestRecipient")
   readReceiptPreferences  ReadReceiptPreference[] @relation("ReadReceiptOwner")
   readReceiptOverrides    ReadReceiptPreference[] @relation("ReadReceiptTarget")
 }
@@ -97,7 +97,7 @@ model VehicleModification {
 model ModificationPhoto {
   id             String              @id @default(cuid())
   modificationId String
-  url            String
+  url             String
   createdAt      DateTime            @default(now())
   modification   VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
   @@index([modificationId])
@@ -109,9 +109,9 @@ model ModificationMention {
   mentionedUserId String
   mentionedById   String
   createdAt       DateTime             @default(now())
-  mentionedBy     User                @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
-  mentionedUser   User                @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
-  modification    VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
+  mentionedBy     User                 @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
+  mentionedUser   User                 @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  modification    VehicleModification  @relation(fields: [modificationId], references: [id], onDelete: Cascade)
   @@unique([modificationId, mentionedUserId])
   @@index([mentionedUserId])
   @@index([mentionedById])
@@ -235,6 +235,35 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@index([expiresAt])
+}
+
+enum UserRole {
+  USER
+  MECHANIC
+  MECHANIC_SHOP
+  DEALERSHIP
+}
+
+enum OnboardingType {
+  DRIVER
+  EXPLORER
+  MECHANIC
+  MECHANIC_SHOP
+  DEALERSHIP
+}
+
+enum ModificationCategory {
+  PERFORMANCE
+  EXTERIOR
+  INTERIOR
+  WHEELS_TIRES
+  SUSPENSION
+  EXHAUST
+  AUDIO
+  LIGHTING
+  ENGINE
+  MAINTENANCE
+  OTHER
 }
 
 enum NotificationType {

@@ -14,6 +14,11 @@ async function receiptEnabled(ownerId: string, targetId: string) {
   return override?.enabled ?? owner?.readReceiptsEnabled ?? true;
 }
 
+const messageInclude = {
+  sender: { select: { id: true, name: true, username: true, image: true } },
+  replyTo: { select: { id: true, content: true, senderId: true, sender: { select: { id: true, name: true, username: true } } } },
+} as const;
+
 export async function GET(request: Request, context: RouteContext) {
   try {
     const user = await getCurrentUser();
@@ -27,14 +32,16 @@ export async function GET(request: Request, context: RouteContext) {
     });
     const otherUser = conversation?.members[0]?.user ?? null;
     const canShowReceipt = otherUser ? await receiptEnabled(otherUser.id, user.id) : false;
-    const messages = await prisma.message.findMany({ where: { conversationId }, orderBy: { createdAt: "asc" }, take: 200, include: { sender: { select: { id: true, name: true, username: true, image: true } } } });
+    const messages = await prisma.message.findMany({ where: { conversationId }, orderBy: { createdAt: "asc" }, take: 200, include: messageInclude });
 
-    await prisma.$transaction([
-      prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } }),
-      ...(otherUser ? [prisma.notification.updateMany({ where: { userId: user.id, actorId: otherUser.id, type: "MESSAGE", readAt: null }, data: { readAt: new Date() } })] : []),
-    ]);
+    await prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } });
 
-    return NextResponse.json({ success: true, messages: messages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })), otherUser, readReceiptsEnabledForOtherUser: canShowReceipt });
+    return NextResponse.json({
+      success: true,
+      messages: messages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
+      otherUser,
+      readReceiptsEnabledForOtherUser: canShowReceipt,
+    });
   } catch (error) {
     console.error("Conversation load error:", error);
     return NextResponse.json({ success: false, error: "Unable to load conversation." }, { status: 500 });
@@ -47,19 +54,32 @@ export async function POST(request: Request, context: RouteContext) {
     if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
     const { conversationId } = await context.params;
     if (!(await isMember(conversationId, user.id))) return NextResponse.json({ success: false, error: "Conversation not found." }, { status: 404 });
-    const body = await request.json();
+
+    const body = await request.json().catch(() => ({}));
     const content = typeof body.content === "string" ? body.content.trim() : "";
+    const replyToId = typeof body.replyToId === "string" ? body.replyToId : null;
     if (!content) return NextResponse.json({ success: false, error: "Message cannot be empty." }, { status: 400 });
     if (content.length > 2000) return NextResponse.json({ success: false, error: "Message must be 2000 characters or less." }, { status: 400 });
+
     const recipient = await prisma.conversationMember.findFirst({ where: { conversationId, userId: { not: user.id } }, select: { userId: true } });
     if (!recipient) return NextResponse.json({ success: false, error: "Recipient not found." }, { status: 404 });
 
+    let validReplyToId: string | null = null;
+    if (replyToId) {
+      const replyTarget = await prisma.message.findFirst({ where: { id: replyToId, conversationId }, select: { id: true } });
+      if (!replyTarget) return NextResponse.json({ success: false, error: "Reply target not found." }, { status: 400 });
+      validReplyToId = replyTarget.id;
+    }
+
     const message = await prisma.$transaction(async (tx) => {
-      const created = await tx.message.create({ data: { conversationId, senderId: user.id, content }, include: { sender: { select: { id: true, name: true, username: true, image: true } } } });
+      const created = await tx.message.create({
+        data: { conversationId, senderId: user.id, content, replyToId: validReplyToId },
+        include: messageInclude,
+      });
       await tx.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
-      await tx.notification.create({ data: { userId: recipient.userId, actorId: user.id, type: "MESSAGE", title: "New message", body: `@${user.username} sent you a message.`, href: `/messages/${encodeURIComponent(user.username)}` } });
       return created;
     });
+
     return NextResponse.json({ success: true, message });
   } catch (error) {
     console.error("Send message error:", error);

@@ -7,23 +7,22 @@ import GlassCard from "@/components/GlassCard";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import PhotoLightbox from "@/components/PhotoLightbox";
+import LiveSocialActions from "@/components/LiveSocialActions";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [featuredVehicles, posts, unreadNotifications, unreadMessages] = await Promise.all([
+  const [featuredVehicles, posts] = await Promise.all([
     prisma.vehicle.findMany({ where: { isFeatured: true }, include: { user: { select: { name: true, username: true, image: true } }, photos: { orderBy: { createdAt: "asc" } } }, orderBy: { updatedAt: "desc" }, take: 6 }),
     prisma.post.findMany({ include: { author: { select: { name: true, username: true, image: true } } }, orderBy: { createdAt: "desc" }, take: 12 }),
-    prisma.notification.count({ where: { userId: user.id, readAt: null, type: { not: "MESSAGE" } } }),
-    prisma.message.count({ where: { senderId: { not: user.id }, readAt: null, conversation: { members: { some: { userId: user.id } } } } }),
   ]);
 
   return (
     <main className="min-h-screen bg-black text-white">
       <div className="pointer-events-none fixed left-1/2 top-[-300px] z-0 h-[600px] w-[600px] -translate-x-1/2 rounded-full bg-red-600/[0.06] blur-[150px]" />
       <div className="pointer-events-none fixed bottom-[-300px] right-[-200px] z-0 h-[500px] w-[500px] rounded-full bg-red-950/[0.08] blur-[150px]" />
-      <header className="sticky top-0 z-50 hidden border-b border-white/[0.06] bg-black/75 backdrop-blur-2xl md:block"><div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8"><Logo className="h-12 w-auto" /><nav className="flex items-center gap-8"><Link href="/home" className="text-sm font-medium text-white hover:text-red-400">Discover</Link><Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Mechanics</Link><Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Dealerships</Link><Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Events</Link></nav><SocialActions user={user} unreadNotifications={unreadNotifications} unreadMessages={unreadMessages} /></div></header>
+      <header className="sticky top-0 z-50 hidden border-b border-white/[0.06] bg-black/75 backdrop-blur-2xl md:block"><div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8"><Logo className="h-12 w-auto" /><nav className="flex items-center gap-8"><Link href="/home" className="text-sm font-medium text-white hover:text-red-400">Discover</Link><Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Mechanics</Link><Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Dealerships</Link><Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Events</Link></nav><div className="flex items-center gap-3"><LiveSocialActions /><Link href="/profile" aria-label="Open your profile" className="ml-1 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/[0.09] bg-white/[0.04] text-sm font-bold text-red-300 transition hover:border-red-400/30">{user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0).toUpperCase()}</Link></div></div></header>
       <div className="relative z-10 mx-auto max-w-7xl px-5 pb-32 pt-6 sm:px-6 md:pb-16 md:pt-10 lg:px-8">
         <div className="mb-7 flex items-center justify-between md:hidden"><Logo className="h-10 w-auto" /></div>
         <section className="mb-8 rounded-[2rem] border border-white/[0.07] bg-gradient-to-br from-white/[0.035] to-transparent p-6 sm:p-8"><div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-red-400/70">Revvam community</p><h1 className="text-4xl font-black tracking-[-0.05em] sm:text-5xl">What&apos;s happening?</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-white/40 sm:text-base">Cars, builds, people and conversations from across Revvam — all in one place.</p></div><Link href="/profile/posts" className="inline-flex w-fit items-center gap-2 rounded-full border border-red-400/20 bg-red-600/10 px-4 py-2.5 text-sm font-semibold text-red-200 transition hover:bg-red-600/20">+ Create post</Link></div></section>
@@ -35,8 +34,7 @@ export default async function HomePage() {
     </main>
   );
 }
-function SocialActions({ user, unreadNotifications, unreadMessages }: { user: { name: string; username: string; image?: string | null }; unreadNotifications: number; unreadMessages: number }) { return <div className="flex items-center gap-2"><SocialIcon href="/profile/notifications" label="Notifications" badge={unreadNotifications} icon="♧" /><SocialIcon href="/messages" label="Messages" badge={unreadMessages} icon="✉" /><Link href="/profile" aria-label="Open your profile" className="ml-1 flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/[0.09] bg-white/[0.04] text-sm font-bold text-red-300 transition hover:border-red-400/30">{user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0).toUpperCase()}</Link></div>; }
-function SocialIcon({ href, label, badge, icon }: { href: string; label: string; badge: number; icon: string }) { return <Link href={href} aria-label={label} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.025] text-lg text-white/55 transition hover:border-red-400/25 hover:bg-red-500/[0.08] hover:text-white"><span aria-hidden>{icon}</span>{badge > 0 && <span className="absolute -right-1 -top-1 flex min-w-4.5 h-4.5 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1 text-[9px] font-bold text-white">{badge > 99 ? "99+" : badge}</span>}</Link>; }
+
 function QuickLink({ href, icon, label, muted = false }: { href: string; icon: string; label: string; muted?: boolean }) { return <Link href={href} className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${muted ? "border-white/[0.07] bg-white/[0.02] text-white/30 hover:text-white/60" : "border-white/[0.09] bg-white/[0.025] text-white/55 hover:border-red-400/20 hover:bg-red-500/[0.06] hover:text-white"}`}><span>{icon}</span>{label}</Link>; }
 function Avatar({ image, fallback, size = "md" }: { image?: string | null; fallback: string; size?: "xs" | "md" }) { const classes = size === "xs" ? "h-5 w-5 text-[8px]" : "h-10 w-10 text-xs"; return <span className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/15 font-bold text-red-300 ${classes}`}>{image ? <img src={image} alt="" className="h-full w-full object-cover" /> : fallback.charAt(0).toUpperCase()}</span>; }
 function formatDate(value: Date) { return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(value); }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import LiveSocialActions from "@/components/LiveSocialActions";
 
 const subscribeToMount = () => () => {};
 const getClientMountSnapshot = () => true;
@@ -25,28 +24,39 @@ export default function MobileNav() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
 
-  async function refreshIndicators() {
+  async function refreshIndicators(signal?: AbortSignal) {
     try {
-      const [notificationsResponse, messagesResponse] = await Promise.all([
-        fetch(`/api/notifications?_=${Date.now()}`, { credentials: "include", cache: "no-store" }),
-        fetch(`/api/messages?_=${Date.now()}`, { credentials: "include", cache: "no-store" }),
-      ]);
-      const notifications = await notificationsResponse.json().catch(() => null);
-      const messages = await messagesResponse.json().catch(() => null);
-      if (notificationsResponse.ok && notifications?.success) setNotificationCount(Number(notifications.unreadCount) || 0);
-      if (messagesResponse.ok && messages?.success) {
-        const total = (messages.conversations ?? []).reduce((sum: number, conversation: { unreadCount?: number }) => sum + (Number(conversation.unreadCount) || 0), 0);
-        setMessageCount(total);
-      }
-    } catch {
+      const response = await fetch(`/api/social/unread?_=${Date.now()}`, {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+        signal,
+      });
+
+      if (!response.ok) return;
+      const data = await response.json().catch(() => null);
+      if (!data?.success || signal?.aborted) return;
+
+      setNotificationCount(Number(data.unreadNotifications) || 0);
+      setMessageCount(Number(data.unreadMessages) || 0);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       // Indicators are non-blocking; keep the last known values.
     }
   }
 
   useEffect(() => {
-    refreshIndicators();
-    const timer = window.setInterval(refreshIndicators, 3000);
-    return () => window.clearInterval(timer);
+    const controller = new AbortController();
+    refreshIndicators(controller.signal);
+
+    const timer = window.setInterval(() => {
+      refreshIndicators(controller.signal);
+    }, 3000);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+    };
   }, [pathname]);
 
   useEffect(() => {
@@ -91,7 +101,6 @@ export default function MobileNav() {
 
   return createPortal(
     <>
-      <div className="pointer-events-none fixed left-0 top-0 h-0 w-0 overflow-hidden opacity-0" aria-hidden="true"><LiveSocialActions compact /></div>
       <button type="button" onClick={toggleMobileNav} aria-label={mobileNavOpen ? "Hide navigation" : "Show navigation"} aria-expanded={mobileNavOpen} className={`mobile-nav-root fixed left-1/2 z-[2147483647] flex h-6 w-16 -translate-x-1/2 items-center justify-center rounded-full border border-white/[0.14] bg-[#080808] shadow-[0_8px_30px_rgba(0,0,0,0.85)] transition-[bottom] duration-300 ease-out active:bg-red-500/15 ${mobileNavOpen ? "bottom-[max(72px,calc(72px+env(safe-area-inset-bottom)))]" : "bottom-[max(12px,env(safe-area-inset-bottom))]"}`} style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647, WebkitTapHighlightColor: "transparent" }}><span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-white/65" /></button>
       <div className={`mobile-nav-root fixed inset-x-0 bottom-0 z-[2147483646] px-3 pb-[max(8px,env(safe-area-inset-bottom))] transition-transform duration-300 ease-out ${mobileNavOpen ? "translate-y-0" : "translate-y-full"}`} style={{ pointerEvents: mobileNavOpen ? "auto" : "none", touchAction: "manipulation", isolation: "isolate", zIndex: 2147483646 }}>
         <div className="relative mx-auto w-full max-w-[520px]">

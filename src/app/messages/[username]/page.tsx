@@ -34,8 +34,10 @@ export default function IndividualMessagePage() {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
+  const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const initialScrollRef = useRef(true);
   const stickToBottomRef = useRef(true);
+  const freshChatEntryRef = useRef(true);
   const touchStartXRef = useRef(0);
   const isComposer = username === "new";
 
@@ -75,6 +77,7 @@ export default function IndividualMessagePage() {
     if (!conversationId) return;
     initialScrollRef.current = true;
     stickToBottomRef.current = true;
+    freshChatEntryRef.current = true;
     loadConversation(conversationId);
     const timer = window.setInterval(() => loadConversation(conversationId, true), 1500);
     return () => window.clearInterval(timer);
@@ -110,11 +113,14 @@ export default function IndividualMessagePage() {
   }, [messages]);
 
   useEffect(() => {
-    if (!conversationId || chatStatus !== "ACCEPTED") return;
+    if (!conversationId || chatStatus !== "ACCEPTED" || !freshChatEntryRef.current) return;
+
+    freshChatEntryRef.current = false;
     const focusTimer = window.setTimeout(() => {
-      composerRef.current?.focus();
+      composerRef.current?.focus({ preventScroll: true });
       scrollConversationToBottom(true);
     }, 150);
+
     return () => window.clearTimeout(focusTimer);
   }, [conversationId, chatStatus]);
 
@@ -133,7 +139,13 @@ export default function IndividualMessagePage() {
 
   useEffect(() => {
     if (!contextMenu) return;
-    const close = () => setContextMenu(null);
+
+    const close = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && contextMenuRef.current?.contains(target)) return;
+      setContextMenu(null);
+    };
+
     document.addEventListener("pointerdown", close);
     window.addEventListener("scroll", close, true);
     return () => {
@@ -147,7 +159,9 @@ export default function IndividualMessagePage() {
   function chooseReply(message: Message) {
     setContextMenu(null);
     setReplyTo(message);
-    requestAnimationFrame(() => composerRef.current?.focus());
+    requestAnimationFrame(() => {
+      composerRef.current?.focus({ preventScroll: true });
+    });
   }
 
   function handleMessageContextMenu(event: React.MouseEvent, message: Message) {
@@ -184,7 +198,7 @@ export default function IndividualMessagePage() {
       setContent(""); setReplyTo(null);
       await loadConversation(conversationId, true);
       scrollConversationToBottom(true);
-      window.setTimeout(() => { composerRef.current?.focus(); scrollConversationToBottom(true); }, 0);
+      window.setTimeout(() => { composerRef.current?.focus({ preventScroll: true }); scrollConversationToBottom(true); }, 0);
     } catch (e) { setError(e instanceof Error ? e.message : "Unable to send message."); }
     finally { setSending(false); }
   }
@@ -210,7 +224,7 @@ export default function IndividualMessagePage() {
   }
 
   if (isComposer) return (
-    <main className="min-h-screen bg-black px-4 py-6 pb-28 text-white sm:px-6 sm:py-8"><div className="mx-auto max-w-3xl"><Link href="/messages" className="text-sm text-white/35 hover:text-white">← Back to messages</Link><div className="mt-7 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-8"><p className="text-xs uppercase tracking-[0.22em] text-red-400/70">New conversation</p><h1 className="mt-2 text-3xl font-black tracking-[-0.045em]">Find someone on Revvam</h1><p className="mt-3 text-sm leading-6 text-white/35">Search for a driver or car enthusiast, then send a chat request with a short message.</p><div className="relative mt-7"><input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search username..." className="h-12 w-full rounded-2xl border border-white/[0.10] bg-black/30 px-4 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" />{results.length > 0 && <div className="absolute left-0 right-0 top-14 z-20 overflow-hidden rounded-2xl border border-white/[0.10] bg-[#0b0b0b] shadow-2xl">{results.map((result) => <Link key={result.id} href={`/messages/${encodeURIComponent(result.username)}`} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 last:border-0 hover:bg-white/[0.04]"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/10 text-sm font-bold text-red-300">{result.image ? <img src={result.image} alt="" className="h-full w-full object-cover" /> : result.name.charAt(0).toUpperCase()}</span><span><span className="block text-sm font-semibold">{result.name}</span><span className="block text-xs text-white/30">@{result.username}</span></span></Link>)}</div>}</div></div></div><MobileNav /></main>
+    <main className="min-h-screen bg-black px-4 py-6 pb-28 text-white sm:px-6 sm:py-8"><div className="mx-auto max-w-3xl"><Link href="/messages" className="text-sm text-white/35 hover:text-white">← Back to messages</Link><div className="mt-7 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-8"><p className="text-xs uppercase tracking-[0.22em] text-red-400/70">New conversation</p><h1 className="mt-2 text-3xl font-black tracking-[-0.045em]">Find someone on Revvam</h1><p className="mt-3 text-sm leading-6 text-white/35">Search for a driver or car enthusiast, then send a chat request with a short message.</p><div className="relative mt-7"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search username..." className="h-12 w-full rounded-2xl border border-white/[0.10] bg-black/30 px-4 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" />{results.length > 0 && <div className="absolute left-0 right-0 top-14 z-20 overflow-hidden rounded-2xl border border-white/[0.10] bg-[#0b0b0b] shadow-2xl">{results.map((result) => <Link key={result.id} href={`/messages/${encodeURIComponent(result.username)}`} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 last:border-0 hover:bg-white/[0.04]"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/10 text-sm font-bold text-red-300">{result.image ? <img src={result.image} alt="" className="h-full w-full object-cover" /> : result.name.charAt(0).toUpperCase()}</span><span><span className="block text-sm font-semibold">{result.name}</span><span className="block text-xs text-white/30">@{result.username}</span></span></Link>)}</div>}</div></div></div><MobileNav /></main>
   );
 
   if (loading) return <main className="flex min-h-screen items-center justify-center bg-black text-white"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-red-500" /></main>;
@@ -247,10 +261,10 @@ export default function IndividualMessagePage() {
             <div ref={bottomAnchorRef} aria-hidden="true" className="h-px w-full" />
           </div>
 
-          {contextMenu && <div role="menu" className="fixed z-[2147483647] min-w-[150px] rounded-xl border border-white/[0.12] bg-[#0b0b0b] p-1.5 shadow-2xl" style={{ left: contextMenu.x, top: contextMenu.y }} onPointerDown={(event) => event.stopPropagation()}><button type="button" role="menuitem" onClick={() => chooseReply(contextMenu.message)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06] hover:text-white">↩ <span>Reply</span></button></div>}
+          {contextMenu && <div ref={contextMenuRef} role="menu" className="fixed z-[2147483647] min-w-[150px] rounded-xl border border-white/[0.12] bg-[#0b0b0b] p-1.5 shadow-2xl" style={{ left: contextMenu.x, top: contextMenu.y }} onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}><button type="button" role="menuitem" onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); chooseReply(contextMenu.message); }} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-white/80 hover:bg-white/[0.06] hover:text-white">↩ <span>Reply</span></button></div>}
 
           <div className="shrink-0 border-t border-white/[0.07] bg-[#080808] p-3 sm:p-5">
-            {replyTo && <div className="mb-2 flex items-center gap-3 rounded-2xl border border-red-400/15 bg-red-500/[0.045] px-3 py-2.5"><span className="h-8 w-0.5 rounded-full bg-red-400" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-red-300/75">Replying to @{replyTo.sender.username}</p><p className="truncate text-xs text-white/35">{replyTo.content}</p></div><button type="button" onClick={() => { setReplyTo(null); composerRef.current?.focus(); }} className="h-8 w-8 shrink-0 rounded-lg text-white/35 hover:bg-white/[0.05] hover:text-white">×</button></div>}
+            {replyTo && <div className="mb-2 flex items-center gap-3 rounded-2xl border border-red-400/15 bg-red-500/[0.045] px-3 py-2.5"><span className="h-8 w-0.5 rounded-full bg-red-400" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold uppercase tracking-[0.12em] text-red-300/75">Replying to @{replyTo.sender.username}</p><p className="truncate text-xs text-white/35">{replyTo.content}</p></div><button type="button" onClick={() => { setReplyTo(null); composerRef.current?.focus({ preventScroll: true }); }} className="h-8 w-8 shrink-0 rounded-lg text-white/35 hover:bg-white/[0.05] hover:text-white">×</button></div>}
             <div className="flex items-end gap-2">
               <textarea ref={composerRef} value={content} onChange={(event) => setContent(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(); } }} rows={1} placeholder="Write a message..." aria-label="Write a message" className="min-h-11 max-h-32 flex-1 resize-none rounded-2xl border border-white/[0.10] bg-black/30 px-4 py-3 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/30" />
               <button type="button" onClick={sendMessage} disabled={sending || !content.trim()} className="min-h-11 shrink-0 rounded-2xl border border-red-400/20 bg-red-500/[0.12] px-5 text-sm font-semibold text-red-300 disabled:opacity-40">{sending ? "..." : "Send"}</button>

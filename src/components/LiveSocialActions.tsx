@@ -60,6 +60,21 @@ function updateStaticBadges(notifications: number, messages: number) {
     badge.style.display = count > 0 ? "flex" : "none";
     badge.style.visibility = count > 0 ? "visible" : "hidden";
   });
+
+  document.querySelectorAll<HTMLElement>("[data-revvam-profile-toggle]").forEach((toggle) => {
+    const total = notifications + messages;
+    let badge = toggle.querySelector<HTMLElement>("[data-revvam-profile-badge]");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.dataset.revvamProfileBadge = "true";
+      badge.className = "absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-black bg-red-500 px-1.5 text-[11px] font-black leading-none text-white shadow-[0_2px_10px_rgba(239,68,68,0.45)]";
+      toggle.classList.add("relative");
+      toggle.appendChild(badge);
+    }
+    badge.textContent = total > 99 ? "99+" : String(total);
+    badge.style.display = total > 0 ? "flex" : "none";
+    badge.style.visibility = total > 0 ? "visible" : "hidden";
+  });
 }
 
 export default function LiveSocialActions({ compact = false }: Props) {

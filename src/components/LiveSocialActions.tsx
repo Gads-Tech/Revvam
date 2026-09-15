@@ -9,26 +9,13 @@ function updateStaticBadges(notifications: number, messages: number) {
   if (typeof document === "undefined") return;
 
   const targets = [
-    { selector: 'a[href="/profile/notifications"]', label: "Notifications", count: notifications },
-    { selector: 'a[href="/messages"]', label: "Messages", count: messages },
+    { selector: 'a[href="/profile/notifications"]', count: notifications },
+    { selector: 'a[href="/messages"]', count: messages },
   ];
 
-  for (const { selector, label, count } of targets) {
+  for (const { selector, count } of targets) {
     document.querySelectorAll<HTMLAnchorElement>(selector).forEach((link) => {
       const isMobile = !!link.closest(".mobile-nav-root");
-
-      if (!isMobile) {
-        link.setAttribute("aria-label", label);
-        link.className = "relative inline-flex h-10 items-center justify-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-4 text-sm font-semibold text-white/65 shadow-lg transition hover:border-red-400/25 hover:bg-red-500/[0.08] hover:text-white";
-
-        let labelNode = link.querySelector<HTMLElement>("[data-revvam-social-label]");
-        if (!labelNode) {
-          labelNode = document.createElement("span");
-          labelNode.dataset.revvamSocialLabel = "true";
-          link.prepend(labelNode);
-        }
-        labelNode.textContent = label;
-      }
 
       let badge = link.querySelector<HTMLElement>("[data-revvam-unread-badge]");
       if (!badge) {

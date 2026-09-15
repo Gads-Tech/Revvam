@@ -69,12 +69,14 @@ export default function IndividualMessagePage() {
     return () => window.clearInterval(timer);
   }, [conversationId]);
 
-  // Scroll only the message list. Do not use scrollIntoView(), because that can
-  // scroll the whole page and push the fixed composer/send bar below the viewport.
+  // Put the conversation at the newest message once when it opens.
+  // After that, polling must never take control of the user's scroll position.
   useEffect(() => {
+    if (!initialScrollRef.current) return;
     const container = messagesContainerRef.current;
     if (!container) return;
-    container.scrollTo({ top: container.scrollHeight, behavior: initialScrollRef.current ? "auto" : "smooth" });
+
+    container.scrollTop = container.scrollHeight;
     initialScrollRef.current = false;
   }, [messages]);
 

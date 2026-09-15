@@ -26,34 +26,67 @@ export async function GET(request: Request, context: RouteContext) {
     const { conversationId } = await context.params;
     if (!(await isMember(conversationId, user.id))) return NextResponse.json({ success: false, error: "Conversation not found." }, { status: 404 });
 
+    const url = new URL(request.url);
+    const markRead = url.searchParams.get("markRead") === "1";
     const conversation = await prisma.conversation.findUnique({
       where: { id: conversationId },
       include: { members: { where: { userId: { not: user.id } }, include: { user: { select: { id: true, name: true, username: true, image: true } } } } },
     });
     const otherUser = conversation?.members[0]?.user ?? null;
     const canShowReceipt = otherUser ? await receiptEnabled(otherUser.id, user.id) : false;
-    const messages = await prisma.message.findMany({ where: { conversationId }, orderBy: { createdAt: "asc" }, take: 200, include: messageInclude });
 
-    // Capture this before marking messages read. The client uses it to decide whether a fresh chat entry
-    // should jump to the newest messages. Returning to a chat with nothing new preserves the prior scroll.
-    const unreadBeforeOpen = messages.filter((message) => message.senderId !== user.id && message.readAt === null).length;
+    const messages = await prisma.message.findMany({
+      where: { conversationId, deletions: { none: { userId: user.id } } },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+      include: messageInclude,
+    });
 
-    // Opening a chat consumes both unread message rows and any legacy MESSAGE notifications.
-    await prisma.$transaction([
-      prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } }),
-      prisma.notification.updateMany({ where: { userId: user.id, actorId: otherUser?.id, type: "MESSAGE", readAt: null }, data: { readAt: new Date() } }),
-    ]);
+    const unreadBeforeOpen = await prisma.message.count({
+      where: { conversationId, senderId: { not: user.id }, readAt: null, deletions: { none: { userId: user.id } } },
+    });
+
+    if (markRead) {
+      await prisma.$transaction([
+        prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } }),
+        prisma.notification.updateMany({ where: { userId: user.id, actorId: otherUser?.id, type: "MESSAGE", readAt: null }, data: { readAt: new Date() } }),
+      ]);
+    }
 
     return NextResponse.json({
       success: true,
       messages: messages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
       otherUser,
       readReceiptsEnabledForOtherUser: canShowReceipt,
-      unreadBeforeOpen,
+      unreadBeforeOpen: markRead ? unreadBeforeOpen : 0,
+      unreadCount: markRead ? 0 : unreadBeforeOpen,
     });
   } catch (error) {
     console.error("Conversation load error:", error);
     return NextResponse.json({ success: false, error: "Unable to load conversation." }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request, context: RouteContext) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401 });
+    const { conversationId } = await context.params;
+    if (!(await isMember(conversationId, user.id))) return NextResponse.json({ success: false, error: "Conversation not found." }, { status: 404 });
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: { members: { where: { userId: { not: user.id } }, select: { userId: true } } },
+    });
+    const otherUserId = conversation?.members[0]?.userId;
+    await prisma.$transaction([
+      prisma.message.updateMany({ where: { conversationId, senderId: { not: user.id }, readAt: null }, data: { readAt: new Date() } }),
+      prisma.notification.updateMany({ where: { userId: user.id, actorId: otherUserId, type: "MESSAGE", readAt: null }, data: { readAt: new Date() } }),
+    ]);
+    return NextResponse.json({ success: true, unreadCount: 0 });
+  } catch (error) {
+    console.error("Mark messages read error:", error);
+    return NextResponse.json({ success: false, error: "Unable to mark messages as read." }, { status: 500 });
   }
 }
 

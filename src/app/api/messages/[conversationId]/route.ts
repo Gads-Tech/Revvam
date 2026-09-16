@@ -35,9 +35,6 @@ export async function GET(request: Request, context: RouteContext) {
     const url = new URL(request.url);
     const markRead = url.searchParams.get("markRead") === "1";
 
-    // These reads do not depend on each other, so run them together. This is
-    // especially important on mobile where a slow sequential poll can miss the
-    // next polling window.
     const [conversation, messages, unreadBeforeOpen] = await Promise.all([
       prisma.conversation.findUnique({
         where: { id: conversationId },
@@ -50,7 +47,7 @@ export async function GET(request: Request, context: RouteContext) {
       }),
       prisma.message.findMany({
         where: { conversationId, deletions: { none: { userId: user.id } } },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         take: 200,
         include: messageInclude,
       }),
@@ -69,10 +66,12 @@ export async function GET(request: Request, context: RouteContext) {
       ]);
     }
 
+    const chronologicalMessages = [...messages].reverse();
+
     return NextResponse.json({
       success: true,
       currentUserId: user.id,
-      messages: messages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
+      messages: chronologicalMessages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
       otherUser,
       readReceiptsEnabledForOtherUser: canShowReceipt,
       unreadBeforeOpen: markRead ? unreadBeforeOpen : 0,

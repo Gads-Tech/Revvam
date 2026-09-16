@@ -61,20 +61,23 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     setDeepLinkCommentId(targetId);
     setShowComments(true);
     window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } }));
+    void loadComments();
   }, [post.id]);
 
   useEffect(() => {
     if (!showComments || !deepLinkCommentId || !comments.length) return;
     const target = comments.find((item) => item.id === deepLinkCommentId);
     if (!target) return;
-    if (target.parentId) setExpandedReplies((current) => ({ ...current, [target.parentId as string]: true }));
+    if (target.parentId) {
+      setExpandedReplies((current) => current[target.parentId as string] ? current : { ...current, [target.parentId as string]: true });
+    }
     const timer = window.setTimeout(() => {
       const element = document.getElementById(`comment-${deepLinkCommentId}`);
       element?.scrollIntoView({ behavior: "smooth", block: "center" });
       setDeepLinkCommentId(null);
     }, target.parentId ? 320 : 180);
     return () => window.clearTimeout(timer);
-  }, [comments, showComments, deepLinkCommentId, expandedReplies]);
+  }, [comments, showComments, deepLinkCommentId]);
 
   useEffect(() => {
     let cancelled = false;

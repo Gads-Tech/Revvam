@@ -159,17 +159,21 @@ model PostLike {
 }
 
 model PostComment {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   postId    String
   authorId  String
+  parentId  String?
   content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  post      Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    PostComment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   PostComment[]  @relation("CommentReplies")
 
   @@index([postId, createdAt])
   @@index([authorId, createdAt])
+  @@index([parentId, createdAt])
 }
 
 model PostShare {
@@ -178,8 +182,8 @@ model PostShare {
   userId    String
   channel   PostShareChannel @default(REVVAM)
   createdAt DateTime        @default(now())
-  post      Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([postId, createdAt])
   @@index([userId, createdAt])

@@ -87,7 +87,8 @@ export default function MobileNav() {
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.error || "Logout failed");
       setProfileMenuOpen(false);
-      router.replace("/login");
+      // Logged-out users belong on the public Explore/Landing page.
+      router.replace("/");
       router.refresh();
     } catch (error) {
       console.error("Mobile logout error:", error);

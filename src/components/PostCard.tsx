@@ -11,6 +11,7 @@ type Comment = { id: string; content: string; createdAt: string; author: User; p
 
 export default function PostCard({ post, onChanged }: { post: PostData; onChanged?: (post: PostData) => void }) {
   const articleRef = useRef<HTMLElement | null>(null);
+  const commentsRef = useRef<HTMLDivElement | null>(null);
   const [liked, setLiked] = useState(Boolean(post.liked));
   const [counts, setCounts] = useState<Counts>({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 });
   const [comments, setComments] = useState<Comment[]>([]);
@@ -51,9 +52,11 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   useEffect(() => { if (showComments) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); }, [showComments, post.id]);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryTarget = params.get("comment");
     const hash = window.location.hash;
-    if (!hash.startsWith("#comment-")) return;
-    const targetId = decodeURIComponent(hash.slice("#comment-".length));
+    const hashTarget = hash.startsWith("#comment-") ? decodeURIComponent(hash.slice("#comment-".length)) : null;
+    const targetId = queryTarget || hashTarget;
     if (!targetId) return;
     setDeepLinkCommentId(targetId);
     setShowComments(true);
@@ -66,11 +69,12 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     if (!target) return;
     if (target.parentId) setExpandedReplies((current) => ({ ...current, [target.parentId as string]: true }));
     const timer = window.setTimeout(() => {
-      document.getElementById(`comment-${deepLinkCommentId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const element = document.getElementById(`comment-${deepLinkCommentId}`);
+      element?.scrollIntoView({ behavior: "smooth", block: "center" });
       setDeepLinkCommentId(null);
-    }, 120);
+    }, target.parentId ? 320 : 180);
     return () => window.clearTimeout(timer);
-  }, [comments, showComments, deepLinkCommentId]);
+  }, [comments, showComments, deepLinkCommentId, expandedReplies]);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +92,7 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     if (!shareOpen) return;
     const body = document.body; const html = document.documentElement; const scrollY = window.scrollY; const previousBodyOverflow = body.style.overflow; const previousBodyPosition = body.style.position; const previousBodyTop = body.style.top; const previousBodyWidth = body.style.width; const previousHtmlOverflow = html.style.overflow;
     body.style.position = "fixed"; body.style.top = `-${scrollY}px`; body.style.width = "100%"; body.style.overflow = "hidden"; html.style.overflow = "hidden";
-    return () => { body.style.overflow = previousBodyOverflow; body.style.position = previousBodyPosition; body.style.top = previousBodyTop; body.style.width = previousBodyWidth; html.style.overflow = previousHtmlOverflow; window.scrollTo(0, scrollY); };
+    return () => { body.style.overflow = previousBodyOverflow; body.style.position = previousBodyPosition; body.style.top = previousBodyTop; body.style.width = previousBodyWidth; body.style.overflow = previousBodyOverflow; html.style.overflow = previousHtmlOverflow; window.scrollTo(0, scrollY); };
   }, [shareOpen]);
 
   async function toggleLike() {
@@ -98,7 +102,7 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   }
 
   async function loadComments() {
-    try { const response = await fetch(`/api/posts/${post.id}/comments?_=${Date.now()}`, { cache: "no-store", credentials: "include" }); const data = await response.json(); if (response.ok && data.success) { setComments(data.comments ?? []); setCurrentUserId(data.currentUserId ?? null); setCounts((current) => ({ ...current, comments: Number(data.comments?.length) || 0 })); } }
+    try { const response = await fetch(`/api/posts/${post.id}/comments?_=${Date.now()}`, { cache: "no-store", credentials: "include" }); const data = await response.json(); if (response.ok && data.success) { const ordered = [...(data.comments ?? [])].sort((a: Comment, b: Comment) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); setComments(ordered); setCurrentUserId(data.currentUserId ?? null); setCounts((current) => ({ ...current, comments: ordered.length })); } }
     catch { setNotice("Unable to load comments."); }
   }
 
@@ -117,9 +121,11 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     try {
       const response = await fetch(`/api/posts/${post.id}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: comment, parentId: replyingTo?.id ?? null }) });
       const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to comment.");
-      setComments((current) => [...current, data.comment]); setCounts((current) => ({ ...current, comments: current.comments + 1 }));
+      setComments((current) => [data.comment, ...current]);
+      setCounts((current) => ({ ...current, comments: current.comments + 1 }));
       if (replyingTo) setExpandedReplies((current) => ({ ...current, [replyingTo.parentId ?? replyingTo.id]: true }));
       setComment(""); setReplyingTo(null);
+      window.setTimeout(() => commentsRef.current?.scrollTo({ top: 0, behavior: "smooth" }), 50);
     } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to comment."); } finally { setCommentBusy(false); }
   }
 
@@ -182,7 +188,7 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
 
       {showComments && <div className="min-w-0 border-t border-white/[0.06] px-4 pb-4 pt-3 sm:px-5 md:border-l md:border-t-0">
         <div className="flex items-center justify-between gap-3 pb-2"><div><p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Conversation</p><p className="text-xs font-semibold text-white/60">{counts.comments} comment{counts.comments === 1 ? "" : "s"}</p></div><button type="button" onClick={() => { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); }} className="flex h-8 w-12 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.02]" aria-label="Collapse comments"><span className="h-0.5 w-7 rounded-full bg-white/30" /></button></div>
-        <div className={`${commentsScrollable ? "max-h-72 overflow-y-auto" : "overflow-visible"} space-y-3 overscroll-contain pr-1 [scrollbar-width:thin] [touch-action:pan-y]`} style={commentsScrollable ? { WebkitOverflowScrolling: "touch" } : undefined}>
+        <div ref={commentsRef} className={`${commentsScrollable ? "max-h-72 overflow-y-auto" : "overflow-visible"} space-y-3 overscroll-contain pr-1 [scrollbar-width:thin] [touch-action:pan-y]`} style={commentsScrollable ? { WebkitOverflowScrolling: "touch" } : undefined}>
           {topComments.map((item) => {
             const replies = repliesFor(item.id);
             const repliesOpen = Boolean(expandedReplies[item.id]);

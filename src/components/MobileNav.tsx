@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import DiscoverLink from "@/components/DiscoverLink";
 
 const subscribeToMount = () => () => {};
 const getClientMountSnapshot = () => true;
@@ -41,7 +42,6 @@ export default function MobileNav() {
       setMessageCount(Number(data.unreadMessages) || 0);
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      // Indicators are non-blocking; keep the last known values.
     }
   }
 
@@ -115,7 +115,10 @@ export default function MobileNav() {
 
           <nav aria-label="Mobile navigation" className="relative z-[2147483647] flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.12] bg-[#080808] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)]" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
             <MobileNavItem icon="←" label="Back" onClick={handleBack} />
-            <MobileNavItem icon="⌂" label="Discover" href="/home" active={pathname === "/home"} />
+            <DiscoverLink className={`flex h-full min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[15px] px-0.5 py-1 transition-all active:scale-[0.96] ${pathname === "/home" ? "bg-red-500/[0.10] text-red-300" : "text-white/50 active:bg-white/[0.05]"}`}>
+              <span className="flex h-5 items-center justify-center text-[14px] leading-none">⌂</span>
+              <span className="mt-1 w-full truncate text-center text-[8px] font-medium leading-none tracking-tight sm:text-[9px]">Discover</span>
+            </DiscoverLink>
             <MobileNavItem icon="⌕" label="Mechanics" href="#" />
             <MobileNavItem icon="▣" label="Dealers" href="#" />
             <MobileNavItem icon="•" label="Events" href="#" />

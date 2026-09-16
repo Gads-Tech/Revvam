@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 import LiveSocialActions from "@/components/LiveSocialActions";
 
@@ -18,7 +18,7 @@ function timeLabel(value: string) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-export default function MessagesPage() {
+function MessagesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedConversationId = searchParams.get("conversation");
@@ -41,9 +41,6 @@ export default function MessagesPage() {
       const nextConversations: Conversation[] = data.conversations ?? [];
       setConversations(nextConversations);
 
-      // A profile can send us here with ?conversation=<id>. Resolve that
-      // conversation to its other user and enter the actual one-to-one chat.
-      // This prevents the profile's Message button from landing on the list.
       if (!silent && requestedConversationId) {
         const target = nextConversations.find((conversation) => conversation.id === requestedConversationId)?.otherUser;
         if (target?.username) {
@@ -131,5 +128,13 @@ export default function MessagesPage() {
       </div>
       <MobileNav />
     </main>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-black px-4 py-6 pb-28 text-white"><div className="mx-auto flex min-h-[70vh] max-w-5xl items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-red-500" /></div><MobileNav /></main>}>
+      <MessagesPageContent />
+    </Suspense>
   );
 }

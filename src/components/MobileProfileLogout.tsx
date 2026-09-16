@@ -139,7 +139,8 @@ export default function MobileProfileLogout() {
         throw new Error(data?.error || "Unable to log out.");
       }
 
-      router.replace("/login");
+      // Logged-out users should land on the public Explore/Landing page.
+      router.replace("/");
       router.refresh();
     } catch (logoutError) {
       setError(

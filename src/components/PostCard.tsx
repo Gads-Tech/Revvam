@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type User = { id?: string; name: string; username: string; image: string | null };
+type Friend = { id: string; name: string; username: string; image: string | null };
 export type PostData = {
   id: string;
   content: string;
@@ -27,8 +28,28 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   const [busy, setBusy] = useState(false);
   const [commentBusy, setCommentBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareSearch, setShareSearch] = useState("");
+  const [shareUsers, setShareUsers] = useState<Friend[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
+  const [sendingTo, setSendingTo] = useState<string | null>(null);
+  const [shareError, setShareError] = useState("");
 
   useEffect(() => { setLiked(Boolean(post.liked)); setLikes(post._count?.likes ?? 0); }, [post.id, post.liked, post._count?.likes]);
+
+  useEffect(() => {
+    if (!shareOpen || shareSearch.trim().length < 1) { setShareUsers([]); return; }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/users/search?q=${encodeURIComponent(shareSearch.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal });
+        const data = await response.json();
+        if (response.ok && data.success) setShareUsers(data.users ?? []);
+      } catch { /* cancelled */ }
+    }, 180);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [shareOpen, shareSearch]);
 
   async function toggleLike() {
     if (busy) return;
@@ -68,13 +89,69 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     finally { setCommentBusy(false); }
   }
 
-  async function sharePost() {
-    const url = `${window.location.origin}/posts/${post.id}`;
+  async function openShare() {
+    setShareOpen(true); setShareSearch(""); setShareUsers([]); setShareError("");
+    setLoadingFriends(true);
     try {
-      if (navigator.share) await navigator.share({ title: `@${post.author.username} on Revvam`, text: post.content.slice(0, 120), url });
-      else { await navigator.clipboard.writeText(url); setNotice("Post link copied."); }
-    } catch { /* user cancelled share */ }
+      const response = await fetch(`/api/messages?_=${Date.now()}`, { credentials: "include", cache: "no-store" });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const connected = (data.conversations ?? [])
+          .map((conversation: { otherUser?: Friend | null }) => conversation.otherUser)
+          .filter((friend: Friend | null | undefined): friend is Friend => Boolean(friend));
+        setFriends(connected);
+      } else if (response.status === 401) {
+        setShareError("Log in to share a post with someone on Revvam.");
+      }
+    } catch {
+      setShareError("Unable to load your Revvam friends.");
+    } finally { setLoadingFriends(false); }
   }
+
+  function closeShare() {
+    if (sendingTo) return;
+    setShareOpen(false); setShareSearch(""); setShareUsers([]); setShareError("");
+  }
+
+  async function sendPostToUser(recipient: Friend) {
+    if (sendingTo) return;
+    setSendingTo(recipient.username); setShareError("");
+    const url = `${window.location.origin}/posts/${post.id}`;
+    const text = `@${post.author.username} shared a post on Revvam: ${url}`;
+    try {
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ recipientUsername: recipient.username, content: text }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to send post.");
+      setShareError(`Sent to @${recipient.username}.`);
+      window.setTimeout(() => { setShareOpen(false); setShareError(""); }, 900);
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : "Unable to send post.");
+    } finally { setSendingTo(null); }
+  }
+
+  async function shareExternal() {
+    const url = `${window.location.origin}/posts/${post.id}`;
+    setShareError("");
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `@${post.author.username} on Revvam`, text: post.content.slice(0, 120), url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setShareError("Post link copied to clipboard.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setShareError("Unable to open sharing options.");
+    }
+  }
+
+  const filteredFriends = friends.filter((friend) => !shareSearch.trim() || `${friend.name} ${friend.username}`.toLowerCase().includes(shareSearch.trim().toLowerCase()));
+  const searchOnlyUsers = shareSearch.trim() ? shareUsers.filter((user) => !friends.some((friend) => friend.id === user.id)) : [];
 
   return <article className="overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.025] transition hover:border-white/[0.12]">
     <div className="p-5 sm:p-6">
@@ -90,13 +167,35 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     <div className="flex items-center gap-1 border-t border-white/[0.06] px-4 py-2 sm:px-5">
       <button type="button" onClick={toggleLike} disabled={busy} className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition ${liked ? "text-red-300" : "text-white/35 hover:bg-white/[0.04] hover:text-white"}`}><span className="text-base">{liked ? "♥" : "♡"}</span>{likes || "Like"}</button>
       <button type="button" onClick={toggleComments} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><span className="text-base">○</span>{post._count?.comments || comments.length || "Comment"}</button>
-      <button type="button" onClick={sharePost} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><span className="text-base">↗</span>Share</button>
+      <button type="button" onClick={openShare} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><span className="text-base">↗</span>Share</button>
     </div>
     {showComments && <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 sm:px-5">
       <div className="space-y-3">{comments.map((item) => <div key={item.id} className="rounded-2xl bg-white/[0.025] p-3"><div className="flex items-center gap-2"><span className="text-xs font-semibold">@{item.author.username}</span><span className="text-[9px] text-white/20">{formatDate(item.createdAt)}</span></div><p className="mt-1 text-xs leading-5 text-white/55">{item.content}</p></div>)}</div>
       <form onSubmit={addComment} className="mt-3 flex gap-2"><input value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} placeholder="Write a comment..." className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-black/30 px-4 py-2.5 text-xs text-white outline-none placeholder:text-white/20 focus:border-red-400/25" /><button disabled={!comment.trim() || commentBusy} className="rounded-2xl border border-red-400/20 bg-red-600/15 px-4 text-xs font-semibold text-red-200 disabled:opacity-40">{commentBusy ? "..." : "Post"}</button></form>
     </div>}
     {notice && <p className="border-t border-white/[0.06] px-5 py-2 text-[10px] text-red-300">{notice}</p>}
+
+    {shareOpen && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 p-3 backdrop-blur-md sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-label="Share post" onMouseDown={(event) => { if (event.target === event.currentTarget) closeShare(); }}>
+      <div className="w-full max-w-md overflow-hidden rounded-[2rem] border border-white/[0.10] bg-[#090909] shadow-[0_25px_80px_rgba(0,0,0,0.75)]">
+        <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
+          <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/70">Share post</p><h3 className="mt-1 text-lg font-bold">Send it to someone</h3></div>
+          <button type="button" onClick={closeShare} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.05] text-lg text-white/55 hover:text-white" aria-label="Close share dialog">×</button>
+        </div>
+        <div className="p-4 sm:p-5">
+          <button type="button" onClick={shareExternal} className="flex w-full items-center gap-3 rounded-2xl border border-red-400/20 bg-red-600/[0.10] px-4 py-3 text-left transition hover:bg-red-600/[0.16]"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/15 text-lg">↗</span><span><span className="block text-sm font-semibold text-white">Share outside Revvam</span><span className="block text-[10px] text-white/30">Use your phone or desktop sharing options</span></span></button>
+          <div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-white/[0.07]" /><span className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/20">On Revvam</span><span className="h-px flex-1 bg-white/[0.07]" /></div>
+          <input autoFocus value={shareSearch} onChange={(event) => setShareSearch(event.target.value)} placeholder="Search a friend or username..." className="h-11 w-full rounded-2xl border border-white/[0.09] bg-black/50 px-4 text-sm text-white outline-none placeholder:text-white/20 focus:border-red-400/25" />
+          {shareError && <p className="mt-3 rounded-xl border border-red-400/10 bg-red-500/[0.06] px-3 py-2 text-xs text-red-200">{shareError}</p>}
+          <div className="mt-3 max-h-64 overflow-y-auto pr-1">
+            {loadingFriends ? <p className="px-2 py-5 text-center text-xs text-white/25">Loading your friends...</p> : <>
+              {filteredFriends.map((friend) => <button key={friend.id} type="button" onClick={() => sendPostToUser(friend)} disabled={Boolean(sendingTo)} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-white/[0.05] disabled:opacity-50"><span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/15 text-xs font-bold text-red-300">{friend.image ? <img src={friend.image} alt="" className="h-full w-full object-cover" /> : friend.username.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-white/80">{friend.name}</span><span className="block truncate text-[10px] text-white/30">@{friend.username}</span></span><span className="text-[10px] font-semibold text-red-300">{sendingTo === friend.username ? "Sending…" : "Send"}</span></button>)}
+              {searchOnlyUsers.map((friend) => <button key={friend.id} type="button" onClick={() => sendPostToUser(friend)} disabled={Boolean(sendingTo)} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition hover:bg-white/[0.05] disabled:opacity-50"><span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/15 text-xs font-bold text-red-300">{friend.image ? <img src={friend.image} alt="" className="h-full w-full object-cover" /> : friend.username.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-white/80">{friend.name}</span><span className="block truncate text-[10px] text-white/30">@{friend.username}</span></span><span className="text-[10px] font-semibold text-red-300">{sendingTo === friend.username ? "Sending…" : "Send"}</span></button>)}
+              {!filteredFriends.length && !searchOnlyUsers.length && <p className="px-2 py-6 text-center text-xs text-white/25">{shareSearch ? "No user found." : "No Revvam friends yet. Search for a user above."}</p>}
+            </>}
+          </div>
+        </div>
+      </div>
+    </div>}
   </article>;
 }
 

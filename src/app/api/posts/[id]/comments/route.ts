@@ -13,7 +13,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const currentUser = await getCurrentUser();
   const comments = await prisma.postComment.findMany({
     where: { postId: id },
-    orderBy: { createdAt: "asc" },
+    // Newest comments first so the current conversation is what users see immediately.
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: {
       author: { select: authorSelect },
       parent: { select: { id: true, parentId: true, author: { select: { username: true } } } },
@@ -44,8 +45,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!parent || parent.postId !== id) return NextResponse.json({ success: false, error: "Comment to reply to was not found." }, { status: 404, headers: noStore });
   }
 
-  // Keep the UI one level deep: a reply to a reply is grouped beneath
-  // the original top-level comment while still notifying the exact person replied to.
   const parentId = parent?.parentId ?? parent?.id ?? null;
 
   const comment = await prisma.postComment.create({
@@ -64,7 +63,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       type: "POST_COMMENT",
       title: parent ? "New comment reply" : "New comment",
       body: parent ? `@${user.username} replied to your comment.` : `@${user.username} commented on your post.`,
-      href: `/posts/${id}#comment-${comment.id}`,
+      // Query + hash are both intentional: the query gives us a durable deep-link
+      // target while the hash remains useful for browser/native scrolling behavior.
+      href: `/posts/${id}?comment=${encodeURIComponent(comment.id)}#comment-${encodeURIComponent(comment.id)}`,
     });
   }
   if (notifications.length) await prisma.notification.createMany({ data: notifications });

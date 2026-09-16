@@ -28,6 +28,7 @@ model User {
   postMentionsReceived    PostMention[]           @relation("PostMentionedUser")
   postLikes               PostLike[]
   postComments            PostComment[]
+  postShares              PostShare[]
   sessions                Session[]
   vehicles                Vehicle[]
   posts                   Post[]
@@ -139,6 +140,7 @@ model Post {
   author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   likes     PostLike[]
   comments  PostComment[]
+  shares    PostShare[]
   mentions  PostMention[]
 
   @@index([authorId, createdAt])
@@ -168,6 +170,19 @@ model PostComment {
 
   @@index([postId, createdAt])
   @@index([authorId, createdAt])
+}
+
+model PostShare {
+  id        String          @id @default(cuid())
+  postId    String
+  userId    String
+  channel   PostShareChannel @default(REVVAM)
+  createdAt DateTime        @default(now())
+  post      Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model PostMention {
@@ -314,6 +329,11 @@ model Session {
   @@index([expiresAt])
 }
 
+enum PostShareChannel {
+  REVVAM
+  EXTERNAL
+}
+
 enum UserRole {
   USER
   ADMIN
@@ -349,6 +369,10 @@ enum NotificationType {
   MESSAGE
   CHAT_REQUEST
   CHAT_ACCEPTED
+  POST_LIKE
+  POST_COMMENT
+  POST_SHARE
+  POST_MENTION
 }
 
 enum ChatRequestStatus {

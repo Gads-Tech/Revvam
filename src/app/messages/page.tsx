@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 import LiveSocialActions from "@/components/LiveSocialActions";
@@ -18,6 +19,9 @@ function timeLabel(value: string) {
 }
 
 export default function MessagesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedConversationId = searchParams.get("conversation");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [search, setSearch] = useState("");
   const [results, setResults] = useState<User[]>([]);
@@ -34,7 +38,20 @@ export default function MessagesPage() {
       });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load messages.");
-      setConversations(data.conversations ?? []);
+      const nextConversations: Conversation[] = data.conversations ?? [];
+      setConversations(nextConversations);
+
+      // A profile can send us here with ?conversation=<id>. Resolve that
+      // conversation to its other user and enter the actual one-to-one chat.
+      // This prevents the profile's Message button from landing on the list.
+      if (!silent && requestedConversationId) {
+        const target = nextConversations.find((conversation) => conversation.id === requestedConversationId)?.otherUser;
+        if (target?.username) {
+          router.replace(`/messages/${encodeURIComponent(target.username)}`);
+          return;
+        }
+        setError("Unable to open this conversation.");
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load messages.");
     } finally {
@@ -51,7 +68,7 @@ export default function MessagesPage() {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, []);
+  }, [requestedConversationId]);
 
   useEffect(() => {
     if (!search.trim()) {

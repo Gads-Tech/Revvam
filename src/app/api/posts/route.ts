@@ -33,7 +33,9 @@ export async function POST(request: Request) {
     const content = typeof body.content === "string" ? body.content.trim() : "";
     const image = typeof body.image === "string" ? body.image.trim() : null;
     const video = typeof body.video === "string" ? body.video.trim() : null;
-    const mentionedUserIds = Array.isArray(body.mentionedUserIds) ? [...new Set(body.mentionedUserIds.filter((id: unknown): id is string => typeof id === "string"))] : [];
+    const mentionedUserIds: string[] = Array.isArray(body.mentionedUserIds)
+      ? Array.from(new Set(body.mentionedUserIds.filter((id: unknown): id is string => typeof id === "string")))
+      : [];
 
     if (!content) return NextResponse.json({ success: false, error: "Post content is required." }, { status: 400 });
     if (content.length > 2000) return NextResponse.json({ success: false, error: "Post is too long." }, { status: 400 });

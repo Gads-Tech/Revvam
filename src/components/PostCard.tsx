@@ -18,6 +18,8 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState("");
   const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const [deepLinkCommentId, setDeepLinkCommentId] = useState<string | null>(null);
   const [menuCommentId, setMenuCommentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [commentBusy, setCommentBusy] = useState(false);
@@ -47,6 +49,28 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   }, [showComments]);
 
   useEffect(() => { if (showComments) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); }, [showComments, post.id]);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith("#comment-")) return;
+    const targetId = decodeURIComponent(hash.slice("#comment-".length));
+    if (!targetId) return;
+    setDeepLinkCommentId(targetId);
+    setShowComments(true);
+    window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } }));
+  }, [post.id]);
+
+  useEffect(() => {
+    if (!showComments || !deepLinkCommentId || !comments.length) return;
+    const target = comments.find((item) => item.id === deepLinkCommentId);
+    if (!target) return;
+    if (target.parentId) setExpandedReplies((current) => ({ ...current, [target.parentId as string]: true }));
+    const timer = window.setTimeout(() => {
+      document.getElementById(`comment-${deepLinkCommentId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setDeepLinkCommentId(null);
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [comments, showComments, deepLinkCommentId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,7 +107,7 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   }
 
   function startReply(item: Comment) {
-    setReplyingTo(item); setMenuCommentId(null); setComment((current) => current.startsWith(`@${item.author.username} `) ? current : `@${item.author.username} ${current}`); window.setTimeout(() => document.getElementById(`comment-input-${post.id}`)?.focus(), 0);
+    setReplyingTo(item); setMenuCommentId(null); setExpandedReplies((current) => ({ ...current, ...(item.parentId ? { [item.parentId]: true } : { [item.id]: true }) })); setComment((current) => current.startsWith(`@${item.author.username} `) ? current : `@${item.author.username} ${current}`); window.setTimeout(() => document.getElementById(`comment-input-${post.id}`)?.focus(), 0);
   }
 
   function cancelReply() { setReplyingTo(null); setComment(""); }
@@ -93,7 +117,9 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
     try {
       const response = await fetch(`/api/posts/${post.id}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: comment, parentId: replyingTo?.id ?? null }) });
       const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to comment.");
-      setComments((current) => [...current, data.comment]); setCounts((current) => ({ ...current, comments: current.comments + 1 })); setComment(""); setReplyingTo(null);
+      setComments((current) => [...current, data.comment]); setCounts((current) => ({ ...current, comments: current.comments + 1 }));
+      if (replyingTo) setExpandedReplies((current) => ({ ...current, [replyingTo.parentId ?? replyingTo.id]: true }));
+      setComment(""); setReplyingTo(null);
     } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to comment."); } finally { setCommentBusy(false); }
   }
 
@@ -157,10 +183,17 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
       {showComments && <div className="min-w-0 border-t border-white/[0.06] px-4 pb-4 pt-3 sm:px-5 md:border-l md:border-t-0">
         <div className="flex items-center justify-between gap-3 pb-2"><div><p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Conversation</p><p className="text-xs font-semibold text-white/60">{counts.comments} comment{counts.comments === 1 ? "" : "s"}</p></div><button type="button" onClick={() => { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); }} className="flex h-8 w-12 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.02]" aria-label="Collapse comments"><span className="h-0.5 w-7 rounded-full bg-white/30" /></button></div>
         <div className={`${commentsScrollable ? "max-h-72 overflow-y-auto" : "overflow-visible"} space-y-3 overscroll-contain pr-1 [scrollbar-width:thin] [touch-action:pan-y]`} style={commentsScrollable ? { WebkitOverflowScrolling: "touch" } : undefined}>
-          {topComments.map((item) => <div key={item.id}>
-            <CommentItem item={item} currentUserId={currentUserId} menuOpen={menuCommentId === item.id} deleting={deletingCommentId === item.id} onReply={startReply} onDelete={deleteComment} onMenu={() => setMenuCommentId(menuCommentId === item.id ? null : item.id)} onPointer={handleCommentPointer} />
-            {repliesFor(item.id).length > 0 && <div className="ml-8 mt-2 space-y-2 border-l border-white/[0.07] pl-2">{repliesFor(item.id).map((reply) => <CommentItem key={reply.id} item={reply} currentUserId={currentUserId} menuOpen={menuCommentId === reply.id} deleting={deletingCommentId === reply.id} onReply={startReply} onDelete={deleteComment} onMenu={() => setMenuCommentId(menuCommentId === reply.id ? null : reply.id)} onPointer={handleCommentPointer} compact />)}</div>}
-          </div>)}
+          {topComments.map((item) => {
+            const replies = repliesFor(item.id);
+            const repliesOpen = Boolean(expandedReplies[item.id]);
+            return <div key={item.id}>
+              <CommentItem id={`comment-${item.id}`} item={item} currentUserId={currentUserId} menuOpen={menuCommentId === item.id} deleting={deletingCommentId === item.id} onReply={startReply} onDelete={deleteComment} onMenu={() => setMenuCommentId(menuCommentId === item.id ? null : item.id)} onPointer={handleCommentPointer} />
+              {replies.length > 0 && <>
+                <button type="button" onClick={() => setExpandedReplies((current) => ({ ...current, [item.id]: !repliesOpen }))} className="ml-8 mt-1 rounded-lg px-2 py-1 text-[10px] font-semibold text-red-300/70 hover:bg-red-500/[0.05] hover:text-red-200">{repliesOpen ? "Hide replies" : `${replies.length} ${replies.length === 1 ? "reply" : "replies"}`}</button>
+                {repliesOpen && <div className="ml-8 mt-1 space-y-2 border-l border-white/[0.07] pl-2">{replies.map((reply) => <CommentItem key={reply.id} id={`comment-${reply.id}`} item={reply} currentUserId={currentUserId} menuOpen={menuCommentId === reply.id} deleting={deletingCommentId === reply.id} onReply={startReply} onDelete={deleteComment} onMenu={() => setMenuCommentId(menuCommentId === reply.id ? null : reply.id)} onPointer={handleCommentPointer} compact />)}</div>}
+              </>}
+            </div>;
+          })}
           {!comments.length && <p className="py-6 text-center text-xs text-white/20">No comments yet.</p>}
         </div>
         {replyingTo && <div className="mt-3 flex items-center justify-between rounded-xl border border-red-400/10 bg-red-500/[0.05] px-3 py-2 text-[10px] text-red-200"><span>Replying to @{replyingTo.author.username}</span><button type="button" onClick={cancelReply} className="text-white/40 hover:text-white">Cancel</button></div>}
@@ -185,9 +218,9 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   );
 }
 
-function CommentItem({ item, currentUserId, menuOpen, deleting, onReply, onDelete, onMenu, onPointer, compact = false }: { item: Comment; currentUserId: string | null; menuOpen: boolean; deleting: boolean; onReply: (item: Comment) => void; onDelete: (item: Comment) => void; onMenu: () => void; onPointer: (item: Comment) => void; compact?: boolean }) {
+function CommentItem({ id, item, currentUserId, menuOpen, deleting, onReply, onDelete, onMenu, onPointer, compact = false }: { id: string; item: Comment; currentUserId: string | null; menuOpen: boolean; deleting: boolean; onReply: (item: Comment) => void; onDelete: (item: Comment) => void; onMenu: () => void; onPointer: (item: Comment) => void; compact?: boolean }) {
   const mine = Boolean(currentUserId && item.author.id === currentUserId);
-  return <div className="relative" onContextMenu={(event) => { event.preventDefault(); if (mine) onMenu(); }} onPointerDown={() => onPointer(item)}>
+  return <div id={id} className="relative" onContextMenu={(event) => { event.preventDefault(); if (mine) onMenu(); }} onPointerDown={() => onPointer(item)}>
     <div className={`rounded-2xl bg-white/[0.025] p-3 ${compact ? "py-2.5" : ""}`}>
       <div className="flex items-center gap-2">
         <Link href={`/users/${encodeURIComponent(item.author.username)}`} onClick={(event) => event.stopPropagation()} className="shrink-0">{item.author.image ? <img src={item.author.image} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/15 text-[9px] font-bold text-red-300">{item.author.name.charAt(0).toUpperCase()}</div>}</Link>

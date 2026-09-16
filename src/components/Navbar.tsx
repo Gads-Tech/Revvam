@@ -6,9 +6,7 @@ export default function Navbar() {
   return (
     <nav className="absolute left-0 right-0 top-0 z-50 px-4 pt-4 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-white/[0.10] bg-black/[0.42] px-4 py-3 shadow-2xl shadow-black/30 backdrop-blur-2xl sm:px-6 sm:py-4">
-        <Link href="/" aria-label="Revvam home">
-          <Logo className="h-11 w-auto sm:h-12" />
-        </Link>
+        <Logo href="/" className="h-11 w-auto sm:h-12" />
 
         <div className="hidden items-center gap-8 text-sm font-medium text-white/55 md:flex">
           <a href="#community" className="transition hover:text-white">Community</a>

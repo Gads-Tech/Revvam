@@ -95,19 +95,12 @@ export default function IndividualMessagePage() {
 
   async function loadConversation(id: string, silent = false) {
     if (!id) return;
-
-    // Never abort an already-running background poll on mobile. A forwarded
-    // iPhone connection can take longer than the polling interval; aborting it
-    // every 1.2s made Safari repeatedly miss the response. Initial/focus loads
-    // may still replace an older request.
     if (pollControllerRef.current) {
       if (silent) return;
       pollControllerRef.current.abort();
     }
-
     const controller = new AbortController();
     pollControllerRef.current = controller;
-
     try {
       const markRead = !silent;
       const response = await fetch(`/api/messages/${encodeURIComponent(id)}?${markRead ? "markRead=1&" : ""}_=${Date.now()}`, {
@@ -117,15 +110,12 @@ export default function IndividualMessagePage() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load chat.");
       const nextMessages: Message[] = data.messages ?? [];
-
       if (!silent && firstConversationLoadRef.current) {
         entryScrollModeRef.current = Number(data.unreadBeforeOpen) > 0 ? "bottom" : "restore";
         firstConversationLoadRef.current = false;
         setNewMessageCount(0);
       }
-
       if (data.currentUserId) setCurrentUserId(String(data.currentUserId));
-
       if (silent && pollingReadyRef.current) {
         const knownIds = knownMessageIdsRef.current;
         const incomingMessages = nextMessages.filter((message) => !knownIds.has(message.id) && message.senderId !== String(data.currentUserId || ""));
@@ -141,7 +131,6 @@ export default function IndividualMessagePage() {
           }
         }
       }
-
       knownMessageIdsRef.current = new Set(nextMessages.map((message) => message.id));
       setMessages(nextMessages);
       setReceiptVisible(data.readReceiptsEnabledForOtherUser ?? true);
@@ -230,9 +219,13 @@ export default function IndividualMessagePage() {
 
   useEffect(() => {
     if (!contextMenu) return;
-    const close = (event: PointerEvent) => { const target = event.target as Node | null; if (target && contextMenuRef.current?.contains(target)) return; setContextMenu(null); };
-    document.addEventListener("pointerdown", close); window.addEventListener("scroll", close, true);
-    return () => { document.removeEventListener("pointerdown", close); window.removeEventListener("scroll", close, true); };
+    const close = (event: Event) => { const target = event.target as Node | null; if (target && contextMenuRef.current?.contains(target)) return; setContextMenu(null); };
+    document.addEventListener("pointerdown", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      window.removeEventListener("scroll", close, true);
+    };
   }, [contextMenu]);
 
   const title = useMemo(() => user ? user.name || `@${user.username}` : `@${username}`, [user, username]);

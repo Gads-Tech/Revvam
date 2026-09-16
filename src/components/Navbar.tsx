@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import Logo from "./Logo";
-import GlassButton from "./GlassButton";
 
 export default function Navbar() {
   return (
@@ -21,9 +20,9 @@ export default function Navbar() {
           <Link href="/login" className="hidden rounded-full px-4 py-2.5 text-sm font-semibold text-white/65 transition hover:text-white sm:inline-flex">
             Log in
           </Link>
-          <GlassButton variant="secondary" onClick={() => { window.location.href = "/signup"; }}>
+          <Link href="/signup" className="inline-flex h-10 items-center justify-center rounded-full border border-red-400/25 bg-red-600/20 px-4 text-sm font-bold text-white shadow-lg shadow-red-950/20 transition hover:bg-red-500/30 sm:px-5">
             Join Now <span className="ml-1">→</span>
-          </GlassButton>
+          </Link>
         </div>
       </div>
     </nav>

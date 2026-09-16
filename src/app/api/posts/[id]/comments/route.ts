@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       type: "POST_COMMENT",
       title: parent ? "New comment reply" : "New comment",
       body: parent ? `@${user.username} replied to your comment.` : `@${user.username} commented on your post.`,
-      href: `/posts/${id}`,
+      href: `/posts/${id}#comment-${comment.id}`,
     });
   }
   if (notifications.length) await prisma.notification.createMany({ data: notifications });

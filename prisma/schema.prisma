@@ -24,6 +24,10 @@ model User {
   driverProfile           DriverProfile?
   mentionsMade            ModificationMention[]   @relation("MentionedBy")
   mentionsReceived        ModificationMention[]   @relation("MentionedUser")
+  postMentionsMade        PostMention[]           @relation("PostMentionedBy")
+  postMentionsReceived    PostMention[]           @relation("PostMentionedUser")
+  postLikes               PostLike[]
+  postComments            PostComment[]
   sessions                Session[]
   vehicles                Vehicle[]
   posts                   Post[]
@@ -113,10 +117,10 @@ model ModificationMention {
   modificationId  String
   mentionedUserId String
   mentionedById   String
-  createdAt       DateTime            @default(now())
-  mentionedBy     User                @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
-  mentionedUser   User                @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
-  modification    VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime             @default(now())
+  mentionedBy     User                 @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
+  mentionedUser   User                 @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  modification    VehicleModification  @relation(fields: [modificationId], references: [id], onDelete: Cascade)
 
   @@unique([modificationId, mentionedUserId])
   @@index([mentionedUserId])
@@ -125,15 +129,60 @@ model ModificationMention {
 }
 
 model Post {
-  id        String   @id @default(cuid())
+  id        String         @id @default(cuid())
   authorId  String
   content   String
   image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  video     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     PostLike[]
+  comments  PostComment[]
+  mentions  PostMention[]
 
   @@index([authorId, createdAt])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model PostMention {
+  id              String   @id @default(cuid())
+  postId          String
+  mentionedUserId String
+  mentionedById   String
+  createdAt       DateTime @default(now())
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  mentionedUser   User     @relation("PostMentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  mentionedBy     User     @relation("PostMentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
+
+  @@unique([postId, mentionedUserId])
+  @@index([mentionedUserId])
+  @@index([mentionedById])
 }
 
 model Follow {

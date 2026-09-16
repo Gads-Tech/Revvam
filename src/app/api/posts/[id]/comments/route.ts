@@ -16,7 +16,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     orderBy: { createdAt: "asc" },
     include: {
       author: { select: authorSelect },
-      parent: { select: { id: true, author: { select: { username: true } } } },
+      parent: { select: { id: true, parentId: true, author: { select: { username: true } } } },
     },
   });
   return NextResponse.json({ success: true, currentUserId: currentUser?.id ?? null, comments }, { headers: noStore });
@@ -28,22 +28,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const body = await request.json();
   const content = typeof body.content === "string" ? body.content.trim() : "";
-  const parentId = typeof body.parentId === "string" && body.parentId.trim() ? body.parentId.trim() : null;
+  const requestedParentId = typeof body.parentId === "string" && body.parentId.trim() ? body.parentId.trim() : null;
   if (!content) return NextResponse.json({ success: false, error: "Comment cannot be empty." }, { status: 400, headers: noStore });
   if (content.length > 1000) return NextResponse.json({ success: false, error: "Comment is too long." }, { status: 400, headers: noStore });
 
   const post = await prisma.post.findUnique({ where: { id }, select: { id: true, authorId: true } });
   if (!post) return NextResponse.json({ success: false, error: "Post not found." }, { status: 404, headers: noStore });
 
-  let parent: { id: string; postId: string; authorId: string; author: { username: string } } | null = null;
-  if (parentId) {
-    parent = await prisma.postComment.findUnique({ where: { id: parentId }, select: { id: true, postId: true, authorId: true, author: { select: { username: true } } } });
+  let parent: { id: string; postId: string; authorId: string; author: { username: string }; parentId: string | null } | null = null;
+  if (requestedParentId) {
+    parent = await prisma.postComment.findUnique({
+      where: { id: requestedParentId },
+      select: { id: true, postId: true, authorId: true, parentId: true, author: { select: { username: true } } },
+    });
     if (!parent || parent.postId !== id) return NextResponse.json({ success: false, error: "Comment to reply to was not found." }, { status: 404, headers: noStore });
   }
 
+  // Keep the UI one level deep: a reply to a reply is grouped beneath
+  // the original top-level comment while still notifying the exact person replied to.
+  const parentId = parent?.parentId ?? parent?.id ?? null;
+
   const comment = await prisma.postComment.create({
     data: { postId: id, authorId: user.id, content, parentId },
-    include: { author: { select: authorSelect }, parent: { select: { id: true, author: { select: { username: true } } } } },
+    include: { author: { select: authorSelect }, parent: { select: { id: true, parentId: true, author: { select: { username: true } } } } },
   });
 
   const notifications: { userId: string; actorId: string; type: "POST_COMMENT"; title: string; body: string; href: string }[] = [];

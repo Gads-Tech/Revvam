@@ -7,17 +7,21 @@ type User = { id?: string; name: string; username: string; image: string | null 
 type Friend = { id: string; name: string; username: string; image: string | null };
 type Counts = { likes: number; comments: number; shares: number };
 export type PostData = { id: string; content: string; image: string | null; video?: string | null; createdAt: string; author: User; liked?: boolean; _count?: Counts; mentions?: { mentionedUser: User }[] };
-type Comment = { id: string; content: string; createdAt: string; author: User };
+type Comment = { id: string; content: string; createdAt: string; author: User; parentId?: string | null; parent?: { id: string; author: { username: string } } | null };
 
 export default function PostCard({ post, onChanged }: { post: PostData; onChanged?: (post: PostData) => void }) {
   const articleRef = useRef<HTMLElement | null>(null);
   const [liked, setLiked] = useState(Boolean(post.liked));
   const [counts, setCounts] = useState<Counts>({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 });
   const [comments, setComments] = useState<Comment[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showComments, setShowComments] = useState(false);
   const [comment, setComment] = useState("");
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [menuCommentId, setMenuCommentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [commentBusy, setCommentBusy] = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [shareOpen, setShareOpen] = useState(false);
   const [shareSearch, setShareSearch] = useState("");
@@ -27,202 +31,107 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [shareError, setShareError] = useState("");
 
-  useEffect(() => {
-    setLiked(Boolean(post.liked));
-    setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 });
-  }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
+  useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
 
   useEffect(() => {
-    const onOtherPostOpened = (event: Event) => {
-      const custom = event as CustomEvent<{ postId: string }>;
-      if (custom.detail?.postId !== post.id) setShowComments(false);
-    };
+    const onOtherPostOpened = (event: Event) => { const custom = event as CustomEvent<{ postId: string }>; if (custom.detail?.postId !== post.id) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } };
     window.addEventListener("revvam:comments-open", onOtherPostOpened);
     return () => window.removeEventListener("revvam:comments-open", onOtherPostOpened);
   }, [post.id]);
 
   useEffect(() => {
     if (!showComments) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) setShowComments(false);
-    }, { threshold: 0.05 });
+    const observer = new IntersectionObserver(([entry]) => { if (!entry.isIntersecting) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }, { threshold: 0.05 });
     if (articleRef.current) observer.observe(articleRef.current);
     return () => observer.disconnect();
   }, [showComments]);
 
-  useEffect(() => {
-    if (showComments) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } }));
-  }, [showComments, post.id]);
+  useEffect(() => { if (showComments) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); }, [showComments, post.id]);
 
   useEffect(() => {
     let cancelled = false;
-    const refresh = async () => {
-      try {
-        const response = await fetch(`/api/posts/${post.id}/like?_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json" } });
-        const data = await response.json();
-        if (!cancelled && response.ok && data.success) {
-          const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || 0, shares: Number(data.shares) || 0 };
-          setLiked(Boolean(data.liked));
-          setCounts(next);
-          onChanged?.({ ...post, liked: Boolean(data.liked), _count: next });
-        }
-      } catch {
-        // Live activity is best-effort.
-      }
-    };
-    refresh();
-    const timer = window.setInterval(refresh, 2500);
-    return () => { cancelled = true; window.clearInterval(timer); };
+    const refresh = async () => { try { const response = await fetch(`/api/posts/${post.id}/like?_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json" } }); const data = await response.json(); if (!cancelled && response.ok && data.success) { const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || 0, shares: Number(data.shares) || 0 }; setLiked(Boolean(data.liked)); setCounts(next); onChanged?.({ ...post, liked: Boolean(data.liked), _count: next }); } } catch {} };
+    refresh(); const timer = window.setInterval(refresh, 2500); return () => { cancelled = true; window.clearInterval(timer); };
   }, [post.id]);
 
   useEffect(() => {
     if (!shareOpen || shareSearch.trim().length < 1) { setShareUsers([]); return; }
-    const controller = new AbortController();
-    const timer = window.setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/users/search?q=${encodeURIComponent(shareSearch.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal });
-        const data = await response.json();
-        if (response.ok && data.success) setShareUsers(data.users ?? []);
-      } catch { /* cancelled */ }
-    }, 180);
+    const controller = new AbortController(); const timer = window.setTimeout(async () => { try { const response = await fetch(`/api/users/search?q=${encodeURIComponent(shareSearch.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal }); const data = await response.json(); if (response.ok && data.success) setShareUsers(data.users ?? []); } catch {} }, 180);
     return () => { window.clearTimeout(timer); controller.abort(); };
   }, [shareOpen, shareSearch]);
 
   useEffect(() => {
     if (!shareOpen) return;
-    const body = document.body;
-    const html = document.documentElement;
-    const scrollY = window.scrollY;
-    const previousBodyOverflow = body.style.overflow;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyWidth = body.style.width;
-    const previousHtmlOverflow = html.style.overflow;
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
-    html.style.overflow = "hidden";
-    return () => {
-      body.style.overflow = previousBodyOverflow;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.width = previousBodyWidth;
-      html.style.overflow = previousHtmlOverflow;
-      window.scrollTo(0, scrollY);
-    };
+    const body = document.body; const html = document.documentElement; const scrollY = window.scrollY; const previousBodyOverflow = body.style.overflow; const previousBodyPosition = body.style.position; const previousBodyTop = body.style.top; const previousBodyWidth = body.style.width; const previousHtmlOverflow = html.style.overflow;
+    body.style.position = "fixed"; body.style.top = `-${scrollY}px`; body.style.width = "100%"; body.style.overflow = "hidden"; html.style.overflow = "hidden";
+    return () => { body.style.overflow = previousBodyOverflow; body.style.position = previousBodyPosition; body.style.top = previousBodyTop; body.style.width = previousBodyWidth; html.style.overflow = previousHtmlOverflow; window.scrollTo(0, scrollY); };
   }, [shareOpen]);
 
   async function toggleLike() {
-    if (busy) return;
-    setBusy(true); setNotice("");
-    try {
-      const response = await fetch(`/api/posts/${post.id}/like`, { method: "POST", credentials: "include" });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "Unable to like post.");
-      const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || counts.comments, shares: Number(data.shares) || counts.shares };
-      setLiked(Boolean(data.liked)); setCounts(next);
-      onChanged?.({ ...post, liked: Boolean(data.liked), _count: next });
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to like post."); }
-    finally { setBusy(false); }
+    if (busy) return; setBusy(true); setNotice("");
+    try { const response = await fetch(`/api/posts/${post.id}/like`, { method: "POST", credentials: "include" }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to like post."); const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || counts.comments, shares: Number(data.shares) || counts.shares }; setLiked(Boolean(data.liked)); setCounts(next); onChanged?.({ ...post, liked: Boolean(data.liked), _count: next }); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "Unable to like post."); } finally { setBusy(false); }
   }
 
   async function loadComments() {
-    try {
-      const response = await fetch(`/api/posts/${post.id}/comments?_=${Date.now()}`, { cache: "no-store", credentials: "include" });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setComments(data.comments ?? []);
-        setCounts((current) => ({ ...current, comments: Number(data.comments?.length) || 0 }));
-      }
-    } catch { setNotice("Unable to load comments."); }
+    try { const response = await fetch(`/api/posts/${post.id}/comments?_=${Date.now()}`, { cache: "no-store", credentials: "include" }); const data = await response.json(); if (response.ok && data.success) { setComments(data.comments ?? []); setCurrentUserId(data.currentUserId ?? null); setCounts((current) => ({ ...current, comments: Number(data.comments?.length) || 0 })); } }
+    catch { setNotice("Unable to load comments."); }
   }
 
   async function toggleComments() {
-    const next = !showComments;
-    if (next) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } }));
-    setShowComments(next);
-    if (next) await loadComments();
+    const next = !showComments; if (next) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); setShowComments(next); if (next) await loadComments(); else { setReplyingTo(null); setMenuCommentId(null); }
   }
 
+  function startReply(item: Comment) {
+    setReplyingTo(item); setMenuCommentId(null); setComment((current) => current.startsWith(`@${item.author.username} `) ? current : `@${item.author.username} ${current}`); window.setTimeout(() => document.getElementById(`comment-input-${post.id}`)?.focus(), 0);
+  }
+
+  function cancelReply() { setReplyingTo(null); setComment(""); }
+
   async function addComment(event: React.FormEvent) {
-    event.preventDefault();
-    if (!comment.trim() || commentBusy) return;
-    setCommentBusy(true); setNotice("");
+    event.preventDefault(); if (!comment.trim() || commentBusy) return; setCommentBusy(true); setNotice("");
     try {
-      const response = await fetch(`/api/posts/${post.id}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: comment }) });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "Unable to comment.");
-      setComments((current) => [...current, data.comment]);
-      setCounts((current) => ({ ...current, comments: current.comments + 1 }));
-      setComment("");
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to comment."); }
-    finally { setCommentBusy(false); }
+      const response = await fetch(`/api/posts/${post.id}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: comment, parentId: replyingTo?.id ?? null }) });
+      const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to comment.");
+      setComments((current) => [...current, data.comment]); setCounts((current) => ({ ...current, comments: current.comments + 1 })); setComment(""); setReplyingTo(null);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to comment."); } finally { setCommentBusy(false); }
+  }
+
+  async function deleteComment(item: Comment) {
+    if (item.author.id !== currentUserId || deletingCommentId) return;
+    setDeletingCommentId(item.id); setMenuCommentId(null); setNotice("");
+    try {
+      const response = await fetch(`/api/posts/${post.id}/comments`, { method: "DELETE", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ commentId: item.id }) });
+      const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to delete comment.");
+      setComments((current) => current.filter((commentItem) => commentItem.id !== item.id && commentItem.parentId !== item.id)); setCounts((current) => ({ ...current, comments: Math.max(0, current.comments - 1 - comments.filter((c) => c.parentId === item.id).length) }));
+      if (replyingTo?.id === item.id) cancelReply();
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to delete comment."); } finally { setDeletingCommentId(null); }
+  }
+
+  function handleCommentPointer(item: Comment) {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      const timer = window.setTimeout(() => { if (item.author.id === currentUserId) setMenuCommentId(item.id); }, 550);
+      const clear = () => window.clearTimeout(timer);
+      window.addEventListener("pointerup", clear, { once: true }); window.addEventListener("pointercancel", clear, { once: true });
+    }
   }
 
   async function openShare() {
     setShareOpen(true); setShareSearch(""); setShareUsers([]); setShareError(""); setLoadingFriends(true);
-    try {
-      const response = await fetch(`/api/messages?_=${Date.now()}`, { credentials: "include", cache: "no-store" });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        const connected = (data.conversations ?? []).map((conversation: { otherUser?: Friend | null }) => conversation.otherUser).filter((friend: Friend | null | undefined): friend is Friend => Boolean(friend));
-        setFriends(connected);
-      } else if (response.status === 401) setShareError("Log in to share a post with someone on Revvam.");
-    } catch { setShareError("Unable to load your Revvam friends."); }
-    finally { setLoadingFriends(false); }
+    try { const response = await fetch(`/api/messages?_=${Date.now()}`, { credentials: "include", cache: "no-store" }); const data = await response.json(); if (response.ok && data.success) { const connected = (data.conversations ?? []).map((conversation: { otherUser?: Friend | null }) => conversation.otherUser).filter((friend: Friend | null | undefined): friend is Friend => Boolean(friend)); setFriends(connected); } else if (response.status === 401) setShareError("Log in to share a post with someone on Revvam."); }
+    catch { setShareError("Unable to load your Revvam friends."); } finally { setLoadingFriends(false); }
   }
 
-  function closeShare() {
-    if (sendingTo) return;
-    setShareOpen(false); setShareSearch(""); setShareUsers([]); setShareError("");
-  }
-
-  async function recordShare(channel: "REVVAM" | "EXTERNAL") {
-    try {
-      const response = await fetch(`/api/posts/${post.id}/share`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ channel }) });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        const next = { ...counts, shares: Number(data.shares) || 0 };
-        setCounts(next);
-        onChanged?.({ ...post, liked, _count: next });
-      }
-      return response.ok && data.success;
-    } catch { return false; }
-  }
-
-  async function sendPostToUser(recipient: Friend) {
-    if (sendingTo) return;
-    setSendingTo(recipient.username); setShareError("");
-    const url = `${window.location.origin}/posts/${post.id}`;
-    const text = `@${post.author.username} shared a post on Revvam: ${url}`;
-    try {
-      const response = await fetch("/api/messages", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ recipientUsername: recipient.username, content: text }) });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to send post.");
-      await recordShare("REVVAM");
-      setShareError(`Sent to @${recipient.username}.`);
-      window.setTimeout(() => { setShareOpen(false); setShareError(""); }, 900);
-    } catch (error) { setShareError(error instanceof Error ? error.message : "Unable to send post."); }
-    finally { setSendingTo(null); }
-  }
-
-  async function shareExternal() {
-    const url = `${window.location.origin}/posts/${post.id}`;
-    setShareError("");
-    try {
-      if (navigator.share) await navigator.share({ title: `@${post.author.username} on Revvam`, text: post.content.slice(0, 120), url });
-      else { await navigator.clipboard.writeText(url); setShareError("Post link copied to clipboard."); }
-      await recordShare("EXTERNAL");
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      setShareError("Unable to open sharing options.");
-    }
-  }
+  function closeShare() { if (sendingTo) return; setShareOpen(false); setShareSearch(""); setShareUsers([]); setShareError(""); }
+  async function recordShare(channel: "REVVAM" | "EXTERNAL") { try { const response = await fetch(`/api/posts/${post.id}/share`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ channel }) }); const data = await response.json(); if (response.ok && data.success) { const next = { ...counts, shares: Number(data.shares) || 0 }; setCounts(next); onChanged?.({ ...post, liked, _count: next }); } return response.ok && data.success; } catch { return false; } }
+  async function sendPostToUser(recipient: Friend) { if (sendingTo) return; setSendingTo(recipient.username); setShareError(""); const url = `${window.location.origin}/posts/${post.id}`; const text = `@${post.author.username} shared a post on Revvam: ${url}`; try { const response = await fetch("/api/messages", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ recipientUsername: recipient.username, content: text }) }); const data = await response.json().catch(() => null); if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to send post."); await recordShare("REVVAM"); setShareError(`Sent to @${recipient.username}.`); window.setTimeout(() => { setShareOpen(false); setShareError(""); }, 900); } catch (error) { setShareError(error instanceof Error ? error.message : "Unable to send post."); } finally { setSendingTo(null); } }
+  async function shareExternal() { const url = `${window.location.origin}/posts/${post.id}`; setShareError(""); try { if (navigator.share) await navigator.share({ title: `@${post.author.username} on Revvam`, text: post.content.slice(0, 120), url }); else { await navigator.clipboard.writeText(url); setShareError("Post link copied to clipboard."); } await recordShare("EXTERNAL"); } catch (error) { if (error instanceof DOMException && error.name === "AbortError") return; setShareError("Unable to open sharing options."); } }
 
   const filteredFriends = friends.filter((friend) => !shareSearch.trim() || `${friend.name} ${friend.username}`.toLowerCase().includes(shareSearch.trim().toLowerCase()));
   const searchOnlyUsers = shareSearch.trim() ? shareUsers.filter((user) => !friends.some((friend) => friend.id === user.id)) : [];
   const commentsScrollable = comments.length >= 5;
+  const topComments = comments.filter((item) => !item.parentId);
+  const repliesFor = (commentId: string) => comments.filter((item) => item.parentId === commentId);
 
   return (
     <article ref={articleRef} className={`overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.025] transition hover:border-white/[0.12] ${showComments ? "md:grid md:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]" : ""}`}>
@@ -246,12 +155,16 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
       </div>
 
       {showComments && <div className="min-w-0 border-t border-white/[0.06] px-4 pb-4 pt-3 sm:px-5 md:border-l md:border-t-0">
-        <div className="flex items-center justify-between gap-3 pb-2"><div><p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Conversation</p><p className="text-xs font-semibold text-white/60">{counts.comments} comment{counts.comments === 1 ? "" : "s"}</p></div><button type="button" onClick={() => setShowComments(false)} className="flex h-8 w-12 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.02]" aria-label="Collapse comments"><span className="h-0.5 w-7 rounded-full bg-white/30" /></button></div>
+        <div className="flex items-center justify-between gap-3 pb-2"><div><p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Conversation</p><p className="text-xs font-semibold text-white/60">{counts.comments} comment{counts.comments === 1 ? "" : "s"}</p></div><button type="button" onClick={() => { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); }} className="flex h-8 w-12 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.02]" aria-label="Collapse comments"><span className="h-0.5 w-7 rounded-full bg-white/30" /></button></div>
         <div className={`${commentsScrollable ? "max-h-72 overflow-y-auto" : "overflow-visible"} space-y-3 overscroll-contain pr-1 [scrollbar-width:thin] [touch-action:pan-y]`} style={commentsScrollable ? { WebkitOverflowScrolling: "touch" } : undefined}>
-          {comments.map((item) => <div key={item.id} className="rounded-2xl bg-white/[0.025] p-3"><div className="flex items-center gap-2">{item.author.image ? <img src={item.author.image} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" /> : <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-red-600/15 text-[9px] font-bold text-red-300">{item.author.name.charAt(0).toUpperCase()}</div>}<Link href={`/users/${encodeURIComponent(item.author.username)}`} className="min-w-0 truncate text-xs font-semibold text-white/85 transition hover:text-red-300">@{item.author.username}</Link><span className="ml-auto shrink-0 text-[9px] text-white/20">{formatDate(item.createdAt)}</span></div><p className="mt-2 pl-9 text-xs leading-5 text-white/55">{item.content}</p></div>)}
+          {topComments.map((item) => <div key={item.id}>
+            <CommentItem item={item} currentUserId={currentUserId} menuOpen={menuCommentId === item.id} deleting={deletingCommentId === item.id} onReply={startReply} onDelete={deleteComment} onMenu={() => setMenuCommentId(menuCommentId === item.id ? null : item.id)} onPointer={handleCommentPointer} />
+            {repliesFor(item.id).length > 0 && <div className="ml-8 mt-2 space-y-2 border-l border-white/[0.07] pl-2">{repliesFor(item.id).map((reply) => <CommentItem key={reply.id} item={reply} currentUserId={currentUserId} menuOpen={menuCommentId === reply.id} deleting={deletingCommentId === reply.id} onReply={startReply} onDelete={deleteComment} onMenu={() => setMenuCommentId(menuCommentId === reply.id ? null : reply.id)} onPointer={handleCommentPointer} compact />)}</div>}
+          </div>)}
           {!comments.length && <p className="py-6 text-center text-xs text-white/20">No comments yet.</p>}
         </div>
-        <form onSubmit={addComment} className="mt-3 flex gap-2"><input value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} placeholder="Write a comment..." className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-black/30 px-4 py-2.5 text-xs text-white outline-none placeholder:text-white/20 focus:border-red-400/25" /><button disabled={!comment.trim() || commentBusy} className="rounded-2xl border border-red-400/20 bg-red-600/15 px-4 text-xs font-semibold text-red-200 disabled:opacity-40">{commentBusy ? "..." : "Post"}</button></form>
+        {replyingTo && <div className="mt-3 flex items-center justify-between rounded-xl border border-red-400/10 bg-red-500/[0.05] px-3 py-2 text-[10px] text-red-200"><span>Replying to @{replyingTo.author.username}</span><button type="button" onClick={cancelReply} className="text-white/40 hover:text-white">Cancel</button></div>}
+        <form onSubmit={addComment} className="mt-2 flex gap-2"><input id={`comment-input-${post.id}`} value={comment} onChange={(e) => setComment(e.target.value)} maxLength={1000} placeholder={replyingTo ? `Reply to @${replyingTo.author.username}...` : "Write a comment..."} className="min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-black/30 px-4 py-2.5 text-xs text-white outline-none placeholder:text-white/20 focus:border-red-400/25" /><button disabled={!comment.trim() || commentBusy} className="rounded-2xl border border-red-400/20 bg-red-600/15 px-4 text-xs font-semibold text-red-200 disabled:opacity-40">{commentBusy ? "..." : replyingTo ? "Reply" : "Post"}</button></form>
       </div>}
 
       {shareOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label="Share post" onMouseDown={(event) => { if (event.target === event.currentTarget) closeShare(); }}>
@@ -272,15 +185,28 @@ export default function PostCard({ post, onChanged }: { post: PostData; onChange
   );
 }
 
+function CommentItem({ item, currentUserId, menuOpen, deleting, onReply, onDelete, onMenu, onPointer, compact = false }: { item: Comment; currentUserId: string | null; menuOpen: boolean; deleting: boolean; onReply: (item: Comment) => void; onDelete: (item: Comment) => void; onMenu: () => void; onPointer: (item: Comment) => void; compact?: boolean }) {
+  const mine = Boolean(currentUserId && item.author.id === currentUserId);
+  return <div className="relative" onContextMenu={(event) => { event.preventDefault(); if (mine) onMenu(); }} onPointerDown={() => onPointer(item)}>
+    <div className={`rounded-2xl bg-white/[0.025] p-3 ${compact ? "py-2.5" : ""}`}>
+      <div className="flex items-center gap-2">
+        <Link href={`/users/${encodeURIComponent(item.author.username)}`} onClick={(event) => event.stopPropagation()} className="shrink-0">{item.author.image ? <img src={item.author.image} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/15 text-[9px] font-bold text-red-300">{item.author.name.charAt(0).toUpperCase()}</div>}</Link>
+        <Link href={`/users/${encodeURIComponent(item.author.username)}`} className="min-w-0 truncate text-xs font-semibold text-white/85 transition hover:text-red-300">@{item.author.username}</Link>
+        <span className="ml-auto shrink-0 text-[9px] text-white/20">{formatDate(item.createdAt)}</span>
+      </div>
+      <p className="mt-2 pl-9 whitespace-pre-wrap text-xs leading-5 text-white/55">{renderMentions(item.content)}</p>
+      <div className="mt-2 flex items-center gap-3 pl-9"><button type="button" onClick={() => onReply(item)} className="text-[10px] font-semibold text-white/30 hover:text-red-300">Reply</button>{mine && <button type="button" onClick={onMenu} className="hidden text-[10px] font-semibold text-white/30 hover:text-white sm:inline-flex" aria-label="Comment options">•••</button>}</div>
+    </div>
+    {menuOpen && <div className="absolute right-2 top-9 z-30 w-28 overflow-hidden rounded-xl border border-white/[0.10] bg-[#0a0a0a] p-1 shadow-2xl"><button type="button" onClick={() => onReply(item)} className="flex w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-white/70 hover:bg-white/[0.06]">Reply</button>{mine && <button type="button" disabled={deleting} onClick={() => onDelete(item)} className="flex w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-300 hover:bg-red-500/[0.08]">{deleting ? "Deleting…" : "Delete"}</button>}</div>}
+  </div>;
+}
+
+function renderMentions(content: string) {
+  return content.split(/(@[A-Za-z0-9_.-]+)/g).map((part, index) => part.startsWith("@") ? <span key={index} className="text-red-300">{part}</span> : <span key={index}>{part}</span>);
+}
+
 function ShareUser({ friend, sendingTo, onSend }: { friend: Friend; sendingTo: string | null; onSend: (friend: Friend) => void }) {
   return <button type="button" onClick={() => onSend(friend)} disabled={Boolean(sendingTo)} className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition hover:border-red-400/20 hover:bg-red-500/[0.05] disabled:opacity-50"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/10 text-xs font-bold text-red-300">{friend.image ? <img src={friend.image} alt="" className="h-full w-full object-cover" /> : friend.name.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-white/85">{friend.name}</span><span className="block truncate text-[10px] text-white/25">@{friend.username}</span></span><span className="shrink-0 text-xs font-semibold text-red-300">{sendingTo === friend.username ? "Sending…" : "Send"}</span></button>;
 }
 
-function formatDate(value: string) {
-  const date = new Date(value);
-  const diff = Math.max(0, Date.now() - date.getTime());
-  if (diff < 60_000) return "just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`;
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
+function formatDate(value: string) { const date = new Date(value); const diff = Math.max(0, Date.now() - date.getTime()); if (diff < 60_000) return "just now"; if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`; if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`; return date.toLocaleDateString(undefined, { month: "short", day: "numeric" }); }

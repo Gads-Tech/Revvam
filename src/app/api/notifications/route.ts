@@ -14,9 +14,10 @@ export async function GET() {
     if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: noStore });
 
     // Messages have their own inbox/count. They must never appear as notifications.
+    // Always return the newest activity first, regardless of notification type.
     const notifications = await prisma.notification.findMany({
       where: { userId: user.id, type: { not: "MESSAGE" } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 50,
       include: {
         actor: { select: { id: true, name: true, username: true, image: true } },

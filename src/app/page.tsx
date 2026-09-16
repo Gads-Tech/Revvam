@@ -1,14 +1,21 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import Navbar from "@/components/Navbar";
 import GlassCard from "@/components/GlassCard";
 
+import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function LandingPage() {
-  const [posts, featuredVehicles, communityStats] = await Promise.all([
+  // The public landing page is only for visitors. Once a user is logged in,
+  // the root route always takes them back to the Discover feed.
+  const currentUser = await getCurrentUser();
+  if (currentUser) redirect("/home");
+
+  const [posts, featuredVehicles] = await Promise.all([
     prisma.post.findMany({
       orderBy: { createdAt: "desc" },
       take: 12,
@@ -27,14 +34,7 @@ export default async function LandingPage() {
         photos: { orderBy: { createdAt: "asc" }, take: 1 },
       },
     }),
-    Promise.all([
-      prisma.user.count(),
-      prisma.post.count(),
-      prisma.vehicle.count(),
-    ]),
   ]);
-
-  const [userCount, postCount, vehicleCount] = communityStats;
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-black text-white">
@@ -69,12 +69,6 @@ export default async function LandingPage() {
                 Log in
               </Link>
             </div>
-          </div>
-
-          <div className="mt-12 grid grid-cols-3 gap-2 sm:max-w-xl sm:gap-3">
-            <Stat value={userCount} label="People" />
-            <Stat value={postCount} label="Posts" />
-            <Stat value={vehicleCount} label="Vehicles" />
           </div>
         </div>
       </section>
@@ -195,15 +189,6 @@ export default async function LandingPage() {
         </div>
       </section>
     </main>
-  );
-}
-
-function Stat({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-4 text-center backdrop-blur-xl">
-      <p className="text-xl font-black sm:text-2xl">{value.toLocaleString()}</p>
-      <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.16em] text-white/25">{label}</p>
-    </div>
   );
 }
 

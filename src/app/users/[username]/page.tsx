@@ -90,7 +90,13 @@ export default function PublicUserProfilePage() {
       return;
     }
     if (chatStatus === "ACCEPTED") {
-      window.location.href = "/messages";
+      const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/chat-request`, { cache: "no-store", credentials: "include" });
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.success && data.conversationId) {
+        window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`;
+      } else {
+        setError(data?.error || "Unable to open this conversation.");
+      }
       return;
     }
     setChatBusy(true);
@@ -100,7 +106,7 @@ export default function PublicUserProfilePage() {
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to send chat request.");
       setChatStatus(data.status as ChatStatus);
-      if (data.status === "ACCEPTED") window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`;
+      if (data.status === "ACCEPTED" && data.conversationId) window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`;
     } catch (chatError) {
       setError(chatError instanceof Error ? chatError.message : "Unable to send chat request.");
     } finally {

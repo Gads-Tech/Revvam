@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 import PostCard, { PostData } from "@/components/PostCard";
 import PostComposer from "@/components/PostComposer";
+import BackButton from "@/components/BackButton";
 
 export default function DriverPostsPage() {
   const [posts, setPosts] = useState<PostData[]>([]);
@@ -25,7 +26,7 @@ export default function DriverPostsPage() {
 
   return <main className="min-h-screen overflow-x-hidden bg-black px-4 pb-32 pt-7 text-white sm:px-6 sm:pt-10">
     <div className="relative z-10 mx-auto w-full max-w-3xl">
-      <Link href="/profile" className="text-sm text-white/35 hover:text-white">← Back to profile</Link>
+      <BackButton />
       <header className="mt-7"><p className="text-xs uppercase tracking-[0.22em] text-red-400/70">Driver posts</p><h1 className="mt-2 text-4xl font-black tracking-[-0.045em]">Your posts</h1><p className="mt-3 text-sm leading-6 text-white/35">Share your cars, builds, progress, events, and life with the Revvam community.</p></header>
       <div className="mt-7"><PostComposer onCreated={(post) => setPosts((current) => [post, ...current])} /></div>
       {error && <p className="mt-4 text-sm text-red-300">{error}</p>}

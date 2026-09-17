@@ -4,21 +4,17 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import MobileNav from "@/components/MobileNav";
+import BackButton from "@/components/BackButton";
 
 type Photo = { id: string; url: string };
 type Mention = { id: string; mentionedUser: { id: string; username: string; name: string; image: string | null } };
 type Modification = { id: string; category: string; title: string; description: string | null; notes: string | null; photos: Photo[]; mentions: Mention[] };
 type Vehicle = { id: string; make: string; model: string; year: number | null; type: string | null; image: string | null; isFeatured: boolean; photos: Photo[]; modifications: Modification[] };
 type Post = { id: string; content: string; image: string | null; createdAt: string };
-type PublicUser = {
-  id: string; name: string | null; username: string; image: string | null; bio: string | null; location: string | null; role: string | null; onboardingType: string | null; createdAt: string;
-  vehicles: Vehicle[]; posts: Post[]; _count: { vehicles: number; posts: number; followers: number; following: number };
-};
+type PublicUser = { id: string; name: string | null; username: string; image: string | null; bio: string | null; location: string | null; role: string | null; onboardingType: string | null; createdAt: string; vehicles: Vehicle[]; posts: Post[]; _count: { vehicles: number; posts: number; followers: number; following: number } };
 type ChatStatus = "NONE" | "PENDING_SENT" | "PENDING_RECEIVED" | "DECLINED" | "DECLINED_BY_TARGET" | "ACCEPTED" | "SELF";
 
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
+function formatDate(value: string) { return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
 
 export default function PublicUserProfilePage() {
   const params = useParams();
@@ -35,133 +31,48 @@ export default function PublicUserProfilePage() {
 
   async function loadUser() {
     try {
-      setLoading(true);
-      setError("");
+      setLoading(true); setError("");
       const response = await fetch(`/api/users/${encodeURIComponent(username)}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load this profile.");
-      setUser(data.user);
-      setFollowing(Boolean(data.following));
-      setIsOwnProfile(Boolean(data.isOwnProfile));
+      setUser(data.user); setFollowing(Boolean(data.following)); setIsOwnProfile(Boolean(data.isOwnProfile));
       if (!data.isOwnProfile) {
         const chatResponse = await fetch(`/api/users/${encodeURIComponent(username)}/chat-request`, { cache: "no-store", credentials: "include" });
         const chatData = await chatResponse.json();
         if (chatResponse.ok && chatData.success) setChatStatus(chatData.status as ChatStatus);
-      } else {
-        setChatStatus("SELF");
-      }
-    } catch (loadError) {
-      console.error("Unable to load public profile:", loadError);
-      setError(loadError instanceof Error ? loadError.message : "Unable to load this profile.");
-    } finally {
-      setLoading(false);
-    }
+      } else setChatStatus("SELF");
+    } catch (loadError) { console.error("Unable to load public profile:", loadError); setError(loadError instanceof Error ? loadError.message : "Unable to load this profile."); }
+    finally { setLoading(false); }
   }
-
   useEffect(() => { if (username) loadUser(); }, [username]);
-
   const featuredVehicle = useMemo(() => user?.vehicles.find((vehicle) => vehicle.isFeatured) ?? user?.vehicles[0] ?? null, [user]);
-  const allPhotos = useMemo(() => user ? user.vehicles.flatMap((vehicle) => [
-    ...(vehicle.image ? [{ id: `${vehicle.id}-main`, url: vehicle.image }] : []),
-    ...vehicle.photos,
-    ...vehicle.modifications.flatMap((modification) => modification.photos),
-  ]) : [], [user]);
+  const allPhotos = useMemo(() => user ? user.vehicles.flatMap((vehicle) => [...(vehicle.image ? [{ id: `${vehicle.id}-main`, url: vehicle.image }] : []), ...vehicle.photos, ...vehicle.modifications.flatMap((modification) => modification.photos)]) : [], [user]);
 
   async function toggleFollow() {
     if (!user || isOwnProfile || followBusy) return;
     setFollowBusy(true);
-    try {
-      const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/follow`, { method: "POST", credentials: "include" });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "Unable to update follow status.");
-      setFollowing(Boolean(data.following));
-      setUser((current) => current ? { ...current, _count: { ...current._count, followers: data.followers } } : current);
-    } catch (followError) {
-      setError(followError instanceof Error ? followError.message : "Unable to update follow status.");
-    } finally {
-      setFollowBusy(false);
-    }
+    try { const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/follow`, { method: "POST", credentials: "include" }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to update follow status."); setFollowing(Boolean(data.following)); setUser((current) => current ? { ...current, _count: { ...current._count, followers: data.followers } } : current); }
+    catch (followError) { setError(followError instanceof Error ? followError.message : "Unable to update follow status."); }
+    finally { setFollowBusy(false); }
   }
-
   async function requestChat() {
     if (!user || isOwnProfile || chatBusy) return;
-    if (chatStatus === "PENDING_RECEIVED") {
-      window.location.href = "/profile/notifications";
-      return;
-    }
-    if (chatStatus === "ACCEPTED") {
-      const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/chat-request`, { cache: "no-store", credentials: "include" });
-      const data = await response.json().catch(() => null);
-      if (response.ok && data?.success && data.conversationId) {
-        window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`;
-      } else {
-        setError(data?.error || "Unable to open this conversation.");
-      }
-      return;
-    }
-    setChatBusy(true);
-    setError("");
-    try {
-      const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/chat-request`, { method: "POST", credentials: "include" });
-      const data = await response.json();
-      if (!response.ok || !data.success) throw new Error(data.error || "Unable to send chat request.");
-      setChatStatus(data.status as ChatStatus);
-      if (data.status === "ACCEPTED" && data.conversationId) window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`;
-    } catch (chatError) {
-      setError(chatError instanceof Error ? chatError.message : "Unable to send chat request.");
-    } finally {
-      setChatBusy(false);
-    }
+    if (chatStatus === "PENDING_RECEIVED") { window.location.href = "/profile/notifications"; return; }
+    if (chatStatus === "ACCEPTED") { const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/chat-request`, { cache: "no-store", credentials: "include" }); const data = await response.json().catch(() => null); if (response.ok && data?.success && data.conversationId) window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`; else setError(data?.error || "Unable to open this conversation."); return; }
+    setChatBusy(true); setError("");
+    try { const response = await fetch(`/api/users/${encodeURIComponent(user.username)}/chat-request`, { method: "POST", credentials: "include" }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to send chat request."); setChatStatus(data.status as ChatStatus); if (data.status === "ACCEPTED" && data.conversationId) window.location.href = `/messages?conversation=${encodeURIComponent(data.conversationId)}`; }
+    catch (chatError) { setError(chatError instanceof Error ? chatError.message : "Unable to send chat request."); }
+    finally { setChatBusy(false); }
   }
 
   if (loading) return <main className="flex min-h-screen items-center justify-center bg-black text-white"><div className="text-center"><div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-red-500" /><p className="mt-4 text-sm text-white/30">Loading profile...</p></div></main>;
-  if (error || !user) return <main className="min-h-screen bg-black px-5 py-12 text-white sm:px-8"><div className="mx-auto max-w-2xl"><div className="rounded-3xl border border-red-500/20 bg-red-500/[0.06] px-5 py-4 text-sm text-red-300">{error || "User not found."}</div><Link href="/home" className="mt-5 inline-flex text-sm text-white/40 hover:text-white">← Back to Discover</Link></div></main>;
+  if (error || !user) return <main className="min-h-screen bg-black px-5 py-12 text-white sm:px-8"><div className="mx-auto max-w-2xl"><div className="rounded-3xl border border-red-500/20 bg-red-500/[0.06] px-5 py-4 text-sm text-red-300">{error || "User not found."}</div><div className="mt-5"><BackButton /></div></div></main>;
 
-  return (
-    <main className="min-h-screen overflow-x-hidden bg-black pb-28 text-white">
-      <div className="pointer-events-none fixed left-1/2 top-[-280px] z-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-red-600/[0.07] blur-[150px]" />
-      <div className="pointer-events-none fixed bottom-[-250px] right-[-200px] z-0 h-[500px] w-[500px] rounded-full bg-red-950/[0.08] blur-[160px]" />
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
-        <Link href="/home" className="mb-6 inline-flex items-center gap-2 text-sm text-white/35 hover:text-white">← Discover</Link>
-
-        <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025] backdrop-blur-2xl">
-          <div className="h-28 bg-gradient-to-br from-red-600/[0.20] via-red-950/[0.08] to-transparent sm:h-36" />
-          <div className="px-5 pb-7 sm:px-8 sm:pb-8">
-            <div className="-mt-11 flex flex-col gap-5 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
-              <div className="flex items-end gap-4">
-                {user.image ? <img src={user.image} alt={user.name || user.username} className="h-24 w-24 rounded-3xl border border-white/[0.12] bg-black object-cover shadow-2xl sm:h-28 sm:w-28" /> : <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/[0.12] bg-white/[0.05] text-3xl font-bold text-white/30 sm:h-28 sm:w-28">{(user.name || user.username).charAt(0).toUpperCase()}</div>}
-                <div className="pb-1"><p className="text-xs uppercase tracking-[0.22em] text-red-400/70">Public profile</p><h1 className="mt-1 text-2xl font-black tracking-[-0.04em] sm:text-4xl">{user.name || user.username}</h1><p className="mt-1 text-sm text-white/35">@{user.username}</p></div>
-              </div>
-              {!isOwnProfile ? (
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={toggleFollow} disabled={followBusy} className={`h-11 rounded-2xl border px-5 text-sm font-semibold transition-all ${following ? "border-white/[0.12] bg-white/[0.05] text-white/70" : "border-red-400/25 bg-red-600/20 text-white hover:bg-red-500/30"} disabled:opacity-50`}>{followBusy ? "Updating..." : following ? "Following" : "Follow"}</button>
-                  <button type="button" onClick={requestChat} disabled={chatBusy || chatStatus === "PENDING_SENT" || chatStatus === "DECLINED_BY_TARGET"} className={`h-11 rounded-2xl border px-5 text-sm font-semibold transition-all ${chatStatus === "ACCEPTED" ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200" : "border-white/[0.10] bg-white/[0.04] text-white/70 hover:border-red-400/25 hover:bg-red-500/[0.08] hover:text-white"} disabled:cursor-not-allowed disabled:opacity-60`}>
-                    {chatBusy ? "Sending..." : chatStatus === "PENDING_SENT" ? "Request sent" : chatStatus === "PENDING_RECEIVED" ? "Review request" : chatStatus === "ACCEPTED" ? "Message" : chatStatus === "DECLINED_BY_TARGET" ? "Chat unavailable" : "Request chat"}
-                  </button>
-                </div>
-              ) : <Link href="/profile" className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/[0.10] bg-white/[0.04] px-5 text-sm font-medium text-white/60 hover:text-white">Manage profile</Link>}
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-2">{user.role && <span className="rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-red-300">{user.role}</span>}{user.location && <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-white/45">📍 {user.location}</span>}</div>
-            {user.bio && <p className="mt-6 max-w-3xl text-sm leading-7 text-white/45">{user.bio}</p>}
-            <div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4">{[[user._count.posts, "Posts"], [user._count.vehicles, "Vehicles"], [user._count.followers, "Followers"], [user._count.following, "Following"]].map(([value, label]) => <div key={label} className="rounded-2xl border border-white/[0.07] bg-black/20 px-4 py-4 text-center"><p className="text-xl font-black">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/25">{label}</p></div>)}</div>
-          </div>
-        </section>
-
-        {featuredVehicle && <section className="mt-6 overflow-hidden rounded-[2rem] border border-red-400/20 bg-gradient-to-br from-red-600/[0.10] via-white/[0.025] to-transparent"><div className="border-b border-red-400/10 px-5 py-5 sm:px-7"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/80">Featured vehicle</p><h2 className="mt-1 text-2xl font-black tracking-tight">{featuredVehicle.make} {featuredVehicle.model}</h2></div><Link href={`/vehicles/${featuredVehicle.id}`} className="group grid sm:grid-cols-[1.25fr_0.75fr]"><div className="relative h-64 overflow-hidden bg-black sm:h-80">{featuredVehicle.image || featuredVehicle.photos[0]?.url ? <img src={featuredVehicle.image || featuredVehicle.photos[0].url} alt={`${featuredVehicle.make} ${featuredVehicle.model}`} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-7xl opacity-20">🚗</div>}<div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" /></div><div className="flex flex-col justify-center p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.18em] text-red-400/65">{featuredVehicle.year ?? "Year unknown"} · {featuredVehicle.type ?? "Vehicle"}</p><p className="mt-4 text-sm leading-6 text-white/35">Explore the complete public build, photos, modifications, and mentions.</p><span className="mt-6 inline-flex w-fit rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-white/60 group-hover:border-red-400/20 group-hover:bg-red-500/10 group-hover:text-white">View build →</span></div></Link></section>}
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <section className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Garage</p><h2 className="mt-1 text-xl font-bold">All vehicles</h2></div><span className="text-xs text-white/25">{user.vehicles.length}</span></div><div className="grid gap-4 sm:grid-cols-2">{user.vehicles.map((vehicle) => { const image = vehicle.image || vehicle.photos[0]?.url; return <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`} className="group overflow-hidden rounded-3xl border border-white/[0.08] bg-black/20 hover:-translate-y-0.5 hover:border-white/[0.15]"><div className="relative h-44 overflow-hidden bg-white/[0.025]">{image ? <img src={image} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-5xl opacity-20">🚗</div>}{vehicle.isFeatured && <span className="absolute left-3 top-3 rounded-full bg-red-600/80 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em]">Featured</span>}</div><div className="p-4"><p className="text-[10px] uppercase tracking-[0.16em] text-red-400/60">{vehicle.year ?? "Year unknown"}</p><h3 className="mt-1 font-semibold">{vehicle.make} {vehicle.model}</h3><p className="mt-2 text-xs text-white/25">{vehicle.modifications.length} modification{vehicle.modifications.length === 1 ? "" : "s"}</p></div></Link>; })}</div></section>
-          <section className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Build highlights</p><h2 className="mt-1 text-xl font-bold">Recent modifications</h2><div className="mt-5 space-y-3">{user.vehicles.flatMap((vehicle) => vehicle.modifications.slice(0, 4).map((modification) => ({ vehicle, modification }))).slice(0, 8).map(({ vehicle, modification }) => <Link key={modification.id} href={`/vehicles/${vehicle.id}`} className="block rounded-2xl border border-white/[0.07] bg-black/20 p-4 hover:border-red-400/20 hover:bg-red-500/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] uppercase tracking-[0.14em] text-red-400/60">{modification.category}</p><h3 className="mt-1 text-sm font-semibold">{modification.title}</h3><p className="mt-1 text-[11px] text-white/25">{vehicle.make} {vehicle.model}</p></div><span className="text-white/20">→</span></div>{modification.description && <p className="mt-3 line-clamp-2 text-xs leading-5 text-white/35">{modification.description}</p>}{modification.mentions.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{modification.mentions.map((mention) => <span key={mention.id} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2 py-1 text-[10px] text-red-300">@{mention.mentionedUser.username}</span>)}</div>}</Link>)}</div></section>
-        </div>
-
-        <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><div className="mb-6 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Build gallery</p><h2 className="mt-1 text-xl font-bold">Vehicle & modification photos</h2></div><span className="text-xs text-white/25">{allPhotos.length}</span></div>{allPhotos.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">{allPhotos.map((photo, index) => <button key={`${photo.id}-${index}`} type="button" onClick={() => setSelectedImage(photo.url)} className="group relative aspect-square overflow-hidden rounded-2xl bg-black text-left"><img src={photo.url} alt="Vehicle build" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /><span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" /></button>)}</div> : <div className="rounded-3xl border border-dashed border-white/[0.08] px-6 py-12 text-center text-sm text-white/25">No build photos yet.</div>}</section>
-
-        <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><div className="mb-6"><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Driver posts</p><h2 className="mt-1 text-xl font-bold">From @{user.username}</h2></div>{user.posts.length ? <div className="space-y-3">{user.posts.map((post) => <article key={post.id} className="rounded-3xl border border-white/[0.07] bg-black/20 p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-white/60">{post.content}</p>{post.image && <button type="button" onClick={() => setSelectedImage(post.image)} className="mt-4 block w-full overflow-hidden rounded-2xl"><img src={post.image} alt="Post" className="max-h-[520px] w-full object-cover" /></button>}<p className="mt-4 text-[10px] uppercase tracking-[0.12em] text-white/20">{formatDate(post.createdAt)}</p></article>)}</div> : <div className="rounded-3xl border border-dashed border-white/[0.08] px-6 py-12 text-center text-sm text-white/25">No posts yet.</div>}</section>
-      </div>
-
-      {selectedImage && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 sm:p-8" role="dialog" aria-modal="true" onClick={() => setSelectedImage(null)}><button type="button" aria-label="Close image" onClick={() => setSelectedImage(null)} className="absolute left-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/70 text-xl text-white/80 backdrop-blur-xl">×</button><img src={selectedImage} alt="Expanded vehicle build" onClick={(event) => event.stopPropagation()} className="max-h-[92vh] max-w-[96vw] object-contain" /></div>}
-      <MobileNav />
-    </main>
-  );
+  return <main className="min-h-screen overflow-x-hidden bg-black pb-28 text-white"><div className="pointer-events-none fixed left-1/2 top-[-280px] z-0 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-red-600/[0.07] blur-[150px]" /><div className="pointer-events-none fixed bottom-[-250px] right-[-200px] z-0 h-[500px] w-[500px] rounded-full bg-red-950/[0.08] blur-[160px]" /><div className="relative z-10 mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8"><div className="mb-6"><BackButton /></div>
+    <section className="overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025] backdrop-blur-2xl"><div className="h-28 bg-gradient-to-br from-red-600/[0.20] via-red-950/[0.08] to-transparent sm:h-36" /><div className="px-5 pb-7 sm:px-8 sm:pb-8"><div className="-mt-11 flex flex-col gap-5 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between"><div className="flex items-end gap-4">{user.image ? <img src={user.image} alt={user.name || user.username} className="h-24 w-24 rounded-3xl border border-white/[0.12] bg-black object-cover shadow-2xl sm:h-28 sm:w-28" /> : <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-white/[0.12] bg-white/[0.05] text-3xl font-bold text-white/30 sm:h-28 sm:w-28">{(user.name || user.username).charAt(0).toUpperCase()}</div>}<div className="pb-1"><p className="text-xs uppercase tracking-[0.22em] text-red-400/70">Public profile</p><h1 className="mt-1 text-2xl font-black tracking-[-0.04em] sm:text-4xl">{user.name || user.username}</h1><p className="mt-1 text-sm text-white/35">@{user.username}</p></div></div>{!isOwnProfile ? <div className="flex flex-wrap gap-2"><button type="button" onClick={toggleFollow} disabled={followBusy} className={`h-11 rounded-2xl border px-5 text-sm font-semibold transition-all ${following ? "border-white/[0.12] bg-white/[0.05] text-white/70" : "border-red-400/25 bg-red-600/20 text-white hover:bg-red-500/30"} disabled:opacity-50`}>{followBusy ? "Updating..." : following ? "Following" : "Follow"}</button><button type="button" onClick={requestChat} disabled={chatBusy || chatStatus === "PENDING_SENT" || chatStatus === "DECLINED_BY_TARGET"} className={`h-11 rounded-2xl border px-5 text-sm font-semibold transition-all ${chatStatus === "ACCEPTED" ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-200" : "border-white/[0.10] bg-white/[0.04] text-white/70 hover:border-red-400/25 hover:bg-red-500/[0.08] hover:text-white"} disabled:cursor-not-allowed disabled:opacity-60`}>{chatBusy ? "Sending..." : chatStatus === "PENDING_SENT" ? "Request sent" : chatStatus === "PENDING_RECEIVED" ? "Review request" : chatStatus === "ACCEPTED" ? "Message" : chatStatus === "DECLINED_BY_TARGET" ? "Chat unavailable" : "Request chat"}</button></div> : <Link href="/profile" className="inline-flex h-11 items-center justify-center rounded-2xl border border-white/[0.10] bg-white/[0.04] px-5 text-sm font-medium text-white/60 hover:text-white">Manage profile</Link>}</div><div className="mt-6 flex flex-wrap gap-2">{user.role && <span className="rounded-full border border-red-400/20 bg-red-500/[0.08] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-red-300">{user.role}</span>}{user.location && <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-white/45">📍 {user.location}</span>}</div>{user.bio && <p className="mt-6 max-w-3xl text-sm leading-7 text-white/45">{user.bio}</p>}<div className="mt-7 grid grid-cols-2 gap-2 sm:grid-cols-4">{[[user._count.posts, "Posts"], [user._count.vehicles, "Vehicles"], [user._count.followers, "Followers"], [user._count.following, "Following"]].map(([value, label]) => <div key={label} className="rounded-2xl border border-white/[0.07] bg-black/20 px-4 py-4 text-center"><p className="text-xl font-black">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-white/25">{label}</p></div>)}</div></div></section>
+    {featuredVehicle && <section className="mt-6 overflow-hidden rounded-[2rem] border border-red-400/20 bg-gradient-to-br from-red-600/[0.10] via-white/[0.025] to-transparent"><div className="border-b border-red-400/10 px-5 py-5 sm:px-7"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/80">Featured vehicle</p><h2 className="mt-1 text-2xl font-black tracking-tight">{featuredVehicle.make} {featuredVehicle.model}</h2></div><Link href={`/vehicles/${featuredVehicle.id}`} className="group grid sm:grid-cols-[1.25fr_0.75fr]"><div className="relative h-64 overflow-hidden bg-black sm:h-80">{featuredVehicle.image || featuredVehicle.photos[0]?.url ? <img src={featuredVehicle.image || featuredVehicle.photos[0].url} alt={`${featuredVehicle.make} ${featuredVehicle.model}`} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-7xl opacity-20">🚗</div>}<div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" /></div><div className="flex flex-col justify-center p-6 sm:p-8"><p className="text-xs uppercase tracking-[0.18em] text-red-400/65">{featuredVehicle.year ?? "Year unknown"} · {featuredVehicle.type ?? "Vehicle"}</p><p className="mt-4 text-sm leading-6 text-white/35">Explore the complete public build, photos, modifications, and mentions.</p><span className="mt-6 inline-flex w-fit rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-white/60 group-hover:border-red-400/20 group-hover:bg-red-500/10 group-hover:text-white">View build →</span></div></Link></section>}
+    <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]"><section className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><div className="mb-6 flex items-end justify-between gap-4"><div><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Garage</p><h2 className="mt-1 text-xl font-bold">All vehicles</h2></div><span className="text-xs text-white/25">{user.vehicles.length}</span></div><div className="grid gap-4 sm:grid-cols-2">{user.vehicles.map((vehicle) => { const image = vehicle.image || vehicle.photos[0]?.url; return <Link key={vehicle.id} href={`/vehicles/${vehicle.id}`} className="group overflow-hidden rounded-3xl border border-white/[0.08] bg-black/20 hover:-translate-y-0.5 hover:border-white/[0.15]"><div className="relative h-44 overflow-hidden bg-white/[0.025]">{image ? <img src={image} alt={`${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-5xl opacity-20">🚗</div>}{vehicle.isFeatured && <span className="absolute left-3 top-3 rounded-full bg-red-600/80 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.12em]">Featured</span>}</div><div className="p-4"><p className="text-[10px] uppercase tracking-[0.16em] text-red-400/60">{vehicle.year ?? "Year unknown"}</p><h3 className="mt-1 font-semibold">{vehicle.make} {vehicle.model}</h3><p className="mt-2 text-xs text-white/25">{vehicle.modifications.length} modification{vehicle.modifications.length === 1 ? "" : "s"}</p></div></Link>; })}</div></section><section className="rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Build highlights</p><h2 className="mt-1 text-xl font-bold">Recent modifications</h2><div className="mt-5 space-y-3">{user.vehicles.flatMap((vehicle) => vehicle.modifications.slice(0, 4).map((modification) => ({ vehicle, modification }))).slice(0, 8).map(({ vehicle, modification }) => <Link key={modification.id} href={`/vehicles/${vehicle.id}`} className="block rounded-2xl border border-white/[0.07] bg-black/20 p-4 hover:border-red-400/20 hover:bg-red-500/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="text-[9px] uppercase tracking-[0.14em] text-red-400/60">{modification.category}</p><h3 className="mt-1 text-sm font-semibold">{modification.title}</h3><p className="mt-1 text-[11px] text-white/25">{vehicle.make} {vehicle.model}</p></div><span className="text-white/20">→</span></div>{modification.description && <p className="mt-3 line-clamp-2 text-xs leading-5 text-white/35">{modification.description}</p>}{modification.mentions.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5">{modification.mentions.map((mention) => <span key={mention.id} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2 py-1 text-[10px] text-red-300">@{mention.mentionedUser.username}</span>)}</div>}</Link>)}</div></section></div>
+    <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><div className="mb-6 flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Build gallery</p><h2 className="mt-1 text-xl font-bold">Vehicle & modification photos</h2></div><span className="text-xs text-white/25">{allPhotos.length}</span></div>{allPhotos.length ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">{allPhotos.map((photo, index) => <button key={`${photo.id}-${index}`} type="button" onClick={() => setSelectedImage(photo.url)} className="group relative aspect-square overflow-hidden rounded-2xl bg-black text-left"><img src={photo.url} alt="Vehicle build" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /><span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/20" /></button>)}</div> : <div className="rounded-3xl border border-dashed border-white/[0.08] px-6 py-12 text-center text-sm text-white/25">No build photos yet.</div>}</section>
+    <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-7"><div className="mb-6"><p className="text-[10px] uppercase tracking-[0.2em] text-white/25">Driver posts</p><h2 className="mt-1 text-xl font-bold">From @{user.username}</h2></div>{user.posts.length ? <div className="space-y-3">{user.posts.map((post) => <article key={post.id} className="rounded-3xl border border-white/[0.07] bg-black/20 p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-white/60">{post.content}</p>{post.image && <button type="button" onClick={() => setSelectedImage(post.image)} className="mt-4 block w-full overflow-hidden rounded-2xl"><img src={post.image} alt="Post" className="max-h-[520px] w-full object-cover" /></button>}<p className="mt-4 text-[10px] uppercase tracking-[0.12em] text-white/20">{formatDate(post.createdAt)}</p></article>)}</div> : <div className="rounded-3xl border border-dashed border-white/[0.08] px-6 py-12 text-center text-sm text-white/25">No posts yet.</div>}</section>
+  </div>{selectedImage && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 sm:p-8" role="dialog" aria-modal="true" onClick={() => setSelectedImage(null)}><button type="button" aria-label="Close image" onClick={() => setSelectedImage(null)} className="absolute left-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/70 text-xl text-white/80 backdrop-blur-xl">×</button><img src={selectedImage} alt="Expanded vehicle build" onClick={(event) => event.stopPropagation()} className="max-h-[92vh] max-w-[96vw] object-contain" /></div>}<MobileNav /></main>;
 }

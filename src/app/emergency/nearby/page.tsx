@@ -34,6 +34,7 @@ export default function NearbyEmergencyPage() {
   const [emergencies, setEmergencies] = useState<Emergency[]>([]);
   const [loading, setLoading] = useState(true);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
@@ -52,11 +53,20 @@ export default function NearbyEmergencyPage() {
   useEffect(() => {
     load();
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
+    const watchId = navigator.geolocation.watchPosition(
       (p) => setLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude }),
       () => undefined,
-      { enableHighAccuracy: true, maximumAge: 60000, timeout: 10000 },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
     );
+
+    fetch("/api/profile", { credentials: "include", cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data?.success) setProfileImage(data.user?.image || null);
+      })
+      .catch(() => undefined);
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
   const mapMarkers = useMemo(
@@ -108,6 +118,7 @@ export default function NearbyEmergencyPage() {
           </div>
           <EmergencyMap
             userLocation={location}
+            userImage={profileImage}
             markers={mapMarkers}
           />
           <div className="border-t border-white/[0.07] px-5 py-3 text-[10px] text-white/25 sm:px-6">

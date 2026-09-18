@@ -62,11 +62,26 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   useEffect(() => { let cancelled = false; const refresh = async () => { try { const response = await fetch(`/api/posts/${post.id}/like?_=${Date.now()}`, { credentials: "include", cache: "no-store", headers: { Accept: "application/json" } }); const data = await response.json(); if (!cancelled && response.ok && data.success) { const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || 0, shares: Number(data.shares) || 0 }; setLiked(Boolean(data.liked)); setCounts(next); onChanged?.({ ...post, liked: Boolean(data.liked), _count: next }); } } catch {} }; refresh(); const timer = window.setInterval(refresh, 2500); return () => { cancelled = true; window.clearInterval(timer); }; }, [post.id]);
   useEffect(() => { if (!shareOpen || shareSearch.trim().length < 1) { setShareUsers([]); return; } const controller = new AbortController(); const timer = window.setTimeout(async () => { try { const response = await fetch(`/api/users/search?q=${encodeURIComponent(shareSearch.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal }); const data = await response.json(); if (response.ok && data.success) setShareUsers(data.users ?? []); } catch {} }, 180); return () => { window.clearTimeout(timer); controller.abort(); }; }, [shareOpen, shareSearch]);
   useEffect(() => {
-    if (!showComments || !window.matchMedia("(max-width: 639px)").matches) return;
+    if (!window.matchMedia("(max-width: 639px)").matches) return;
     const body = document.body;
-    const previous = body.style.overflow;
-    body.style.overflow = "hidden";
-    return () => { body.style.overflow = previous; };
+    const html = document.documentElement;
+    if (showComments) {
+      body.dataset.revvamCommentsOpen = "true";
+      html.dataset.revvamCommentsOpen = "true";
+      body.style.overflow = "hidden";
+      body.style.touchAction = "none";
+    } else {
+      delete body.dataset.revvamCommentsOpen;
+      delete html.dataset.revvamCommentsOpen;
+      body.style.overflow = "";
+      body.style.touchAction = "";
+    }
+    return () => {
+      delete body.dataset.revvamCommentsOpen;
+      delete html.dataset.revvamCommentsOpen;
+      body.style.overflow = "";
+      body.style.touchAction = "";
+    };
   }, [showComments]);
 
   useEffect(() => {

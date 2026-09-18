@@ -1,5 +1,6 @@
-import { BackIcon, MessageIcon, SearchIcon, CloseIcon } from "@/components/icons";
 "use client";
+
+import { BackIcon, MessageIcon, SearchIcon, CloseIcon } from "@/components/icons";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";

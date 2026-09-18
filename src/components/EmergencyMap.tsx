@@ -155,8 +155,11 @@ export default function EmergencyMap({
     const createGlobe = async () => {
       if (cancelled || !mapRef.current || !window.google?.maps) return;
 
-      const { Map3DElement, Marker3DElement } =
-        await window.google.maps.importLibrary("maps3d");
+      const [{ Map3DElement, Marker3DElement }, { PinElement }] =
+        await Promise.all([
+          window.google.maps.importLibrary("maps3d"),
+          window.google.maps.importLibrary("marker"),
+        ]);
 
       if (cancelled || !mapRef.current) return;
 
@@ -192,11 +195,35 @@ export default function EmergencyMap({
           label: userImage ? undefined : "YOU",
           drawsWhenOccluded: true,
           altitudeMode: "CLAMP_TO_GROUND",
-          altitudeMode: "CLAMP_TO_GROUND",
+          sizePreserved: true,
         });
+
         if (userImage) {
-          you.innerHTML = `<img src="${userImage}" alt="" style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 4px rgba(239,68,68,.28),0 0 24px rgba(239,68,68,.55);" />`;
+          const image = document.createElement("img");
+          image.src = userImage;
+          image.alt = "";
+          image.width = 48;
+          image.height = 48;
+          image.style.borderRadius = "999px";
+          image.style.objectFit = "cover";
+          image.style.border = "3px solid #ffffff";
+          image.style.boxShadow = "0 0 0 4px rgba(239,68,68,.28), 0 0 24px rgba(239,68,68,.55)";
+
+          const template = document.createElement("template");
+          template.content.append(image);
+          you.append(template);
+        } else {
+          you.append(
+            new PinElement({
+              background: "#ef4444",
+              borderColor: "#ffffff",
+              glyphText: "YOU",
+              glyphColor: "#ffffff",
+              scale: 1.2,
+            }),
+          );
         }
+
         globe.appendChild(you);
       }
 

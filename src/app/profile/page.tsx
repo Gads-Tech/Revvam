@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CarIcon, MechanicIcon, StorefrontIcon, SettingsIcon, LocationIcon, BellIcon, MessageIcon, EditIcon, ArrowRightIcon, PlusIcon, UserIcon } from "@/components/icons/RevvamIcons";
+import { CarIcon, MechanicIcon, StorefrontIcon, SettingsIcon, LocationIcon, BellIcon, MessageIcon, EditIcon, ArrowRightIcon, PlusIcon, UserIcon, GarageIcon } from "@/components/icons/RevvamIcons";
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";

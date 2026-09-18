@@ -1,5 +1,6 @@
-import { CarIcon, MechanicIcon, CameraIcon, ExpandIcon } from "@/components/icons";
 "use client";
+
+import { CarIcon, MechanicIcon, CameraIcon, ExpandIcon } from "@/components/icons";
 
 import Link from "next/link";
 import {

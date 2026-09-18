@@ -149,7 +149,7 @@ export default function AddCarPage() {
               hover:text-white
             "
           >
-            <span>←</span>
+            <BackIcon className="h-4 w-4" />
             Back to garage
           </Link>
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SendIcon } from "@/components/icons";
 
 import DiscoverLink from "./DiscoverLink";
 import Logo from "./Logo";
@@ -28,7 +29,7 @@ export default function Navbar() {
             Log in
           </Link>
           <Link href="/signup" className="inline-flex h-10 items-center justify-center rounded-full border border-red-400/25 bg-red-600/20 px-4 text-sm font-bold text-white shadow-lg shadow-red-950/20 transition hover:bg-red-500/30 sm:px-5">
-            Join Now <span className="ml-1">→</span>
+            Join Now <SendIcon className="ml-1 h-3.5 w-3.5" />
           </Link>
         </div>
       </div>

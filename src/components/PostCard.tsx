@@ -7,7 +7,7 @@ import { BackIcon, BellIcon, CarIcon, CloseIcon, CommentIcon, ImageIcon, LikeIco
 type User = { id?: string; name: string; username: string; image: string | null };
 type Friend = { id: string; name: string; username: string; image: string | null };
 type Counts = { likes: number; comments: number; shares: number };
-export type PostData = { id: string; content: string; image: string | null; video?: string | null; createdAt: string; author: User; liked?: boolean; _count?: Counts; mentions?: { mentionedUser: User }[] };
+export type PostData = { id: string; content: string; owned?: boolean; image: string | null; video?: string | null; createdAt: string; author: User; liked?: boolean; _count?: Counts; mentions?: { mentionedUser: User }[] };
 type Comment = { id: string; content: string; createdAt: string; author: User; parentId?: string | null; parent?: { id: string; author: { username: string } } | null };
 
 export default function PostCard({ post, onChanged, publicMode = false }: { post: PostData; onChanged?: (post: PostData) => void; publicMode?: boolean }) {
@@ -35,7 +35,12 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [shareError, setShareError] = useState("");
+  const [postContent, setPostContent] = useState(post.content);
+  const [postRemoved, setPostRemoved] = useState(false);
+  const [postMenuOpen, setPostMenuOpen] = useState(false);
+  const [postEditBusy, setPostEditBusy] = useState(false);
 
+  useEffect(() => { setPostContent(post.content); setPostRemoved(false); }, [post.id, post.content]);
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
   useEffect(() => { const onOtherPostOpened = (event: Event) => { const custom = event as CustomEvent<{ postId: string }>; if (custom.detail?.postId !== post.id) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }; window.addEventListener("revvam:comments-open", onOtherPostOpened); return () => window.removeEventListener("revvam:comments-open", onOtherPostOpened); }, [post.id]);
   useEffect(() => { if (!showComments) return; const observer = new IntersectionObserver(([entry]) => { if (!entry.isIntersecting) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }, { threshold: 0.05 }); if (articleRef.current) observer.observe(articleRef.current); return () => observer.disconnect(); }, [showComments]);
@@ -63,6 +68,36 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     return () => observer.disconnect();
   }, [post.video]);
 
+  async function editPost() {
+    if (!post.owned || postEditBusy) return;
+    const nextContent = window.prompt("Edit your post", postContent);
+    if (nextContent === null || nextContent.trim() === postContent.trim()) { setPostMenuOpen(false); return; }
+    if (!nextContent.trim()) { setNotice("Post content is required."); return; }
+    setPostEditBusy(true); setNotice("");
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify({ content: nextContent }) });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to edit post.");
+      setPostContent(data.post.content);
+      onChanged?.({ ...post, content: data.post.content });
+      setPostMenuOpen(false);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to edit post."); }
+    finally { setPostEditBusy(false); }
+  }
+  async function deletePost() {
+    if (!post.owned || postEditBusy) return;
+    if (!window.confirm("Delete this post? This cannot be undone.")) return;
+    setPostEditBusy(true); setNotice("");
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, { method: "DELETE", credentials: "include", headers: { Accept: "application/json" } });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || "Unable to delete post.");
+      setPostRemoved(true);
+      setPostMenuOpen(false);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to delete post."); }
+    finally { setPostEditBusy(false); }
+  }
+
   async function toggleLike() { if (publicMode) { window.location.href = "/login"; return; } if (busy) return; setBusy(true); setNotice(""); try { const response = await fetch(`/api/posts/${post.id}/like`, { method: "POST", credentials: "include" }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to like post."); const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || counts.comments, shares: Number(data.shares) || counts.shares }; setLiked(Boolean(data.liked)); setCounts(next); onChanged?.({ ...post, liked: Boolean(data.liked), _count: next }); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to like post."); } finally { setBusy(false); } }
   async function loadComments() { try { const response = await fetch(`/api/posts/${post.id}/comments?_=${Date.now()}`, { cache: "no-store", credentials: "include" }); const data = await response.json(); if (response.ok && data.success) { const ordered = [...(data.comments ?? [])].sort((a: Comment, b: Comment) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); setComments(ordered); setCurrentUserId(data.currentUserId ?? null); setCounts((current) => ({ ...current, comments: ordered.length })); } } catch { setNotice("Unable to load comments."); } }
   async function toggleComments() { const next = !showComments; if (next) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); setShowComments(next); if (next) await loadComments(); else { setReplyingTo(null); setMenuCommentId(null); } }
@@ -83,9 +118,11 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const topComments = comments.filter((item) => !item.parentId);
   const childrenOf = (id: string) => comments.filter((item) => item.parentId === id);
 
+  if (postRemoved) return null;
+
   return <article ref={articleRef} className={`relative min-w-0 overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.025] transition hover:border-white/[0.12] ${showComments ? "grid grid-cols-[minmax(0,0.45fr)_minmax(0,0.55fr)]" : ""}`}>
     <div className="min-w-0">
-      <div className="p-5 sm:p-6"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{post.content}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
+      <div className="p-5 sm:p-6"><div className="flex items-start justify-between gap-3"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex min-w-0 items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link>{post.owned && <div className="relative shrink-0"><button type="button" onClick={() => setPostMenuOpen((open) => !open)} aria-label="Post options" className="flex h-9 w-9 items-center justify-center rounded-xl text-white/35 hover:bg-white/[0.06] hover:text-white"><MoreIcon className="h-4 w-4" /></button>{postMenuOpen && <div className="absolute right-0 top-10 z-30 w-32 overflow-hidden rounded-xl border border-white/[0.1] bg-[#0b0b0b] p-1 shadow-xl"><button type="button" onClick={editPost} disabled={postEditBusy} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-white/75 hover:bg-white/[0.06]">Edit post</button><button type="button" onClick={deletePost} disabled={postEditBusy} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-red-300 hover:bg-red-500/[0.08]">Delete post</button></div>}</div>}</div><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{postContent}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
       {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div className="overflow-hidden border-t border-white/[0.06] bg-black"><video ref={videoRef} src={post.video} controls loop muted playsInline autoPlay preload="metadata" className="max-h-[620px] w-full" /></div>}
       <div className="flex shrink-0 items-center gap-1 border-t border-white/[0.06] px-4 py-2 sm:px-5"><button type="button" onClick={toggleLike} disabled={busy} className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition ${liked ? "text-red-300" : "text-white/35 hover:bg-white/[0.04] hover:text-white"}`}><LikeIcon className="h-4 w-4" filled={liked} />{counts.likes || "Like"}</button><button type="button" onClick={toggleComments} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><CommentIcon className="h-4 w-4" />{counts.comments || "Comment"}</button><button type="button" onClick={openShare} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><ShareIcon className="h-4 w-4" />{counts.shares || "Share"}</button></div>{notice && <p className="border-t border-white/[0.06] px-5 py-2 text-[10px] text-red-300">{notice}</p>}
     </div>

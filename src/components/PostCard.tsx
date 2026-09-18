@@ -9,7 +9,7 @@ type Counts = { likes: number; comments: number; shares: number };
 export type PostData = { id: string; content: string; image: string | null; video?: string | null; createdAt: string; author: User; liked?: boolean; _count?: Counts; mentions?: { mentionedUser: User }[] };
 type Comment = { id: string; content: string; createdAt: string; author: User; parentId?: string | null; parent?: { id: string; author: { username: string } } | null };
 
-export default function PostCard({ post, onChanged }: { post: PostData; onChanged?: (post: PostData) => void }) {
+export default function PostCard({ post, onChanged, publicMode: _publicMode }: { post: PostData; onChanged?: (post: PostData) => void; publicMode?: boolean }) {
   const articleRef = useRef<HTMLElement | null>(null);
   const commentsRef = useRef<HTMLDivElement | null>(null);
   const [liked, setLiked] = useState(Boolean(post.liked));

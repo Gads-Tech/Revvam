@@ -6,7 +6,7 @@ import { BackIcon, BellIcon, CommentIcon, LikeIcon, MessageIcon, PlusIcon, Share
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BackIcon, BellIcon, CommentIcon, LikeIcon, MessageIcon, PlusIcon, ShareIcon, MoreIcon } from "@/components/icons";
+
 import MobileNav from "@/components/MobileNav";
 
 type Actor = { id: string; name: string; username: string; image: string | null };

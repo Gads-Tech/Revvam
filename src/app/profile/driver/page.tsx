@@ -1,6 +1,6 @@
 "use client";
 
-import { CarIcon } from "@/components/icons";
+import { BackIcon, CarIcon } from "@/components/icons";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";

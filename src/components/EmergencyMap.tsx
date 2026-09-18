@@ -108,66 +108,28 @@ export default function EmergencyMap({
       mapInstanceRef.current = map;
 
       if (userLocation) {
-        if (userImage) {
-          const you = new MarkerElement({
-            position: {
-              lat: userLocation.latitude,
-              lng: userLocation.longitude,
-              altitude: 50,
-            },
-            altitudeMode: "CLAMP_TO_GROUND",
-            drawsWhenOccluded: true,
-          });
+        const you = new Marker3DElement({
+          position: {
+            lat: userLocation.latitude,
+            lng: userLocation.longitude,
+            altitude: 50,
+          },
+          drawsWhenOccluded: true,
+          altitudeMode: "CLAMP_TO_GROUND",
+          sizePreserved: true,
+          zIndex: 1000,
+        });
 
-          const avatar = document.createElement("div");
-          avatar.style.width = "52px";
-          avatar.style.height = "52px";
-          avatar.style.borderRadius = "9999px";
-          avatar.style.overflow = "hidden";
-          avatar.style.border = "3px solid #ffffff";
-          avatar.style.background = "#111111";
-          avatar.style.boxShadow =
-            "0 0 0 4px rgba(239,68,68,.30), 0 0 26px rgba(239,68,68,.65)";
-          avatar.style.transform = "translate(-50%, -50%)";
+        const locationPin = new PinElement({
+          background: "#111111",
+          borderColor: "#ffffff",
+          glyphColor: "#ffffff",
+          scale: 1.35,
+          ...(userImage ? { glyphSrc: userImage } : { glyphText: "YOU" }),
+        });
 
-          const image = document.createElement("img");
-          image.src = userImage;
-          image.alt = "";
-          image.width = 52;
-          image.height = 52;
-          image.style.width = "100%";
-          image.style.height = "100%";
-          image.style.objectFit = "cover";
-          image.style.display = "block";
-
-          avatar.appendChild(image);
-          you.appendChild(avatar);
-          globe.appendChild(you);
-        } else {
-          const you = new Marker3DElement({
-            position: {
-              lat: userLocation.latitude,
-              lng: userLocation.longitude,
-              altitude: 50,
-            },
-            label: "YOU",
-            drawsWhenOccluded: true,
-            altitudeMode: "CLAMP_TO_GROUND",
-            sizePreserved: true,
-          });
-
-          you.append(
-            new PinElement({
-              background: "#ef4444",
-              borderColor: "#ffffff",
-              glyphText: "YOU",
-              glyphColor: "#ffffff",
-              scale: 1.2,
-            }),
-          );
-
-          globe.appendChild(you);
-        }
+        you.append(locationPin);
+        globe.appendChild(you);
       }
 
       markers.forEach((marker) => {
@@ -196,7 +158,7 @@ export default function EmergencyMap({
     const createGlobe = async () => {
       if (cancelled || !mapRef.current || !window.google?.maps) return;
 
-      const [{ Map3DElement, Marker3DElement, MarkerElement }, { PinElement }] =
+      const [{ Map3DElement, Marker3DElement }, { PinElement }] =
         await Promise.all([
           window.google.maps.importLibrary("maps3d"),
           window.google.maps.importLibrary("marker"),

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { SendIcon } from "@/components/icons";
+import { SendIcon, SearchIcon, MessageIcon, BellIcon, UserIcon } from "@/components/icons";
 
 import DiscoverLink from "./DiscoverLink";
 import Logo from "./Logo";
@@ -16,8 +16,8 @@ export default function Navbar() {
         </DiscoverLink>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-white/55 md:flex">
-          <DiscoverLink className="transition hover:text-white">
-            Discover
+          <DiscoverLink className="inline-flex items-center gap-2 transition hover:text-white">
+            <SearchIcon className="h-4 w-4" /> Discover
           </DiscoverLink>
           <a href="#community" className="transition hover:text-white">Community</a>
           <a href="#vehicles" className="transition hover:text-white">Vehicles</a>

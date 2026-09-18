@@ -25,6 +25,23 @@ export default function MobileNav() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const updateKeyboardState = () => {
+      const covered = window.innerHeight - viewport.height - viewport.offsetTop > 120;
+      setKeyboardOpen(covered);
+    };
+    updateKeyboardState();
+    viewport.addEventListener("resize", updateKeyboardState);
+    viewport.addEventListener("scroll", updateKeyboardState);
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardState);
+      viewport.removeEventListener("scroll", updateKeyboardState);
+    };
+  }, []);
 
   async function refreshIndicators(signal?: AbortSignal) {
     try {
@@ -97,7 +114,7 @@ export default function MobileNav() {
     }
   };
 
-  if (!mounted) return null;
+  if (!mounted || keyboardOpen) return null;
 
   const combinedCount = notificationCount + messageCount;
 

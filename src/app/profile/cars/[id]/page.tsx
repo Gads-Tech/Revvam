@@ -1,3 +1,4 @@
+import { CarIcon, MechanicIcon, CameraIcon, ExpandIcon } from "@/components/icons";
 "use client";
 
 import Link from "next/link";
@@ -1536,7 +1537,7 @@ const [deletingModificationId, setDeletingModificationId] =
             "
           >
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/[0.06] text-2xl">
-              🚗
+              <CarIcon className="h-16 w-16 opacity-20" />
             </div>
 
             <h1 className="mt-6 text-2xl font-bold">
@@ -1730,7 +1731,7 @@ const [deletingModificationId, setDeletingModificationId] =
               </button>
             ) : (
               <div className="text-[120px] opacity-10">
-                🚗
+                <CarIcon className="h-16 w-16 opacity-20" />
               </div>
             )}
 
@@ -2071,7 +2072,7 @@ done to this vehicle, from
             >
               <div>
                 <div className="text-5xl opacity-20">
-                  🔧
+                  <MechanicIcon className="h-5 w-5" />
                 </div>
 
                 <p className="mt-4 text-sm font-medium text-white/30">
@@ -2388,7 +2389,7 @@ you&apos;ve done to this vehicle.
               "
             >
               <div className="text-4xl">
-                📷
+                <CameraIcon className="h-5 w-5" />
               </div>
 
               <p className="mt-4 text-sm font-semibold text-white/70">
@@ -2463,7 +2464,7 @@ you&apos;ve done to this vehicle.
                             hover:text-red-300
                           "
                         >
-                          ×
+                          <CloseIcon className="h-4 w-4" />
                         </button>
 
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8">
@@ -2533,7 +2534,7 @@ you&apos;ve done to this vehicle.
             <div className="mt-6 flex min-h-[220px] items-center justify-center rounded-3xl border border-dashed border-white/[0.08] bg-black/20 px-6 text-center">
               <div>
                 <div className="text-5xl opacity-20">
-                  📷
+                  <CameraIcon className="h-5 w-5" />
                 </div>
 
                 <p className="mt-4 text-sm font-medium text-white/30">
@@ -2626,7 +2627,7 @@ you&apos;ve done to this vehicle.
                         "
                         aria-label="Open photo"
                       >
-                        ⛶
+                        <ExpandIcon className="h-4 w-4" />
                       </button>
 
                       <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
@@ -2871,7 +2872,7 @@ you&apos;ve done to this vehicle.
                   disabled:opacity-30
                 "
               >
-                ×
+                <CloseIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -3331,7 +3332,7 @@ you&apos;ve done to this vehicle.
                 "
                 aria-label="Previous photo"
               >
-                ‹
+                <BackIcon className="h-4 w-4 rotate-180" />
               </button>
             )}
 
@@ -3382,7 +3383,7 @@ you&apos;ve done to this vehicle.
                 "
                 aria-label="Next photo"
               >
-                ›
+                <BackIcon className="h-4 w-4" />
               </button>
             )}
 

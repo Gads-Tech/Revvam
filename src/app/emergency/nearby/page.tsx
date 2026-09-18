@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { BackIcon, CarIcon, LocationIcon, NavigationIcon, WarningIcon } from "@/components/icons";
+import EmergencyMap from "@/components/EmergencyMap";
 
 type Emergency = {
   id: string;
@@ -82,13 +83,29 @@ export default function NearbyEmergencyPage() {
         </header>
 
         <section className="mb-7 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025]">
-          <div className="flex min-h-[280px] items-center justify-center bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.10),transparent_55%)] p-8 text-center">
-            <div>
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 text-red-300"><NavigationIcon className="h-7 w-7" /></div>
-              <h2 className="mt-4 text-lg font-bold">Live emergency map</h2>
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/30">The emergency markers are ready for the Google Maps layer. For now, the live request list below uses your browser location to show approximate distance.</p>
-              <p className="mt-3 text-[10px] uppercase tracking-[0.16em] text-white/20">{location ? "Your location is active" : "Location permission not granted"}</p>
+          <div className="border-b border-white/[0.07] px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/70">Live network</p>
+                <h2 className="mt-1 text-lg font-bold">Nearby emergency map</h2>
+              </div>
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white/30">Google Maps</span>
             </div>
+          </div>
+          <EmergencyMap
+            userLocation={location}
+            markers={emergencies.map((emergency) => ({
+              id: emergency.id,
+              latitude: emergency.latitude,
+              longitude: emergency.longitude,
+              title: labels[emergency.type] || emergency.type,
+              description: emergency.vehicle
+                ? `${emergency.vehicle.make} ${emergency.vehicle.model} · @${emergency.driver.username}`
+                : `@${emergency.driver.username}`,
+            }))}
+          />
+          <div className="border-t border-white/[0.07] px-5 py-3 text-[10px] text-white/25 sm:px-6">
+            Red markers are active roadside requests. Your blue marker appears when location permission is available.
           </div>
         </section>
 

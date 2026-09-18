@@ -60,7 +60,7 @@ export default function EmergencyMap({
       }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=weekly`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=alpha`;
       script.async = true;
       script.defer = true;
       script.dataset.revvamGoogleMaps = "true";
@@ -161,11 +161,11 @@ export default function EmergencyMap({
 
       const globe = new Map3DElement({
         center,
-        range: 18000000,
-        tilt: 0,
+        range: userLocation || markers.length ? 9000 : 18000000,
+        tilt: userLocation || markers.length ? 62 : 18,
         heading: 0,
-        mode: "SATELLITE",
-        defaultUIHidden: true,
+        mode: "ROADMAP",
+        defaultUIHidden: false,
         gestureHandling: "GREEDY",
       });
 
@@ -280,7 +280,7 @@ export default function EmergencyMap({
       </div>
 
       <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border border-white/[0.1] bg-black/65 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45 backdrop-blur-xl">
-        {mode === "globe" ? "Drag to rotate · scroll to zoom" : "Drag to move · scroll to zoom"}
+        {mode === "globe" ? "Drag to rotate · scroll to zoom · tilt with controls" : "Drag to move · scroll to zoom"}
       </div>
 
       {!ready && (

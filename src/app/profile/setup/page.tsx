@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CarIcon, MechanicIcon, StorefrontIcon, CheckIcon, UserIcon } from "@/components/icons/RevvamIcons";
 
 type Role =
   | "USER"
@@ -18,7 +19,7 @@ type OnboardingType =
 
 type SetupChoice = {
   value: Role;
-  icon: string;
+  icon: React.ReactNode;
   title: string;
   description: string;
   onboardingType: OnboardingType;
@@ -27,7 +28,7 @@ type SetupChoice = {
 const roles: SetupChoice[] = [
   {
     value: "USER",
-    icon: "🚗",
+    icon: <CarIcon className="h-6 w-6" />,
     title: "Driver",
     description:
       "Share your cars, builds, experiences, and connect with other enthusiasts.",
@@ -35,7 +36,7 @@ const roles: SetupChoice[] = [
   },
   {
     value: "MECHANIC",
-    icon: "🔧",
+    icon: <MechanicIcon className="h-6 w-6" />,
     title: "Mechanic",
     description:
       "Show your expertise, connect with drivers, and offer automotive services.",
@@ -43,7 +44,7 @@ const roles: SetupChoice[] = [
   },
   {
     value: "MECHANIC_SHOP",
-    icon: "🏪",
+    icon: <StorefrontIcon className="h-6 w-6" />,
     title: "Mechanic Shop",
     description:
       "Represent your workshop and help drivers find your automotive services.",
@@ -51,7 +52,7 @@ const roles: SetupChoice[] = [
   },
   {
     value: "DEALERSHIP",
-    icon: "🚘",
+    icon: <CarIcon className="h-6 w-6" />,
     title: "Dealership",
     description:
       "Represent your dealership and showcase vehicles to the Revvam community.",
@@ -59,7 +60,7 @@ const roles: SetupChoice[] = [
   },
   {
     value: "USER",
-    icon: "🌎",
+    icon: <UserIcon className="h-6 w-6" />,
     title: "Explorer",
     description:
       "Explore Revvam, discover cars, meet people, and experience the community.",

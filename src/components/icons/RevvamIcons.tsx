@@ -39,3 +39,6 @@ export const CheckIcon=(p:P)=><I {...p}><path d="m5 12 4 4L19 6"/></I>;
 export const WarningIcon=(p:P)=><I {...p}><path d="m12 3 9 17H3L12 3Z"/><path d="M12 9v4M12 16h.01"/></I>;
 export const HelpIcon=(p:P)=><I {...p}><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.7 2.7 0 1 1 4.3 2.2c-1.2.8-1.8 1.2-1.8 2.8M12 17h.01"/></I>;
 export const LogoutIcon=(p:P)=><I {...p}><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></I>;
+
+export const EditIcon=(p:P)=><I {...p}><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/><path d="m14.5 6.5 3 3"/></I>;
+export const ArrowRightIcon=(p:P)=><I {...p}><path d="M5 12h14M13 6l6 6-6 6"/></I>;

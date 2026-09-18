@@ -120,15 +120,33 @@ export default function EmergencyMap({
           zIndex: 1000,
         });
 
-        const locationPin = new PinElement({
-          background: "#111111",
-          borderColor: "#ffffff",
-          glyphColor: "#ffffff",
-          scale: 1.35,
-          ...(userImage ? { glyphSrc: userImage } : { glyphText: "YOU" }),
-        });
+        if (userImage) {
+          const avatar = document.createElement("img");
+          avatar.src = new URL(userImage, window.location.origin).toString();
+          avatar.alt = "";
+          avatar.width = 56;
+          avatar.height = 56;
+          avatar.style.width = "56px";
+          avatar.style.height = "56px";
+          avatar.style.borderRadius = "50%";
+          avatar.style.objectFit = "cover";
+          avatar.style.display = "block";
 
-        you.append(locationPin);
+          const template = document.createElement("template");
+          template.content.append(avatar);
+          you.append(template);
+        } else {
+          you.append(
+            new PinElement({
+              background: "#ef4444",
+              borderColor: "#ffffff",
+              glyphText: "YOU",
+              glyphColor: "#ffffff",
+              scale: 1.2,
+            }),
+          );
+        }
+
         globe.appendChild(you);
       }
 

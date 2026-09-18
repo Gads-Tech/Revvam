@@ -1,3 +1,4 @@
+import { CarIcon } from "@/components/icons";
 "use client";
 
 import Link from "next/link";
@@ -95,7 +96,7 @@ export default function DriverGaragePage() {
             href="/profile"
             className="mb-8 inline-flex items-center gap-2 text-sm text-white/35 transition-colors hover:text-white"
           >
-            <span>←</span>
+            <BackIcon className="h-4 w-4" />
             Back to profile
           </Link>
 
@@ -159,7 +160,7 @@ export default function DriverGaragePage() {
         {!vehiclesLoading && !vehicleError && vehicles.length === 0 && (
           <section className="flex min-h-[320px] flex-col items-center justify-center rounded-[2rem] border border-dashed border-white/[0.10] bg-white/[0.025] px-6 text-center backdrop-blur-2xl">
             <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-3xl border border-white/[0.08] bg-white/[0.04] text-4xl">
-              🚗
+              <CarIcon className="h-6 w-6" />
             </div>
             <h2 className="text-lg font-semibold">Your garage is empty</h2>
             <p className="mt-2 max-w-md text-sm leading-6 text-white/30">
@@ -203,7 +204,7 @@ export default function DriverGaragePage() {
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center text-7xl opacity-20">
-                        🚗
+                        <CarIcon className="h-6 w-6" />
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
@@ -223,7 +224,7 @@ export default function DriverGaragePage() {
                       Your featured car appears here and in the Revvam community spotlight.
                     </p>
                     <span className="mt-6 inline-flex w-fit rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-3 text-xs font-semibold uppercase tracking-[0.1em] text-white/60 transition-all group-hover:border-red-400/20 group-hover:bg-red-500/10 group-hover:text-white">
-                      View vehicle →
+                      View vehicle
                     </span>
                   </div>
                 </Link>
@@ -275,7 +276,7 @@ export default function DriverGaragePage() {
                             />
                           ) : (
                             <div className="text-6xl opacity-20 transition-transform duration-500 group-hover:scale-110">
-                              🚗
+                              <CarIcon className="h-6 w-6" />
                             </div>
                           )}
                           <div className="absolute left-4 top-4 rounded-full border border-white/[0.08] bg-black/40 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.15em] text-white/50 backdrop-blur-xl">

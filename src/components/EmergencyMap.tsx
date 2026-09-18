@@ -195,7 +195,7 @@ export default function EmergencyMap({
           altitudeMode: "CLAMP_TO_GROUND",
         });
         if (userImage) {
-          you.innerHTML = \`<img src="${userImage}" alt="" style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 4px rgba(239,68,68,.28),0 0 24px rgba(239,68,68,.55);" />\`;
+          you.innerHTML = `<img src="${userImage}" alt="" style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 4px rgba(239,68,68,.28),0 0 24px rgba(239,68,68,.55);" />`;
         }
         globe.appendChild(you);
       }

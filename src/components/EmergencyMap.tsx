@@ -31,6 +31,7 @@ export default function EmergencyMap({
   const scriptRef = useRef<HTMLScriptElement | null>(null);
   const [mode, setMode] = useState<ViewMode>("globe");
   const [ready, setReady] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -240,6 +241,43 @@ export default function EmergencyMap({
     };
   }, [mode, markers, userLocation]);
 
+  const locateMe = () => {
+    if (!navigator.geolocation || !mapRef.current) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const next = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
+        if (mode === "map" && mapInstanceRef.current) {
+          mapInstanceRef.current.panTo({ lat: next.latitude, lng: next.longitude });
+          mapInstanceRef.current.setZoom(16);
+        }
+
+        if (mode === "globe" && globeRef.current) {
+          globeRef.current.flyCameraTo({
+            endCameraPosition: {
+              center: {
+                lat: next.latitude,
+                lng: next.longitude,
+                altitude: 0,
+              },
+              range: 1800,
+              tilt: 62,
+              heading: 0,
+            },
+          });
+        }
+
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+    );
+  };
+
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return (
       <div className="flex min-h-[380px] items-center justify-center bg-[radial-gradient(circle_at_center,rgba(220,38,38,0.10),transparent_55%)] p-8 text-center">
@@ -256,6 +294,20 @@ export default function EmergencyMap({
 
   return (
     <div className="relative h-[430px] w-full overflow-hidden bg-[#02040a] sm:h-[560px]">
+      <button
+        type="button"
+        onClick={locateMe}
+        disabled={locating || !ready}
+        aria-label="Locate me"
+        title="Locate me"
+        className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/75 text-white/80 shadow-2xl backdrop-blur-xl transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <svg viewBox="0 0 24 24" className={`h-5 w-5 ${locating ? "animate-pulse" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.5" />
+          <path strokeLinecap="round" d="M12 2.5v4M12 17.5v4M2.5 12h4M17.5 12h4" />
+        </svg>
+      </button>
+
       <div
         ref={mapRef}
         className="absolute inset-0"

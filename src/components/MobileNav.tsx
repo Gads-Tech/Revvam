@@ -26,6 +26,15 @@ export default function MobileNav() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+
+  useEffect(() => {
+    const updateCommentsState = () => setCommentsOpen(document.documentElement.dataset.revvamCommentsOpen === "true");
+    updateCommentsState();
+    const observer = new MutationObserver(updateCommentsState);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-revvam-comments-open"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const viewport = window.visualViewport;
@@ -114,7 +123,7 @@ export default function MobileNav() {
     }
   };
 
-  if (!mounted || keyboardOpen) return null;
+  if (!mounted || keyboardOpen || commentsOpen) return null;
 
   const combinedCount = notificationCount + messageCount;
 

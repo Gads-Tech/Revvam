@@ -1,7 +1,7 @@
 
 "use client";
 
-import { BackIcon, BellIcon, CommentIcon, LikeIcon, MessageIcon, PlusIcon, ShareIcon, MoreIcon } from "@/components/icons";
+import { BackIcon, BellIcon, CommentIcon, LikeIcon, MessageIcon, PlusIcon, ShareIcon, MoreIcon, CloseIcon } from "@/components/icons";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";

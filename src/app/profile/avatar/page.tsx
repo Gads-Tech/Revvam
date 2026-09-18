@@ -1,3 +1,4 @@
+import { BackIcon } from "@/components/icons";
 "use client";
 
 import Link from "next/link";
@@ -127,7 +128,7 @@ export default function ProfileAvatarPage() {
   return (
     <main className="min-h-screen bg-black px-5 py-8 pb-32 text-white sm:px-8">
       <div className="mx-auto max-w-xl">
-        <Link href="/profile" className="text-sm text-white/35 hover:text-white">← Back to profile</Link>
+        <Link href="/profile" className="text-sm text-white/35 hover:text-white"><BackIcon className="h-4 w-4" /> Back to profile</Link>
         <section className="mt-6 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-6 backdrop-blur-2xl sm:p-8">
           <p className="text-xs uppercase tracking-[0.22em] text-red-400/70">Profile identity</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Profile photo</h1>

@@ -21,9 +21,11 @@ type ViewMode = "globe" | "map";
 export default function EmergencyMap({
   markers,
   userLocation,
+  userImage,
 }: {
   markers: MapMarker[];
   userLocation: { latitude: number; longitude: number } | null;
+  userImage?: string | null;
 }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const globeRef = useRef<any>(null);
@@ -110,14 +112,20 @@ export default function EmergencyMap({
           map,
           position: { lat: userLocation.latitude, lng: userLocation.longitude },
           title: "Your location",
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#60a5fa",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2,
-          },
+          icon: userImage
+            ? {
+                url: userImage,
+                scaledSize: new window.google.maps.Size(42, 42),
+                anchor: new window.google.maps.Point(21, 21),
+              }
+            : {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 9,
+                fillColor: "#ef4444",
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 2,
+              },
         });
       }
 
@@ -181,10 +189,14 @@ export default function EmergencyMap({
       if (userLocation) {
         const you = new Marker3DElement({
           position: { lat: userLocation.latitude, lng: userLocation.longitude, altitude: 50 },
-          label: "YOU",
+          label: userImage ? undefined : "YOU",
           drawsWhenOccluded: true,
           altitudeMode: "CLAMP_TO_GROUND",
+          altitudeMode: "CLAMP_TO_GROUND",
         });
+        if (userImage) {
+          you.innerHTML = \`<img src="${userImage}" alt="" style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:2px solid #fff;box-shadow:0 0 0 4px rgba(239,68,68,.28),0 0 24px rgba(239,68,68,.55);" />\`;
+        }
         globe.appendChild(you);
       }
 

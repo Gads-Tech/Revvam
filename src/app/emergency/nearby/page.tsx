@@ -67,8 +67,8 @@ export default function NearbyEmergencyPage() {
         longitude: emergency.longitude,
         title: labels[emergency.type] || emergency.type,
         description: emergency.vehicle
-          ? \`${emergency.vehicle.make} ${emergency.vehicle.model} · @${emergency.driver.username}\`
-          : \`@${emergency.driver.username}\`,
+          ? `${emergency.vehicle.make} ${emergency.vehicle.model} · @${emergency.driver.username}`
+          : `@${emergency.driver.username}`,
       })),
     [emergencies],
   );

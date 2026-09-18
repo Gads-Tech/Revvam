@@ -1,5 +1,6 @@
-import { CarIcon, LocationIcon } from "@/components/icons";
 "use client";
+
+import { CarIcon, LocationIcon } from "@/components/icons";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";

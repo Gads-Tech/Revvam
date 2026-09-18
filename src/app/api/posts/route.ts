@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser();
     const posts = await prisma.post.findMany({ where: mine && currentUser ? { authorId: currentUser.id } : undefined, orderBy: { createdAt: "desc" }, take: 50, include: { author: { select: { id: true, name: true, username: true, image: true } }, _count: { select: { likes: true, comments: true, shares: true } }, likes: currentUser ? { where: { userId: currentUser.id }, select: { id: true } } : false, mentions: { include: { mentionedUser: { select: { id: true, name: true, username: true, image: true } } } } } });
-    return NextResponse.json({ success: true, posts: posts.map(({ likes, ...post }) => ({ ...post, liked: Array.isArray(likes) && likes.length > 0 })) }, { headers: noStore });
+    return NextResponse.json({ success: true, posts: posts.map(({ likes, ...post }) => ({ ...post, owned: Boolean(currentUser && post.authorId === currentUser.id), liked: Array.isArray(likes) && likes.length > 0 })) }, { headers: noStore });
   } catch (error) {
     console.error("Posts fetch error:", error);
     return NextResponse.json({ success: false, error: "Unable to load posts." }, { status: 500, headers: noStore });
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     const { likes, ...postData } = post;
-    return NextResponse.json({ success: true, post: { ...postData, liked: likes.length > 0 } }, { status: 201, headers: noStore });
+    return NextResponse.json({ success: true, post: { ...postData, owned: true, liked: likes.length > 0 } }, { status: 201, headers: noStore });
   } catch (error) {
     console.error("Post creation error:", error);
     return NextResponse.json({ success: false, error: "Unable to create post." }, { status: 500, headers: noStore });

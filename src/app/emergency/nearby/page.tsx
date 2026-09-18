@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BackIcon, CarIcon, LocationIcon, NavigationIcon, WarningIcon } from "@/components/icons";
 import EmergencyMap from "@/components/EmergencyMap";
 
@@ -59,6 +59,20 @@ export default function NearbyEmergencyPage() {
     );
   }, []);
 
+  const mapMarkers = useMemo(
+    () =>
+      emergencies.map((emergency) => ({
+        id: emergency.id,
+        latitude: emergency.latitude,
+        longitude: emergency.longitude,
+        title: labels[emergency.type] || emergency.type,
+        description: emergency.vehicle
+          ? \`${emergency.vehicle.make} ${emergency.vehicle.model} · @${emergency.driver.username}\`
+          : \`@${emergency.driver.username}\`,
+      })),
+    [emergencies],
+  );
+
   const distance = (lat: number, lng: number) => {
     if (!location) return null;
     const R = 6371;
@@ -94,15 +108,7 @@ export default function NearbyEmergencyPage() {
           </div>
           <EmergencyMap
             userLocation={location}
-            markers={emergencies.map((emergency) => ({
-              id: emergency.id,
-              latitude: emergency.latitude,
-              longitude: emergency.longitude,
-              title: labels[emergency.type] || emergency.type,
-              description: emergency.vehicle
-                ? `${emergency.vehicle.make} ${emergency.vehicle.model} · @${emergency.driver.username}`
-                : `@${emergency.driver.username}`,
-            }))}
+            markers={mapMarkers}
           />
           <div className="border-t border-white/[0.07] px-5 py-3 text-[10px] text-white/25 sm:px-6">
             Red markers are active roadside requests. Your blue marker appears when location permission is available.

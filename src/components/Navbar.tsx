@@ -12,7 +12,7 @@ export default function Navbar() {
           aria-label="Revvam Discover"
           className="inline-flex items-center"
         >
-          <Logo className="h-11 w-auto sm:h-12" />
+          <Logo className="h-11 w-auto scale-[1.12] transform-gpu sm:h-12 sm:scale-[1.1]" />
         </DiscoverLink>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-white/55 md:flex">

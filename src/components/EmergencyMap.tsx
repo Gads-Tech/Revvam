@@ -63,7 +63,7 @@ export default function EmergencyMap({
       }
 
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=alpha`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=alpha&loading=async`;
       script.async = true;
       script.defer = true;
       script.dataset.revvamGoogleMaps = "true";
@@ -230,10 +230,19 @@ export default function EmergencyMap({
       markers.forEach((marker) => {
         const pin = new Marker3DElement({
           position: { lat: marker.latitude, lng: marker.longitude, altitude: 50 },
-          label: marker.title,
           drawsWhenOccluded: true,
           altitudeMode: "CLAMP_TO_GROUND",
+          sizePreserved: true,
         });
+
+        pin.append(
+          new PinElement({
+            background: "#ef4444",
+            borderColor: "#ffffff",
+            glyphColor: "#ffffff",
+            scale: 1.15,
+          }),
+        );
 
         pin.addEventListener("gmp-click", () => {
           const nextCenter = {

@@ -5,14 +5,15 @@ import { useRouter } from "next/navigation";
 import AuthLayout from "@/components/AuthLayout";
 import GlassCard from "@/components/GlassCard";
 import GlassButton from "@/components/GlassButton";
+import { CarIcon, MechanicIcon, StorefrontIcon, UserIcon } from "@/components/icons/RevvamIcons";
 
 type OnboardingType = "DRIVER" | "MECHANIC" | "MECHANIC_SHOP" | "DEALERSHIP" | "EXPLORER";
-const options: { type: OnboardingType; icon: string; title: string; description: string }[] = [
-  { type: "DRIVER", icon: "🚗", title: "Driver / Car Enthusiast", description: "Share your cars, discover builds, meet other enthusiasts, and grow your garage." },
-  { type: "MECHANIC", icon: "🔧", title: "Mechanic", description: "Showcase your automotive skills, connect with drivers, and find work." },
-  { type: "MECHANIC_SHOP", icon: "🏪", title: "Mechanic Shop", description: "Create a shop presence, showcase your services, and connect with nearby drivers." },
-  { type: "DEALERSHIP", icon: "🚘", title: "Dealership", description: "Build your dealership presence and showcase vehicles to the Revvam community." },
-  { type: "EXPLORER", icon: "👀", title: "Just Exploring", description: "Explore Revvam, discover cars, people, businesses, and what's happening around you." },
+const options: { type: OnboardingType; icon: React.ReactNode; title: string; description: string }[] = [
+  { type: "DRIVER", icon: <CarIcon className="h-6 w-6" />, title: "Driver / Car Enthusiast", description: "Share your cars, discover builds, meet other enthusiasts, and grow your garage." },
+  { type: "MECHANIC", icon: <MechanicIcon className="h-6 w-6" />, title: "Mechanic", description: "Showcase your automotive skills, connect with drivers, and find work." },
+  { type: "MECHANIC_SHOP", icon: <StorefrontIcon className="h-6 w-6" />, title: "Mechanic Shop", description: "Create a shop presence, showcase your services, and connect with nearby drivers." },
+  { type: "DEALERSHIP", icon: <CarIcon className="h-6 w-6" />, title: "Dealership", description: "Build your dealership presence and showcase vehicles to the Revvam community." },
+  { type: "EXPLORER", icon: <UserIcon className="h-6 w-6" />, title: "Just Exploring", description: "Explore Revvam, discover cars, people, businesses, and what's happening around you." },
 ];
 
 export default function OnboardingPage() {
@@ -45,7 +46,7 @@ export default function OnboardingPage() {
             <button key={option.type} type="button" disabled={loading} onClick={() => setSelected(option.type)} className="block w-full text-left">
               <GlassCard className={`relative overflow-hidden p-4 transition-all duration-300 ${isSelected ? "border-red-500/50 bg-red-500/[0.08]" : "hover:border-white/[0.18] hover:bg-white/[0.045]"}`}>
                 <div className="flex items-center gap-4">
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl ${isSelected ? "bg-red-500/15" : "bg-white/[0.05]"}`}>{option.icon}</div>
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white ${isSelected ? "bg-red-500/15" : "bg-white/[0.05]"}`}>{option.icon}</div>
                   <div className="min-w-0 flex-1"><h2 className={`text-sm font-semibold ${isSelected ? "text-white" : "text-white/80"}`}>{option.title}</h2><p className="mt-1 text-xs leading-5 text-white/35">{option.description}</p></div>
                   <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${isSelected ? "border-red-400 bg-red-500" : "border-white/15"}`}>{isSelected && <span className="text-[10px] font-bold text-white">✓</span>}</div>
                 </div>

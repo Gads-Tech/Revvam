@@ -42,3 +42,5 @@ export const LogoutIcon=(p:P)=><I {...p}><path d="M10 4H5v16h5M14 8l4 4-4 4M18 1
 
 export const EditIcon=(p:P)=><I {...p}><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/><path d="m14.5 6.5 3 3"/></I>;
 export const ArrowRightIcon=(p:P)=><I {...p}><path d="M5 12h14M13 6l6 6-6 6"/></I>;
+
+export const ExpandIcon=(p:P)=><I {...p}><path d="M8 3H3v5M3 3l6 6M16 21h5v-5M21 21l-6-6M21 8V3h-5M21 3l-6 6M3 16v5h5M3 21l6-6"/></I>;

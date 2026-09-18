@@ -31,6 +31,8 @@ model User {
   postShares              PostShare[]
   sessions                Session[]
   vehicles                Vehicle[]
+  emergencyRequests       EmergencyRequest[]
+  emergencyOffers         EmergencyOffer[] @relation("EmergencyOfferMechanic")
   posts                   Post[]
   following               Follow[]                @relation("Following")
   followers               Follow[]                @relation("Followers")
@@ -69,6 +71,7 @@ model Vehicle {
   user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   modifications VehicleModification[]
   photos        VehiclePhoto[]
+  emergencyRequests EmergencyRequest[]
 
   @@index([userId])
 }
@@ -144,6 +147,49 @@ model Post {
   mentions  PostMention[]
 
   @@index([authorId, createdAt])
+}
+
+model EmergencyRequest {
+  id                  String                @id @default(cuid())
+  driverId            String
+  vehicleId           String?
+  type                EmergencyType
+  status              EmergencyStatus       @default(OPEN)
+  description         String
+  photo               String?
+  latitude            Float
+  longitude           Float
+  locationLabel       String?
+  acceptedOfferId     String?               @unique
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  acceptedAt          DateTime?
+  completedAt         DateTime?
+  driver              User                  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle             Vehicle?              @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  offers              EmergencyOffer[]
+  acceptedOffer       EmergencyOffer?       @relation("AcceptedEmergencyOffer", fields: [acceptedOfferId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([latitude, longitude])
+  @@index([driverId, createdAt])
+}
+
+model EmergencyOffer {
+  id             String             @id @default(cuid())
+  emergencyId    String
+  mechanicId     String
+  message        String?
+  status         EmergencyOfferStatus @default(PENDING)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  emergency      EmergencyRequest   @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+  mechanic       User               @relation("EmergencyOfferMechanic", fields: [mechanicId], references: [id], onDelete: Cascade)
+  acceptedFor    EmergencyRequest?  @relation("AcceptedEmergencyOffer")
+
+  @@unique([emergencyId, mechanicId])
+  @@index([mechanicId, status])
+  @@index([emergencyId, status])
 }
 
 model PostLike {
@@ -331,6 +377,33 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+enum EmergencyType {
+  BREAKDOWN
+  OVERHEATING
+  FLAT_TYRE
+  DEAD_BATTERY
+  ENGINE_PROBLEM
+  ACCIDENT
+  FUEL_PROBLEM
+  OTHER
+}
+
+enum EmergencyStatus {
+  OPEN
+  OFFERS_RECEIVED
+  ACCEPTED
+  MECHANIC_EN_ROUTE
+  ARRIVED
+  COMPLETED
+  CANCELLED
+}
+
+enum EmergencyOfferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }
 
 enum PostShareChannel {

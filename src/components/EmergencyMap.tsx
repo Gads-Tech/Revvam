@@ -279,10 +279,6 @@ export default function EmergencyMap({
         </button>
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-full border border-white/[0.1] bg-black/65 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45 backdrop-blur-xl">
-        {mode === "globe" ? "Drag to rotate · scroll to zoom · tilt with controls" : "Drag to move · scroll to zoom"}
-      </div>
-
       {!ready && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#02040a]">
           <div className="text-center">

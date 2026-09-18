@@ -1,6 +1,6 @@
-import type { SVGProps } from "react";
+import type { SVGProps, ReactNode } from "react";
 type P=SVGProps<SVGSVGElement>;
-const I=({children,...p}:P&{children:React.ReactNode})=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>{children}</svg>;
+const I=({children,...p}:P&{children:ReactNode})=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>{children}</svg>;
 export const LikeIcon=({filled=false,...p}:{filled?:boolean}&P)=><I {...p}>{filled?<path fill="currentColor" d="M12 21s-7.2-4.3-9.3-8.7C.9 8.5 3 5 6.5 5c2 0 3.2 1.1 4 2.5C11.3 6.1 12.5 5 14.5 5 18 5 20.1 8.5 18.3 12.3 16.2 16.7 12 21 12 21Z"/>:<path d="M20.8 8.8c0 5-8.8 10.2-8.8 10.2S3.2 13.8 3.2 8.8A4.1 4.1 0 0 1 11 6.7 4.1 4.1 0 0 1 20.8 8.8Z"/>}</I>;
 export const CommentIcon=(p:P)=><I {...p}><path d="M20 11.2a7.7 7.7 0 0 1-8 7.2 9 9 0 0 1-3.5-.7L4 20l1.5-3.8A7.2 7.2 0 0 1 4 11.2 7.7 7.7 0 0 1 12 4a7.7 7.7 0 0 1 8 7.2Z"/><path d="M8 11.5h.01M12 11.5h.01M16 11.5h.01"/></I>;
 export const ShareIcon=(p:P)=><I {...p}><path d="M14 5l5 5-5 5"/><path d="M19 10H9a5 5 0 0 0-5 5v2"/></I>;

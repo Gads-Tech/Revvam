@@ -14,7 +14,7 @@ export default function DriverPostsPage() {
 
   async function loadPosts() {
     try {
-      const response = await fetch("/api/posts", { cache: "no-store", credentials: "include" });
+      const response = await fetch("/api/posts?mine=true", { cache: "no-store", credentials: "include" });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || "Unable to load posts.");
       setPosts(data.posts ?? []);

@@ -1,6 +1,6 @@
 "use client";
 
-import { CarIcon, MechanicIcon, CameraIcon, ExpandIcon } from "@/components/icons";
+import { CarIcon, MechanicIcon, CameraIcon, CloseIcon } from "@/components/icons";
 
 import Link from "next/link";
 import {
@@ -2599,37 +2599,6 @@ you&apos;ve done to this vehicle.
                           Main photo
                         </div>
                       )}
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setViewerIndex(
-                            index
-                          )
-                        }
-                        className="
-                          absolute
-                          right-3
-                          top-3
-                          flex
-                          h-9
-                          w-9
-                          items-center
-                          justify-center
-                          rounded-xl
-                          border
-                          border-white/[0.12]
-                          bg-black/60
-                          text-white/70
-                          backdrop-blur-xl
-                          transition-all
-                          hover:bg-black/80
-                          hover:text-white
-                        "
-                        aria-label="Open photo"
-                      >
-                        <ExpandIcon className="h-4 w-4" />
-                      </button>
 
                       <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2">
                         {!isMain ? (

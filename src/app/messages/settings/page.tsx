@@ -52,7 +52,7 @@ export default function ReadReceiptSettingsPage() {
   return (
     <main className="min-h-screen bg-black px-4 py-6 pb-28 text-white sm:px-6 sm:py-8">
       <div className="mx-auto max-w-3xl">
-        <Link href="/messages" className="text-sm text-white/35 hover:text-white">← Back to messages</Link>
+        <Link href="/messages" className="text-sm text-white/35 hover:text-white"><BackIcon className="h-4 w-4" /> Back to messages</Link>
         <div className="mt-7 rounded-[2rem] border border-white/[0.08] bg-white/[0.025] p-5 sm:p-8">
           <p className="text-xs uppercase tracking-[0.22em] text-red-400/70">Privacy</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.045em]">Read receipts</h1>

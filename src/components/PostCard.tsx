@@ -47,7 +47,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   useEffect(() => { if (!shareOpen || shareSearch.trim().length < 1) { setShareUsers([]); return; } const controller = new AbortController(); const timer = window.setTimeout(async () => { try { const response = await fetch(`/api/users/search?q=${encodeURIComponent(shareSearch.trim())}`, { credentials: "include", cache: "no-store", signal: controller.signal }); const data = await response.json(); if (response.ok && data.success) setShareUsers(data.users ?? []); } catch {} }, 180); return () => { window.clearTimeout(timer); controller.abort(); }; }, [shareOpen, shareSearch]);
   useEffect(() => { if (!shareOpen) return; const body = document.body; const html = document.documentElement; const scrollY = window.scrollY; const previousBodyOverflow = body.style.overflow; const previousBodyPosition = body.style.position; const previousBodyTop = body.style.top; const previousBodyWidth = body.style.width; const previousHtmlOverflow = html.style.overflow; body.style.position = "fixed"; body.style.top = `-${scrollY}px`; body.style.width = "100%"; body.style.overflow = "hidden"; html.style.overflow = "hidden"; return () => { body.style.overflow = previousBodyOverflow; body.style.position = previousBodyPosition; body.style.top = previousBodyTop; body.style.width = previousBodyWidth; html.style.overflow = previousHtmlOverflow; window.scrollTo(0, scrollY); }; }, [shareOpen]);
 
-  async useEffect(() => {
+  useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     video.loop = true;

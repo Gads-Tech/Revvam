@@ -6,10 +6,12 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 const noStore = { "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate", Pragma: "no-cache", Expires: "0" };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const mine = searchParams.get("mine") === "true";
   try {
     const currentUser = await getCurrentUser();
-    const posts = await prisma.post.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { author: { select: { name: true, username: true, image: true } }, _count: { select: { likes: true, comments: true, shares: true } }, likes: currentUser ? { where: { userId: currentUser.id }, select: { id: true } } : false, mentions: { include: { mentionedUser: { select: { id: true, name: true, username: true, image: true } } } } } });
+    const posts = await prisma.post.findMany({ where: mine && currentUser ? { authorId: currentUser.id } : undefined, orderBy: { createdAt: "desc" }, take: 50, include: { author: { select: { id: true, name: true, username: true, image: true } }, _count: { select: { likes: true, comments: true, shares: true } }, likes: currentUser ? { where: { userId: currentUser.id }, select: { id: true } } : false, mentions: { include: { mentionedUser: { select: { id: true, name: true, username: true, image: true } } } } } });
     return NextResponse.json({ success: true, posts: posts.map(({ likes, ...post }) => ({ ...post, liked: Array.isArray(likes) && likes.length > 0 })) }, { headers: noStore });
   } catch (error) {
     console.error("Posts fetch error:", error);

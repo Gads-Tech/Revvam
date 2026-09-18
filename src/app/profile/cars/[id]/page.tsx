@@ -1,6 +1,6 @@
 "use client";
 
-import { CarIcon, MechanicIcon, CameraIcon, CloseIcon } from "@/components/icons";
+import { BackIcon, CarIcon, MechanicIcon, CameraIcon, CloseIcon } from "@/components/icons";
 
 import Link from "next/link";
 import {

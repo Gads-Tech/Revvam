@@ -109,56 +109,27 @@ export default function EmergencyMap({
 
       mapInstanceRef.current = map;
 
-      if (userLocation && userImage) {
-        const you = new Marker3DElement({
-          position: {
-            lat: userLocation.latitude,
-            lng: userLocation.longitude,
-            altitude: 50,
-          },
-          drawsWhenOccluded: true,
-          altitudeMode: "CLAMP_TO_GROUND",
-          sizePreserved: true,
+      if (userLocation) {
+        const userPin = new window.google.maps.Marker({
+          map,
+          position: { lat: userLocation.latitude, lng: userLocation.longitude },
+          title: "Your location",
+          icon: userImage
+            ? {
+                url: new URL(userImage, window.location.origin).toString(),
+                scaledSize: new window.google.maps.Size(96, 96),
+                anchor: new window.google.maps.Point(48, 48),
+              }
+            : {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 12,
+                fillColor: "#ef4444",
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 4,
+              },
           zIndex: 1000,
         });
-
-        const profilePin = new PinElement({
-          glyph: {
-            url: new URL(userImage, window.location.origin).toString(),
-            scale: 1.5,
-          },
-          background: "transparent",
-          borderColor: "#ffffff",
-          borderWidth: 4,
-          scale: 1.5,
-        });
-
-        you.append(profilePin);
-        globe.appendChild(you);
-      } else if (userLocation) {
-        const you = new Marker3DElement({
-          position: {
-            lat: userLocation.latitude,
-            lng: userLocation.longitude,
-            altitude: 50,
-          },
-          drawsWhenOccluded: true,
-          altitudeMode: "CLAMP_TO_GROUND",
-          sizePreserved: true,
-          zIndex: 1000,
-        });
-
-        you.append(
-          new PinElement({
-            background: "#ef4444",
-            borderColor: "#ffffff",
-            glyphText: "YOU",
-            glyphColor: "#ffffff",
-            scale: 1.2,
-          }),
-        );
-
-        globe.appendChild(you);
       }
 
       markers.forEach((marker) => {
@@ -239,14 +210,15 @@ export default function EmergencyMap({
         });
 
         if (userImage) {
-          const profileUrl = new URL(userImage, window.location.origin);
-          const profilePin = new PinElement({
-            background: "#111111",
-            borderColor: "#ffffff",
-            glyph: profileUrl,
-            scale: 1.35,
-          });
-          you.append(profilePin);
+          const template = document.createElement("template");
+          template.innerHTML = `
+            <div style="width:112px;height:112px;border-radius:50%;padding:5px;background:linear-gradient(135deg,#fff,#ff3030 45%,#b00000);box-shadow:0 0 0 7px rgba(255,30,30,.28),0 0 42px rgba(255,20,20,.72);box-sizing:border-box;">
+              <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background:#111;box-sizing:border-box;">
+                <img src="${new URL(userImage, window.location.origin).toString()}" alt="" width="102" height="102" style="width:100%;height:100%;display:block;object-fit:cover;" />
+              </div>
+            </div>
+          `;
+          you.append(template);
         } else {
           you.append(
             new PinElement({
@@ -254,7 +226,7 @@ export default function EmergencyMap({
               borderColor: "#ffffff",
               glyphText: "YOU",
               glyphColor: "#ffffff",
-              scale: 1.2,
+              scale: 1.3,
             }),
           );
         }

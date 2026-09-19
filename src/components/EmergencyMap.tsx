@@ -211,13 +211,32 @@ export default function EmergencyMap({
 
         if (userImage) {
           const template = document.createElement("template");
-          template.innerHTML = `
-            <div style="width:112px;height:112px;border-radius:50%;padding:5px;background:linear-gradient(135deg,#fff,#ff3030 45%,#b00000);box-shadow:0 0 0 7px rgba(255,30,30,.28),0 0 42px rgba(255,20,20,.72);box-sizing:border-box;">
-              <div style="width:100%;height:100%;border-radius:50%;overflow:hidden;background:#111;box-sizing:border-box;">
-                <img src="${new URL(userImage, window.location.origin).toString()}" alt="" width="102" height="102" style="width:100%;height:100%;display:block;object-fit:cover;" />
-              </div>
-            </div>
-          `;
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+
+          svg.setAttribute("width", "132");
+          svg.setAttribute("height", "132");
+          svg.setAttribute("viewBox", "0 0 132 132");
+
+          image.setAttribute("href", new URL(userImage, window.location.origin).toString());
+          image.setAttribute("x", "8");
+          image.setAttribute("y", "8");
+          image.setAttribute("width", "116");
+          image.setAttribute("height", "116");
+          image.setAttribute("preserveAspectRatio", "xMidYMid slice");
+          image.setAttribute("clip-path", "circle(58px at 66px 66px)");
+
+          circle.setAttribute("cx", "66");
+          circle.setAttribute("cy", "66");
+          circle.setAttribute("r", "61");
+          circle.setAttribute("fill", "none");
+          circle.setAttribute("stroke", "#ffffff");
+          circle.setAttribute("stroke-width", "7");
+          circle.setAttribute("filter", "drop-shadow(0 0 8px rgba(239,68,68,.9))");
+
+          svg.append(image, circle);
+          template.content.append(svg);
           you.append(template);
         } else {
           you.append(

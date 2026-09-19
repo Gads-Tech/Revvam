@@ -43,7 +43,9 @@ export async function GET(_: Request, { params }: Context) {
   const acceptedHelper = emergency.acceptedOfferId
     ? emergency.offers.some((offer) => offer.id === emergency.acceptedOfferId && offer.mechanicId === user.id)
     : false;
-  const location = publicLocation(emergency.id, emergency.latitude, emergency.longitude, isOwner || acceptedHelper);
+  const sourceLatitude = emergency.liveLatitude ?? emergency.latitude;
+  const sourceLongitude = emergency.liveLongitude ?? emergency.longitude;
+  const location = publicLocation(emergency.id, sourceLatitude, sourceLongitude, emergency.radiusMeters, isOwner || acceptedHelper);
 
   const safeEmergency = {
     ...emergency,

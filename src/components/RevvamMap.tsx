@@ -53,7 +53,7 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
         minZoom: 2,
         // Vector map foundation: OpenFreeMap uses OpenStreetMap data and
         // gives us a MapLibre-native style we can customize for Revvam.
-        style: "https://tiles.openfreemap.org/styles/liberty",
+        style: "https://tiles.openfreemap.org/styles/bright",
         center,
         zoom: userLocation ? 14 : 6,
         pitch: 52,
@@ -67,25 +67,17 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
       map.addControl(new window.maplibregl.NavigationControl(), "bottom-right");
 
       map.on("load", () => {
-        // Give Revvam World a real 3D city layer where building footprints/heights
-        // are present in the vector source. We keep it defensive so the map still
-        // works if the upstream style changes its source/layer names.
-        const buildingSource = Object.keys(map.getStyle().sources).find((id) => {
-          const source = map.getStyle().sources[id];
-          return source && source.type === "vector";
-        });
-
+        const style = map.getStyle();
+        const buildingSource = Object.keys(style.sources).find((id) => style.sources[id]?.type === "vector");
         if (buildingSource && !map.getLayer("revvam-3d-buildings")) {
           try {
-            const layers = map.getStyle().layers || [];
+            const layers = style.layers || [];
             const buildingLayer = layers.find(
               (layer: any) =>
-                layer.type === "fill-extrusion" ||
-                (layer.type === "fill" &&
-                  typeof layer["source-layer"] === "string" &&
-                  /building/i.test(layer["source-layer"])),
+                (layer.type === "fill-extrusion" || layer.type === "fill") &&
+                typeof layer["source-layer"] === "string" &&
+                /building/i.test(layer["source-layer"]),
             );
-
             const sourceLayer = buildingLayer?.["source-layer"];
             if (sourceLayer) {
               map.addLayer({
@@ -93,37 +85,43 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
                 type: "fill-extrusion",
                 source: buildingSource,
                 "source-layer": sourceLayer,
-                minzoom: 14,
+                minzoom: 13,
                 paint: {
                   "fill-extrusion-color": [
-                    "interpolate",
-                    ["linear"],
-                    ["zoom"],
-                    14, "#151a22",
-                    16, "#202733",
-                    19, "#2a3340",
+                    "interpolate", ["linear"], ["zoom"],
+                    13, "#11151b", 16, "#1b222b", 19, "#252e39",
                   ],
-                  "fill-extrusion-height": [
-                    "coalesce",
-                    ["get", "render_height"],
-                    ["get", "height"],
-                    8,
-                  ],
-                  "fill-extrusion-base": [
-                    "coalesce",
-                    ["get", "render_min_height"],
-                    ["get", "min_height"],
-                    0,
-                  ],
-                  "fill-extrusion-opacity": 0.92,
+                  "fill-extrusion-height": ["coalesce", ["get", "render_height"], ["get", "height"], 8],
+                  "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], ["get", "min_height"], 0],
+                  "fill-extrusion-opacity": 0.94,
                   "fill-extrusion-vertical-gradient": true,
                 },
               });
             }
-          } catch {
-            // The base vector style remains fully usable if its schema changes.
-          }
+          } catch {}
         }
+
+        // Darken the map's major road surfaces where the upstream style exposes them.
+        try {
+          const roadLayers = (map.getStyle().layers || []).filter(
+            (layer: any) => layer.type === "line" && typeof layer.id === "string" &&
+              /(road|street|highway|motorway|trunk)/i.test(layer.id),
+          );
+          roadLayers.forEach((layer: any) => {
+            if (map.getLayer(layer.id)) {
+              map.setPaintProperty(layer.id, "line-color", [
+                "match", ["get", "class"],
+                "motorway", "#e8edf3",
+                "trunk", "#c9d0d8",
+                "primary", "#aab3bd",
+                "secondary", "#8c97a3",
+                "tertiary", "#6f7a86",
+                "#56616d",
+              ]);
+              map.setPaintProperty(layer.id, "line-opacity", 0.9);
+            }
+          });
+        } catch {}
       });
       mapRef.current = map;
 

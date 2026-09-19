@@ -62,6 +62,66 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
       });
 
       map.addControl(new window.maplibregl.NavigationControl(), "bottom-right");
+
+      map.on("load", () => {
+        // Give Revvam World a real 3D city layer where building footprints/heights
+        // are present in the vector source. We keep it defensive so the map still
+        // works if the upstream style changes its source/layer names.
+        const buildingSource = Object.keys(map.getStyle().sources).find((id) => {
+          const source = map.getStyle().sources[id];
+          return source && source.type === "vector";
+        });
+
+        if (buildingSource && !map.getLayer("revvam-3d-buildings")) {
+          try {
+            const layers = map.getStyle().layers || [];
+            const buildingLayer = layers.find(
+              (layer: any) =>
+                layer.type === "fill-extrusion" ||
+                (layer.type === "fill" &&
+                  typeof layer["source-layer"] === "string" &&
+                  /building/i.test(layer["source-layer"])),
+            );
+
+            const sourceLayer = buildingLayer?.["source-layer"];
+            if (sourceLayer) {
+              map.addLayer({
+                id: "revvam-3d-buildings",
+                type: "fill-extrusion",
+                source: buildingSource,
+                "source-layer": sourceLayer,
+                minzoom: 14,
+                paint: {
+                  "fill-extrusion-color": [
+                    "interpolate",
+                    ["linear"],
+                    ["zoom"],
+                    14, "#151a22",
+                    16, "#202733",
+                    19, "#2a3340",
+                  ],
+                  "fill-extrusion-height": [
+                    "coalesce",
+                    ["get", "render_height"],
+                    ["get", "height"],
+                    8,
+                  ],
+                  "fill-extrusion-base": [
+                    "coalesce",
+                    ["get", "render_min_height"],
+                    ["get", "min_height"],
+                    0,
+                  ],
+                  "fill-extrusion-opacity": 0.92,
+                  "fill-extrusion-vertical-gradient": true,
+                },
+              });
+            }
+          } catch {
+            // The base vector style remains fully usable if its schema changes.
+          }
+        }
+      });
       mapRef.current = map;
 
       map.on("load", () => {

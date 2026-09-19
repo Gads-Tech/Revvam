@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import argon2 from "argon2";
 
 import { prisma } from "@/lib/prisma";
+import { createSession } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
@@ -149,6 +150,16 @@ export async function POST(request: Request) {
         createdAt: true,
       },
     });
+
+    // -----------------------------
+    // Sign the new account in immediately.
+    //
+    // Profile setup is the next step after
+    // account creation, so it needs the same
+    // server-side session as a normal login.
+    // -----------------------------
+
+    await createSession(user.id);
 
     // -----------------------------
     // Return safe user data

@@ -10,6 +10,7 @@ import MobileNav from "@/components/MobileNav";
 type Emergency = {
   id: string;
   type: string;
+  status: string;
   description: string;
   photo: string | null;
   latitude: number;
@@ -201,7 +202,7 @@ export default function NearbyEmergencyPage() {
                     <div className="mt-5 border-t border-white/[0.07] pt-4">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-xs text-white/35"><div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">{emergency.driver.image ? <img src={emergency.driver.image} alt="" className="h-full w-full object-cover" /> : emergency.driver.name.charAt(0)}</div>@{emergency.driver.username}</div>
-                        {!isMine && <button type="button" onClick={() => offerHelp(emergency.id)} disabled={offeringId === emergency.id} className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/20 disabled:opacity-50">{offeringId === emergency.id ? "Sending..." : "Offer help"}</button>}
+                        {!isMine && ["OPEN", "OFFERS_RECEIVED"].includes(emergency.status) && <button type="button" onClick={() => offerHelp(emergency.id)} disabled={offeringId === emergency.id} className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/20 disabled:opacity-50">{offeringId === emergency.id ? "Sending..." : "Offer help"}</button>}
                         {isMine && <span className="rounded-full border border-red-500/20 bg-red-500/[.07] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.14em] text-red-300">Your request</span>}
                       </div>
                       {isMine && emergency.offers.length > 0 && (

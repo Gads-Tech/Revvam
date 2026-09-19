@@ -35,6 +35,7 @@ export async function GET(
         location: true,
         role: true,
         onboardingType: true,
+        mechanicProfile: { select: { headline: true, about: true, skills: true, services: true, yearsExperience: true } },
         createdAt: true,
         vehicles: {
           orderBy: { createdAt: "desc" },

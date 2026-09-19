@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import LiveSocialActions from "@/components/LiveSocialActions";
+import MobileNav from "@/components/MobileNav";
 import { useRef, useState } from "react";
 import {
   BackIcon,
@@ -141,9 +143,12 @@ export default function EmergencyPage() {
           <Link href="/home" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white">
             <BackIcon className="h-4 w-4" /> Back to Discover
           </Link>
-          <Link href="/emergency/nearby" className="inline-flex items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.03] px-4 py-2 text-xs font-semibold text-white/55 hover:border-red-500/20 hover:text-white">
+          <div className="flex items-center gap-2">
+            <div className="hidden md:block"><LiveSocialActions /></div>
+            <Link href="/emergency/nearby" className="inline-flex items-center gap-2 rounded-full border border-white/[0.09] bg-white/[0.03] px-4 py-2 text-xs font-semibold text-white/55 hover:border-red-500/20 hover:text-white">
             <NavigationIcon className="h-3.5 w-3.5" /> Nearby emergencies
-          </Link>
+            </Link>
+          </div>
         </div>
 
         <section className="overflow-hidden rounded-[2rem] border border-red-500/20 bg-gradient-to-br from-red-600/[0.12] via-white/[0.03] to-transparent shadow-2xl shadow-red-950/10">
@@ -233,6 +238,7 @@ export default function EmergencyPage() {
           </div>
         </section>
       </div>
+      <MobileNav />
     </main>
   );
 }

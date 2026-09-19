@@ -176,12 +176,13 @@ export default function NearbyEmergencyPage() {
           <div className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-10 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.04] text-white/25"><CarIcon className="h-7 w-7" /></div>
             <h2 className="mt-4 text-lg font-bold">No open emergencies nearby</h2>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/30">When a driver posts a roadside emergency, it will appear here for eligible helpers.</p>
+            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-white/30">When a member posts a roadside emergency, it will appear here for every eligible Revvam member.</p>
           </div>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {emergencies.map((emergency) => {
               const km = distance(emergency.latitude, emergency.longitude);
+              const isMine = currentUserId === emergency.driver.id;
               return (
                 <article key={emergency.id} className="overflow-hidden rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025]">
                   {emergency.photo && <div className="h-48 bg-black"><img src={emergency.photo} alt="" className="h-full w-full object-cover" /></div>}
@@ -217,7 +218,7 @@ export default function NearbyEmergencyPage() {
                           ))}
                         </div>
                       )}
-                    </div>                    </div>
+                    </div>
                   </div>
                 </article>
               );

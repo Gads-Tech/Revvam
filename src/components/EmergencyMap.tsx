@@ -85,6 +85,8 @@ export default function EmergencyMap({
           ? { lat: markers[0].latitude, lng: markers[0].longitude }
           : { lat: 5.6037, lng: -0.1870 };
 
+      mapRef.current.innerHTML = "";
+
       const map = new window.google.maps.Map(mapRef.current, {
         center,
         zoom: userLocation || markers.length ? 13 : 11,
@@ -150,6 +152,29 @@ export default function EmergencyMap({
         globe.appendChild(you);
       }
 
+      if (userLocation) {
+        const userPin = new window.google.maps.Marker({
+          map,
+          position: { lat: userLocation.latitude, lng: userLocation.longitude },
+          title: "Your location",
+          icon: userImage
+            ? {
+                url: new URL(userImage, window.location.origin).toString(),
+                scaledSize: new window.google.maps.Size(52, 52),
+                anchor: new window.google.maps.Point(26, 26),
+              }
+            : {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 9,
+                fillColor: "#ef4444",
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 3,
+              },
+          zIndex: 1000,
+        });
+      }
+
       markers.forEach((marker) => {
         const pin = new window.google.maps.Marker({
           map,
@@ -164,6 +189,10 @@ export default function EmergencyMap({
             strokeWeight: 2,
           },
         });
+
+        if (userLocation && marker.id === "__user__") {
+          pin.setMap(null);
+        }
 
         const info = new window.google.maps.InfoWindow({
           content: `<div style="color:#111;min-width:180px;padding:4px"><strong>${marker.title}</strong>${marker.description ? `<br/><span>${marker.description}</span>` : ""}</div>`,
@@ -212,30 +241,26 @@ export default function EmergencyMap({
 
       if (userLocation) {
         const you = new Marker3DElement({
-          position: { lat: userLocation.latitude, lng: userLocation.longitude, altitude: 50 },
-          label: userImage ? undefined : "YOU",
+          position: {
+            lat: userLocation.latitude,
+            lng: userLocation.longitude,
+            altitude: 50,
+          },
           drawsWhenOccluded: true,
           altitudeMode: "CLAMP_TO_GROUND",
           sizePreserved: true,
+          zIndex: 1000,
         });
 
         if (userImage) {
-          const image = document.createElement("img");
-          image.src = new URL(userImage, window.location.origin).toString();
-          image.alt = "";
-          image.width = 48;
-          image.height = 48;
-          image.style.borderRadius = "999px";
-          image.style.objectFit = "cover";
-          image.style.border = "3px solid #ffffff";
-          image.style.boxShadow = "0 0 0 4px rgba(239,68,68,.28), 0 0 24px rgba(239,68,68,.55)";
-          image.onerror = () => {
-            image.remove();
-          };
-
-          const template = document.createElement("template");
-          template.content.append(image);
-          you.append(template);
+          const profileUrl = new URL(userImage, window.location.origin);
+          const profilePin = new PinElement({
+            background: "#111111",
+            borderColor: "#ffffff",
+            glyph: profileUrl,
+            scale: 1.35,
+          });
+          you.append(profilePin);
         } else {
           you.append(
             new PinElement({

@@ -80,6 +80,24 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
   }
 
+  if (action === "delete") {
+    if (emergency.driverId !== user.id && user.role !== "ADMIN") return NextResponse.json({ success: false, error: "Only the person who posted this emergency can delete it." }, { status: 403, headers: noStore });
+    if (["ACCEPTED", "MECHANIC_EN_ROUTE", "ARRIVED"].includes(emergency.status)) return NextResponse.json({ success: false, error: "An accepted emergency cannot be deleted. Cancel or complete it first." }, { status: 409, headers: noStore });
+    await prisma.emergencyRequest.delete({ where: { id } });
+    return NextResponse.json({ success: true }, { headers: noStore });
+  }
+
+  if (action === "update") {
+    if (emergency.driverId !== user.id) return NextResponse.json({ success: false, error: "Only the person who posted this emergency can edit it." }, { status: 403, headers: noStore });
+    if (["COMPLETED", "CANCELLED"].includes(emergency.status)) return NextResponse.json({ success: false, error: "This emergency is already closed." }, { status: 409, headers: noStore });
+    const description = typeof body?.description === "string" ? body.description.trim() : emergency.description;
+    if (description.length < 8 || description.length > 1500) return NextResponse.json({ success: false, error: "Description must be between 8 and 1500 characters." }, { status: 400, headers: noStore });
+    const radiusMeters = body?.radiusMeters === undefined ? emergency.radiusMeters : Number(body.radiusMeters);
+    if (![500, 1000, 2500, 5000].includes(radiusMeters)) return NextResponse.json({ success: false, error: "Choose a valid assistance radius." }, { status: 400, headers: noStore });
+    const updated = await prisma.emergencyRequest.update({ where: { id }, data: { description, radiusMeters } });
+    return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
+  }
+
   if (action === "radius") {
     if (emergency.driverId !== user.id) return NextResponse.json({ success: false, error: "Only the person requesting help can change the radius." }, { status: 403, headers: noStore });
     const radiusMeters = Number(body?.radiusMeters);
@@ -104,6 +122,7 @@ export async function PATCH(request: Request, { params }: Context) {
     const updated = await prisma.$transaction(async (tx) => {
       await tx.emergencyOffer.updateMany({ where: { emergencyId: id, id: { not: offerId }, status: "PENDING" }, data: { status: "DECLINED" } });
       await tx.emergencyOffer.update({ where: { id: offerId }, data: { status: "ACCEPTED" } });
+      await tx.notification.create({ data: { userId: offer.mechanicId, actorId: user.id, type: "EMERGENCY_ACCEPTED", title: "Your help was accepted", body: "Your offer to help has been accepted.", href: "/emergency/nearby" } });
       return tx.emergencyRequest.update({ where: { id }, data: { acceptedOfferId: offerId, status: "ACCEPTED", acceptedAt: new Date() } });
     });
 

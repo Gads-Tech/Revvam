@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import MobileNav from "@/components/MobileNav";
 import { MechanicIcon, CarIcon, CheckIcon } from "@/components/icons/RevvamIcons";
@@ -29,6 +29,39 @@ export default function MechanicSetupPage() {
   const [yearsExperience, setYearsExperience] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    async function guard() {
+      try {
+        const [profileResponse, mechanicResponse] = await Promise.all([
+          fetch("/api/profile", { credentials: "include", cache: "no-store" }),
+          fetch("/api/mechanic-profile", { credentials: "include", cache: "no-store" }),
+        ]);
+        const profileData = await profileResponse.json().catch(() => null);
+        const mechanicData = await mechanicResponse.json().catch(() => null);
+        if (!active) return;
+        if (!profileData?.success) {
+          router.replace("/login");
+          return;
+        }
+        if (profileData.user.role !== "MECHANIC") {
+          router.replace("/profile");
+          return;
+        }
+        if (mechanicData?.success && mechanicData.profile) {
+          router.replace("/profile/mechanic");
+          return;
+        }
+        setCheckingAccess(false);
+      } catch {
+        router.replace("/profile");
+      }
+    }
+    void guard();
+    return () => { active = false; };
+  }, [router]);
 
   function toggle(list: string[], value: string, setter: (v: string[]) => void) {
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);

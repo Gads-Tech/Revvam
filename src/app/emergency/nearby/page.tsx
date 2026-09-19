@@ -125,7 +125,7 @@ export default function NearbyEmergencyPage() {
     setOfferingId(offerId);
     setError("");
     try {
-      const response = await fetch(`/api/emergencies/${emergencyId}/accept`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ offerId }) });
+      const response = await fetch(`/api/emergencies/${emergencyId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action: "accept_offer", offerId }) });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to accept this offer.");
       await load();
@@ -156,6 +156,22 @@ export default function NearbyEmergencyPage() {
     }
   }
 
+  async function editEmergency(emergency: Emergency) {
+    const description = window.prompt("Update the emergency description:", emergency.description);
+    if (description === null) return;
+    const response = await fetch("/api/emergencies/" + emergency.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action: "update", description, radiusMeters: emergency.radiusMeters }) });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.success) { setError(data?.error || "Unable to update the emergency."); return; }
+    await load();
+  }
+
+  async function deleteEmergency(emergency: Emergency) {
+    if (!window.confirm("Delete this emergency request?")) return;
+    const response = await fetch("/api/emergencies/" + emergency.id, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action: "delete" }) });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.success) { setError(data?.error || "Unable to delete the emergency."); return; }
+    await load();
+  }
   const distance = (lat: number, lng: number) => {
     if (!location) return null;
     const R = 6371;
@@ -236,7 +252,7 @@ export default function NearbyEmergencyPage() {
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-xs text-white/35"><div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">{emergency.driver.image ? <img src={emergency.driver.image} alt="" className="h-full w-full object-cover" /> : emergency.driver.name.charAt(0)}</div>@{emergency.driver.username}</div>
                         {!isMine && ["OPEN", "OFFERS_RECEIVED"].includes(emergency.status) && <button type="button" onClick={() => offerHelp(emergency.id)} disabled={offeringId === emergency.id} className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/20 disabled:opacity-50">{offeringId === emergency.id ? "Sending..." : "Offer help"}</button>}
-                        {isMine && <span className="rounded-full border border-red-500/20 bg-red-500/[.07] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.14em] text-red-300">Your request</span>}
+                        {isMine && <div className="flex items-center gap-2"><button type="button" onClick={() => editEmergency(emergency)} className="rounded-xl border border-white/[.08] bg-white/[.04] px-3 py-2 text-[9px] font-bold uppercase tracking-[.12em] text-white/55 hover:text-white">Edit</button><button type="button" onClick={() => deleteEmergency(emergency)} className="rounded-xl border border-red-500/20 bg-red-500/[.06] px-3 py-2 text-[9px] font-bold uppercase tracking-[.12em] text-red-300 hover:bg-red-500/10">Delete</button></div>}
                       </div>
                       {isMine && emergency.offers.length > 0 && (
                         <div className="mt-4 space-y-2">

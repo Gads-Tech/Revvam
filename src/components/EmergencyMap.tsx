@@ -34,6 +34,11 @@ export default function EmergencyMap({
   const [mode, setMode] = useState<ViewMode>("globe");
   const [ready, setReady] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -371,7 +376,7 @@ export default function EmergencyMap({
       <button
         type="button"
         onClick={locateMe}
-        disabled={locating || !ready}
+        disabled={!mounted || locating || !ready}
         aria-label="Locate me"
         title="Locate me"
         className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-black/75 text-white/80 shadow-2xl backdrop-blur-xl transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-50"

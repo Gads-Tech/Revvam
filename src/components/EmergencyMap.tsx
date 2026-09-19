@@ -35,10 +35,18 @@ export default function EmergencyMap({
   const [ready, setReady] = useState(false);
   const [locating, setLocating] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [localUserLocation, setLocalUserLocation] = useState<{ latitude: number; longitude: number } | null>(userLocation);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const activeUserLocation = localUserLocation ?? userLocation;
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (userLocation) setLocalUserLocation(userLocation);
+  }, [userLocation]);
 
   useEffect(() => {
     const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -84,8 +92,8 @@ export default function EmergencyMap({
     const createMap = () => {
       if (cancelled || !mapRef.current || !window.google?.maps) return;
 
-      const center = userLocation
-        ? { lat: userLocation.latitude, lng: userLocation.longitude }
+      const center = activeUserLocation
+        ? { lat: activeUserLocation.latitude, lng: activeUserLocation.longitude }
         : markers[0]
           ? { lat: markers[0].latitude, lng: markers[0].longitude }
           : { lat: 5.6037, lng: -0.1870 };
@@ -94,7 +102,7 @@ export default function EmergencyMap({
 
       const map = new window.google.maps.Map(mapRef.current, {
         center,
-        zoom: userLocation || markers.length ? 13 : 11,
+        zoom: activeUserLocation || markers.length ? 13 : 11,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
@@ -114,10 +122,10 @@ export default function EmergencyMap({
 
       mapInstanceRef.current = map;
 
-      if (userLocation) {
+      if (activeUserLocation) {
         const userPin = new window.google.maps.Marker({
           map,
-          position: { lat: userLocation.latitude, lng: userLocation.longitude },
+          position: { lat: activeUserLocation.latitude, lng: activeUserLocation.longitude },
           title: "Your location",
           icon: userImage
             ? {
@@ -178,15 +186,15 @@ export default function EmergencyMap({
       mapRef.current.innerHTML = "";
 
       const center = userLocation
-        ? { lat: userLocation.latitude, lng: userLocation.longitude, altitude: 0 }
+        ? { lat: activeUserLocation.latitude, lng: activeUserLocation.longitude, altitude: 0 }
         : markers[0]
           ? { lat: markers[0].latitude, lng: markers[0].longitude, altitude: 0 }
           : { lat: 5.6037, lng: -0.1870, altitude: 0 };
 
       const globe = new Map3DElement({
         center,
-        range: userLocation || markers.length ? 9000 : 18000000,
-        tilt: userLocation || markers.length ? 62 : 18,
+        range: activeUserLocation || markers.length ? 9000 : 18000000,
+        tilt: activeUserLocation || markers.length ? 62 : 18,
         heading: 0,
         mode: "ROADMAP",
         defaultUIHidden: false,
@@ -201,7 +209,7 @@ export default function EmergencyMap({
       mapRef.current.appendChild(globe);
       globeRef.current = globe;
 
-      if (userLocation) {
+      if (activeUserLocation) {
         const you = new Marker3DElement({
           position: {
             lat: userLocation.latitude,
@@ -318,11 +326,19 @@ export default function EmergencyMap({
       mapInstanceRef.current = null;
       globeRef.current = null;
     };
-  }, [mode, markers, userLocation, userImage]);
+  }, [mode, markers, activeUserLocation, userImage]);
 
   const locateMe = () => {
     if (!navigator.geolocation || !mapRef.current) return;
     setLocating(true);
+    setLocationError(null);
+
+    if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+      setLocationError("Mobile location requires HTTPS. Open Revvam over HTTPS on your phone.");
+      setLocating(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const next = {
@@ -330,30 +346,22 @@ export default function EmergencyMap({
           longitude: position.coords.longitude,
         };
 
-        if (mode === "map" && mapInstanceRef.current) {
-          mapInstanceRef.current.panTo({ lat: next.latitude, lng: next.longitude });
-          mapInstanceRef.current.setZoom(16);
-        }
-
-        if (mode === "globe" && globeRef.current) {
-          globeRef.current.flyCameraTo({
-            endCameraPosition: {
-              center: {
-                lat: next.latitude,
-                lng: next.longitude,
-                altitude: 0,
-              },
-              range: 1800,
-              tilt: 62,
-              heading: 0,
-            },
-          });
-        }
-
+        setLocalUserLocation(next);
+        setLocationError(null);
         setLocating(false);
       },
-      () => setLocating(false),
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+      (error) => {
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission was denied. Allow location access for Revvam in your browser settings."
+            : error.code === error.TIMEOUT
+              ? "Location took too long. Make sure GPS/location services are enabled and try again."
+              : "Could not get your location. Please check your phone's location services and try again.";
+
+        setLocationError(message);
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
   };
 
@@ -409,6 +417,12 @@ export default function EmergencyMap({
           Map
         </button>
       </div>
+
+      {locationError && (
+        <div className="absolute bottom-4 left-1/2 z-20 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-2xl border border-red-500/20 bg-black/90 px-4 py-3 text-center text-xs text-white/75 shadow-2xl backdrop-blur-xl">
+          {locationError}
+        </div>
+      )}
 
       {!ready && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#02040a]">

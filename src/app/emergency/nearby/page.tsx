@@ -59,7 +59,8 @@ export default function NearbyEmergencyPage() {
 
   useEffect(() => {
     load();
-    if (!navigator.geolocation) return;
+    const refreshTimer = window.setInterval(() => { load(); }, 4000);
+    if (!navigator.geolocation) return () => window.clearInterval(refreshTimer);
     const watchId = navigator.geolocation.watchPosition(
       (p) => setLocation({ latitude: p.coords.latitude, longitude: p.coords.longitude }),
       () => undefined,
@@ -73,7 +74,10 @@ export default function NearbyEmergencyPage() {
       })
       .catch(() => undefined);
 
-    return () => navigator.geolocation.clearWatch(watchId);
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      window.clearInterval(refreshTimer);
+    };
   }, []);
 
   useEffect(() => {

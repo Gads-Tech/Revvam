@@ -221,7 +221,7 @@ export default function EmergencyMap({
 
         if (userImage) {
           const image = document.createElement("img");
-          image.src = userImage;
+          image.src = new URL(userImage, window.location.origin).toString();
           image.alt = "";
           image.width = 48;
           image.height = 48;
@@ -229,6 +229,9 @@ export default function EmergencyMap({
           image.style.objectFit = "cover";
           image.style.border = "3px solid #ffffff";
           image.style.boxShadow = "0 0 0 4px rgba(239,68,68,.28), 0 0 24px rgba(239,68,68,.55)";
+          image.onerror = () => {
+            image.remove();
+          };
 
           const template = document.createElement("template");
           template.content.append(image);
@@ -308,7 +311,7 @@ export default function EmergencyMap({
       mapInstanceRef.current = null;
       globeRef.current = null;
     };
-  }, [mode, markers, userLocation]);
+  }, [mode, markers, userLocation, userImage]);
 
   const locateMe = () => {
     if (!navigator.geolocation || !mapRef.current) return;

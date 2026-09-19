@@ -3,6 +3,22 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+function publicLocation(id: string, latitude: number, longitude: number, exact: boolean) {
+  if (exact) return { latitude, longitude, radiusMeters: 0, exactLocation: true };
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
+  const offsetMeters = 100 + ((hash >>> 8) % 51);
+  return {
+    latitude: latitude + (offsetMeters * Math.cos(angle)) / 111_320,
+    longitude: longitude + (offsetMeters * Math.sin(angle)) / (111_320 * Math.max(0.2, Math.cos(latitude * Math.PI / 180))),
+    radiusMeters: 500,
+    exactLocation: false,
+  };
+}
+
+
 const noStore = { "Cache-Control": "no-store" };
 
 type Context = { params: Promise<{ id: string }> };
@@ -23,7 +39,22 @@ export async function GET(_: Request, { params }: Context) {
 
   if (!emergency) return NextResponse.json({ success: false, error: "Emergency request not found." }, { status: 404, headers: noStore });
 
-  return NextResponse.json({ success: true, emergency }, { headers: noStore });
+  const isOwner = emergency.driverId === user.id;
+  const acceptedHelper = emergency.acceptedOfferId
+    ? emergency.offers.some((offer) => offer.id === emergency.acceptedOfferId && offer.mechanicId === user.id)
+    : false;
+  const location = publicLocation(emergency.id, emergency.latitude, emergency.longitude, isOwner || acceptedHelper);
+
+  const safeEmergency = {
+    ...emergency,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    radiusMeters: location.radiusMeters,
+    exactLocation: location.exactLocation,
+    offers: emergency.offers.map(({ mechanicId, ...offer }) => offer),
+  };
+
+  return NextResponse.json({ success: true, emergency: safeEmergency }, { headers: noStore });
 }
 
 export async function PATCH(request: Request, { params }: Context) {

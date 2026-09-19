@@ -22,9 +22,6 @@ export async function GET(_: Request, { params }: Context) {
   });
 
   if (!emergency) return NextResponse.json({ success: false, error: "Emergency request not found." }, { status: 404, headers: noStore });
-  if (emergency.driverId !== user.id && user.role !== "ADMIN") {
-    return NextResponse.json({ success: false, error: "You do not have access to this emergency." }, { status: 403, headers: noStore });
-  }
 
   return NextResponse.json({ success: true, emergency }, { headers: noStore });
 }
@@ -62,9 +59,6 @@ export async function PATCH(request: Request, { params }: Context) {
   }
 
   if (action === "status") {
-    if (user.role !== "MECHANIC" && user.role !== "MECHANIC_SHOP" && user.role !== "ADMIN") {
-      return NextResponse.json({ success: false, error: "Only mechanic accounts can update the assistance status." }, { status: 403, headers: noStore });
-    }
     const allowed = new Set(["MECHANIC_EN_ROUTE", "ARRIVED", "COMPLETED"]);
     if (!allowed.has(body?.status)) return NextResponse.json({ success: false, error: "Invalid assistance status." }, { status: 400, headers: noStore });
     const accepted = emergency.offers.find((offer) => offer.id === emergency.acceptedOfferId && offer.mechanicId === user.id);

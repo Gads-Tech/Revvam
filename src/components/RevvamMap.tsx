@@ -46,6 +46,8 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
 
       const map = new window.maplibregl.Map({
         container: containerRef.current,
+        maxZoom: 19,
+        minZoom: 2,
         style: {
           version: 8,
           sources: {

@@ -37,6 +37,8 @@ export default function NearbyEmergencyPage() {
   const [loading, setLoading] = useState(true);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [offeringId, setOfferingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
@@ -64,7 +66,7 @@ export default function NearbyEmergencyPage() {
     fetch("/api/profile", { credentials: "include", cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
-        if (data?.success) setProfileImage(data.user?.image || null);
+        if (data?.success) { setProfileImage(data.user?.image || null); setCurrentUserId(data.user?.id || null); }
       })
       .catch(() => undefined);
 
@@ -84,6 +86,26 @@ export default function NearbyEmergencyPage() {
       })),
     [emergencies],
   );
+
+  async function offerHelp(emergencyId: string) {
+    setOfferingId(emergencyId);
+    setError("");
+    try {
+      const response = await fetch(`/api/emergencies/${emergencyId}/offers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ message: "I can help with this roadside issue." }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to send your help request.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to send your help request.");
+    } finally {
+      setOfferingId(null);
+    }
+  }
 
   const distance = (lat: number, lng: number) => {
     if (!location) return null;
@@ -108,7 +130,7 @@ export default function NearbyEmergencyPage() {
         <header className="mb-7">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-red-400/70">Roadside network</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.04em] sm:text-4xl">Nearby emergencies</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/35">Drivers who need roadside assistance appear here. Mechanics and shops can use this view to discover requests close to them.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-white/35">Members who need roadside assistance appear here. Any Revvam member can offer to help, while mechanics and shops can also use their expertise.</p>
         </header>
 
         <section className="mb-7 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-2 shadow-[0_30px_90px_rgba(0,0,0,.30)] sm:p-3">
@@ -162,7 +184,14 @@ export default function NearbyEmergencyPage() {
                     </div>
                     <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4">
                       <div className="flex items-center gap-2 text-xs text-white/35"><div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">{emergency.driver.image ? <img src={emergency.driver.image} alt="" className="h-full w-full object-cover" /> : emergency.driver.name.charAt(0)}</div>@{emergency.driver.username}</div>
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/20">{emergency.offers.length ? `${emergency.offers.length} offer${emergency.offers.length === 1 ? "" : "s"}` : "Awaiting help"}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/20">{emergency.offers.length ? `${emergency.offers.length} offer${emergency.offers.length === 1 ? "" : "s"}` : "Awaiting help"}</span>
+                        {currentUserId !== emergency.driver.id && (
+                          <button type="button" onClick={() => offerHelp(emergency.id)} disabled={offeringId === emergency.id} className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/20 disabled:opacity-50">
+                            {offeringId === emergency.id ? "Sending..." : "Offer help"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </article>

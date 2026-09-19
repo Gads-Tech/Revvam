@@ -29,6 +29,8 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
   const mapRef = useRef<any>(null);
   const [locating, setLocating] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const markersRef = useRef<any[]>([]);
+  const radiusIdsRef = useRef<string[]>([]);
 
   useEffect(() => {
     setMounted(true);
@@ -188,8 +190,15 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
     const map = mapRef.current;
     if (!map) return;
 
-    document.querySelectorAll(".revvam-user-marker").forEach((el) => el.remove());
-    document.querySelectorAll(".revvam-emergency-marker").forEach((el) => el.remove());
+    if (!map.isStyleLoaded()) return;
+
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
+    radiusIdsRef.current.forEach((id) => {
+      try { if (map.getLayer(id)) map.removeLayer(id); } catch {}
+      try { if (map.getSource(id)) map.removeSource(id); } catch {}
+    });
+    radiusIdsRef.current = [];
 
     if (userLocation) {
       const el = document.createElement("div");
@@ -209,9 +218,10 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
         el.style.fontWeight = "800";
         el.style.fontSize = "12px";
       }
-      new window.maplibregl.Marker({ element: el, anchor: "center" })
+      const marker = new window.maplibregl.Marker({ element: el, anchor: "center" })
         .setLngLat([userLocation.longitude, userLocation.latitude])
         .addTo(map);
+      markersRef.current.push(marker);
     }
 
     markers.forEach((m) => {
@@ -220,13 +230,19 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
       el.style.cssText = "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ef4444;border:3px solid #fff;color:#fff;font-weight:900;font-size:22px;box-shadow:0 0 0 4px rgba(239,68,68,.16),0 0 24px rgba(239,68,68,.58);box-sizing:border-box;";
       el.textContent = "!";
       const popupText = "<strong>⚠ " + m.title + "</strong><br/><span>" + (m.description ?? "") + "</span><br/><small>" + (m.exactLocation ? "Exact live location" : "Approximate location") + " · " + (m.radiusMeters ?? 500) + "m radius</small>";
-      new window.maplibregl.Marker({ element: el })
+      const marker = new window.maplibregl.Marker({ element: el })
         .setLngLat([m.longitude, m.latitude])
         .setPopup(new window.maplibregl.Popup({ offset: 22 }).setHTML(popupText))
         .addTo(map);
+      markersRef.current.push(marker);
 
       if (m.radiusMeters) {
         const sourceId = "emergency-radius-" + m.id;
+        if (map.getSource(sourceId)) {
+          try { if (map.getLayer(sourceId)) map.removeLayer(sourceId); } catch {}
+          try { map.removeSource(sourceId); } catch {}
+        }
+        radiusIdsRef.current.push(sourceId);
         map.addSource(sourceId, {
           type: "geojson",
           data: {

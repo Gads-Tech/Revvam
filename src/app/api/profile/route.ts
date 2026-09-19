@@ -24,6 +24,7 @@ export async function GET() {
         username: user.username,
         email: user.email,
         role: user.role,
+        onboardingType: user.onboardingType,
         image: user.image,
         bio: user.bio,
       },

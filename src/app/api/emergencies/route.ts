@@ -11,9 +11,9 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ success:false, error:"You must be logged in." }, {status:401,headers:noStore});
   const emergencies = await prisma.emergencyRequest.findMany({
-    where:{ status:{in:["OPEN","OFFERS_RECEIVED"]}, driverId:{not:user.id}},
+    where:{ status:{in:["OPEN","OFFERS_RECEIVED","ACCEPTED","MECHANIC_EN_ROUTE","ARRIVED"]}},
     orderBy:{createdAt:"desc"}, take:50,
-    include:{driver:{select:{id:true,name:true,username:true,image:true}},vehicle:{select:{id:true,make:true,model:true,year:true,image:true}},offers:{select:{id:true,status:true}}}
+    include:{driver:{select:{id:true,name:true,username:true,image:true}},vehicle:{select:{id:true,make:true,model:true,year:true,image:true}},offers:{select:{id:true,status:true,message:true,mechanic:{select:{id:true,name:true,username:true,image:true,role:true}}}}}
   });
   return NextResponse.json({success:true,emergencies},{headers:noStore});
 }

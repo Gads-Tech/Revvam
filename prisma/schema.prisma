@@ -175,6 +175,9 @@ model EmergencyRequest {
   photo               String?
   latitude            Float
   longitude           Float
+  radiusMeters        Int                  @default(500)
+  liveLatitude        Float?
+  liveLongitude       Float?
   locationLabel       String?
   acceptedOfferId     String?               @unique
   createdAt           DateTime              @default(now())

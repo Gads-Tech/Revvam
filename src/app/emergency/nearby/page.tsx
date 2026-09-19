@@ -15,6 +15,8 @@ type Emergency = {
   photo: string | null;
   latitude: number;
   longitude: number;
+  radiusMeters: number;
+  exactLocation: boolean;
   locationLabel: string | null;
   createdAt: string;
   driver: { name: string; username: string; image: string | null };
@@ -81,9 +83,8 @@ export default function NearbyEmergencyPage() {
         latitude: emergency.latitude,
         longitude: emergency.longitude,
         title: labels[emergency.type] || emergency.type,
-        description: emergency.vehicle
-          ? `${emergency.vehicle.make} ${emergency.vehicle.model} · @${emergency.driver.username}`
-          : `@${emergency.driver.username}`,
+        radiusMeters: emergency.radiusMeters,
+        description: emergency.description,
       })),
     [emergencies],
   );

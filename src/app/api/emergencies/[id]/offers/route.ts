@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/session";
 
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}) {
  const user=await getCurrentUser(); if(!user) return NextResponse.json({success:false,error:"You must be logged in."},{status:401});
- const {id}=await params; const emergency=await prisma.emergencyRequest.findUnique({where:{id},select:{id:true,status:true,driverId:true}});
+ const {id}=await params; const emergency=await prisma.emergencyRequest.findUnique({where:{id},select:{id:true,status:true,driverId:true,driver:{select:{id:true,name:true}}}});
  if(!emergency||!["OPEN","OFFERS_RECEIVED"].includes(emergency.status)) return NextResponse.json({success:false,error:"This emergency is no longer available."},{status:409});
  if(emergency.driverId===user.id) return NextResponse.json({success:false,error:"You cannot respond to your own emergency."},{status:400});
  const body=await request.json(); const message=typeof body.message==="string"?body.message.trim().slice(0,500):null;
@@ -13,6 +13,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
  const offer=await prisma.$transaction(async tx=>{
    const created=await tx.emergencyOffer.create({data:{emergencyId:id,mechanicId:user.id,message}});
    await tx.emergencyRequest.update({where:{id},data:{status:"OFFERS_RECEIVED"}});
+   await tx.notification.create({data:{userId:emergency.driverId,actorId:user.id,type:"EMERGENCY_OFFER",title:"Someone offered to help",body:user.name+" offered to help with your emergency.",href:"/emergency/nearby"}});
    return created;
  });
  return NextResponse.json({success:true,offer},{status:201});

@@ -228,7 +228,7 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
       <button
         type="button"
         onClick={focusLocation}
-        disabled={!mounted || locating}
+        disabled={locating}
         aria-label="Focus on my location"
         title="Focus on my location"
         className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white shadow-2xl backdrop-blur-xl transition hover:border-red-400/50 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"

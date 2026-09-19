@@ -8,6 +8,8 @@ type MapMarker = {
   longitude: number;
   title: string;
   description?: string;
+  radiusMeters?: number;
+  exactLocation?: boolean;
 };
 
 declare global {
@@ -151,12 +153,9 @@ export default function EmergencyMap({
           position: { lat: marker.latitude, lng: marker.longitude },
           title: marker.title,
           icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 9,
-            fillColor: "#ef4444",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2,
+            url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 52 52"><circle cx="26" cy="26" r="23" fill="#ef4444" stroke="#fff" stroke-width="4"/><path d="M26 13v19" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="26" cy="39" r="2.8" fill="#fff"/></svg>'),
+            scaledSize: new window.google.maps.Size(52, 52),
+            anchor: new window.google.maps.Point(26, 26),
           },
         });
 
@@ -165,10 +164,23 @@ export default function EmergencyMap({
         }
 
         const info = new window.google.maps.InfoWindow({
-          content: `<div style="color:#111;min-width:180px;padding:4px"><strong>${marker.title}</strong>${marker.description ? `<br/><span>${marker.description}</span>` : ""}</div>`,
+          content: `<div style="color:#111;min-width:220px;padding:4px"><strong>⚠ ${marker.title}</strong>${marker.description ? `<br/><span style="display:block;margin-top:6px;line-height:1.45">${marker.description}</span>` : ""}${marker.radiusMeters ? `<br/><span style="display:block;margin-top:6px;color:#777">Approximate help area · ${marker.radiusMeters}m radius</span>` : ""}</div>`,
         });
 
         pin.addListener("click", () => info.open({ map, anchor: pin }));
+        if (marker.radiusMeters) {
+          new window.google.maps.Circle({
+            map,
+            center: { lat: marker.latitude, lng: marker.longitude },
+            radius: marker.radiusMeters,
+            fillColor: "#ef4444",
+            fillOpacity: 0.08,
+            strokeColor: "#ef4444",
+            strokeOpacity: 0.35,
+            strokeWeight: 2,
+            clickable: false,
+          });
+        }
       });
     };
 
@@ -278,8 +290,9 @@ export default function EmergencyMap({
           new PinElement({
             background: "#ef4444",
             borderColor: "#ffffff",
+            glyphText: "!",
             glyphColor: "#ffffff",
-            scale: 1.15,
+            scale: 1.25,
           }),
         );
 

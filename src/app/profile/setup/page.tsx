@@ -21,7 +21,7 @@ export default async function ProfileSetupPage() {
     user.onboardingType !== null ||
     Boolean(mechanicProfile)
   ) {
-    redirect("/profile");
+    redirect("/");
   }
 
   return <ProfileSetupClient />;

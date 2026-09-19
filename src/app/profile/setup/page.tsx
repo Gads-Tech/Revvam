@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CarIcon, MechanicIcon, StorefrontIcon, CheckIcon, UserIcon } from "@/components/icons/RevvamIcons";
 
@@ -76,6 +76,27 @@ export default function ProfileSetupPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/profile", { credentials: "include", cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) return;
+        if (!data?.success) {
+          router.replace("/login");
+          return;
+        }
+        if (data.user.role !== "USER" || data.user.onboardingType !== null) {
+          router.replace("/profile");
+          return;
+        }
+        setCheckingAccess(false);
+      })
+      .catch(() => router.replace("/profile"));
+    return () => { active = false; };
+  }, [router]);
 
   async function handleContinue() {
     if (!selectedRole) {

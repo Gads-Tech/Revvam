@@ -14,6 +14,8 @@ type Marker = {
   longitude: number;
   title: string;
   description?: string;
+  radiusMeters?: number;
+  exactLocation?: boolean;
 };
 
 type Props = {
@@ -215,12 +217,40 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
     markers.forEach((m) => {
       const el = document.createElement("div");
       el.className = "revvam-emergency-marker";
-      el.style.cssText = "width:30px;height:30px;border-radius:50%;padding:3px;background:#080808;border:2px solid #ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.14),0 0 22px rgba(239,68,68,.55);box-sizing:border-box;";
+      el.style.cssText = "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ef4444;border:3px solid #fff;color:#fff;font-weight:900;font-size:22px;box-shadow:0 0 0 4px rgba(239,68,68,.16),0 0 24px rgba(239,68,68,.58);box-sizing:border-box;";
+      el.textContent = "!";
+      const popupText = "<strong>⚠ " + m.title + "</strong><br/><span>" + (m.description ?? "") + "</span><br/><small>" + (m.exactLocation ? "Exact live location" : "Approximate location") + " · " + (m.radiusMeters ?? 500) + "m radius</small>";
       new window.maplibregl.Marker({ element: el })
         .setLngLat([m.longitude, m.latitude])
-        .setPopup(new window.maplibregl.Popup({ offset: 18 }).setHTML(`<strong>${m.title}</strong><br/><span>${m.description ?? ""}</span>`))
+        .setPopup(new window.maplibregl.Popup({ offset: 22 }).setHTML(popupText))
         .addTo(map);
+
+      if (m.radiusMeters) {
+        const sourceId = "emergency-radius-" + m.id;
+        map.addSource(sourceId, {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: { type: "Point", coordinates: [m.longitude, m.latitude] },
+            properties: {},
+          },
+        });
+        map.addLayer({
+          id: sourceId,
+          type: "circle",
+          source: sourceId,
+          paint: {
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 3, 12, 8, 14, 22, 16, 55, 18, 120],
+            "circle-color": "#ef4444",
+            "circle-opacity": 0.08,
+            "circle-stroke-color": "#ef4444",
+            "circle-stroke-opacity": 0.35,
+            "circle-stroke-width": 2,
+          },
+        });
+      }
     });
+
   }, [userLocation, userImage, markers]);
 
   return (

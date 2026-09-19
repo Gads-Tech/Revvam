@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 const noStore = { "Cache-Control": "no-store" };
 
 function publicLocation(id: string, latitude: number, longitude: number, exact: boolean) {
-  if (exact) return { latitude, longitude, radiusMeters: 0, exactLocation: true };
+  if (exact) return { latitude, longitude, radiusMeters: 500, exactLocation: true };
 
   // Keep the real roadside position private until the request is accepted.
   // The marker stays inside a 500m assistance radius.

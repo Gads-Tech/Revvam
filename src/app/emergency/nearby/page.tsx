@@ -18,7 +18,7 @@ type Emergency = {
   createdAt: string;
   driver: { name: string; username: string; image: string | null };
   vehicle: { make: string; model: string; year: number | null } | null;
-  offers: { id: string; status: string }[];
+  offers: { id: string; status: string; message: string | null; mechanic: { id: string; name: string; username: string; image: string | null; role: string } }[];
 };
 
 const labels: Record<string, string> = {
@@ -86,6 +86,21 @@ export default function NearbyEmergencyPage() {
       })),
     [emergencies],
   );
+
+  async function acceptOffer(emergencyId: string, offerId: string) {
+    setOfferingId(offerId);
+    setError("");
+    try {
+      const response = await fetch(`/api/emergencies/${emergencyId}/accept`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ offerId }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to accept this offer.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to accept this offer.");
+    } finally {
+      setOfferingId(null);
+    }
+  }
 
   async function offerHelp(emergencyId: string) {
     setOfferingId(emergencyId);
@@ -182,17 +197,27 @@ export default function NearbyEmergencyPage() {
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.035] px-3 py-1.5"><LocationIcon className="h-3.5 w-3.5" /> {emergency.locationLabel || "Location shared"}</span>
                       {emergency.vehicle && <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.035] px-3 py-1.5"><CarIcon className="h-3.5 w-3.5" /> {emergency.vehicle.make} {emergency.vehicle.model}</span>}
                     </div>
-                    <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4">
-                      <div className="flex items-center gap-2 text-xs text-white/35"><div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">{emergency.driver.image ? <img src={emergency.driver.image} alt="" className="h-full w-full object-cover" /> : emergency.driver.name.charAt(0)}</div>@{emergency.driver.username}</div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/20">{emergency.offers.length ? `${emergency.offers.length} offer${emergency.offers.length === 1 ? "" : "s"}` : "Awaiting help"}</span>
-                        {currentUserId !== emergency.driver.id && (
-                          <button type="button" onClick={() => offerHelp(emergency.id)} disabled={offeringId === emergency.id} className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/20 disabled:opacity-50">
-                            {offeringId === emergency.id ? "Sending..." : "Offer help"}
-                          </button>
-                        )}
+                    <div className="mt-5 border-t border-white/[0.07] pt-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs text-white/35"><div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white/[0.06]">{emergency.driver.image ? <img src={emergency.driver.image} alt="" className="h-full w-full object-cover" /> : emergency.driver.name.charAt(0)}</div>@{emergency.driver.username}</div>
+                        {!isMine && <button type="button" onClick={() => offerHelp(emergency.id)} disabled={offeringId === emergency.id} className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/20 disabled:opacity-50">{offeringId === emergency.id ? "Sending..." : "Offer help"}</button>}
+                        {isMine && <span className="rounded-full border border-red-500/20 bg-red-500/[.07] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.14em] text-red-300">Your request</span>}
                       </div>
-                    </div>
+                      {isMine && emergency.offers.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/25">People offering help</p>
+                          {emergency.offers.map((offer) => (
+                            <div key={offer.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/[.07] bg-black/20 p-3">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-white/[.06]">{offer.mechanic.image ? <img src={offer.mechanic.image} alt="" className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-xs">{offer.mechanic.name.charAt(0)}</span>}</div>
+                                <div className="min-w-0"><p className="truncate text-xs font-semibold">{offer.mechanic.name}</p><p className="truncate text-[10px] text-white/30">@{offer.mechanic.username} · {offer.mechanic.role === "MECHANIC" ? "Mechanic" : "Revvam member"}</p></div>
+                              </div>
+                              {offer.status === "PENDING" ? <button type="button" onClick={() => acceptOffer(emergency.id, offer.id)} disabled={offeringId === offer.id} className="shrink-0 rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[9px] font-bold uppercase tracking-[.12em] text-red-100 hover:bg-red-500/20 disabled:opacity-50">{offeringId === offer.id ? "..." : "Accept"}</button> : <span className="text-[9px] font-bold uppercase tracking-[.12em] text-white/30">{offer.status === "ACCEPTED" ? "Accepted" : "Declined"}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>                    </div>
                   </div>
                 </article>
               );

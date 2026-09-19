@@ -40,7 +40,7 @@ export async function GET() {
     const acceptedHelper = emergency.acceptedOfferId
       ? emergency.offers.some((offer) => offer.id === emergency.acceptedOfferId && offer.mechanicId === user.id)
       : false;
-    const location = publicLocation(emergency.id, emergency.latitude, emergency.longitude, isOwner || acceptedHelper);
+    const location = publicLocation(emergency.id, emergency.latitude, emergency.longitude, emergency.radiusMeters, isOwner || acceptedHelper);
 
     return {
       ...emergency,

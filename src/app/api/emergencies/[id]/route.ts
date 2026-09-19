@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
 function publicLocation(id: string, latitude: number, longitude: number, exact: boolean) {
-  if (exact) return { latitude, longitude, radiusMeters: 0, exactLocation: true };
+  if (exact) return { latitude, longitude, radiusMeters: 500, exactLocation: true };
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
   const angle = ((hash >>> 0) % 360) * (Math.PI / 180);

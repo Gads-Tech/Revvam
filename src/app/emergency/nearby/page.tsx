@@ -76,6 +76,37 @@ export default function NearbyEmergencyPage() {
     return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
+  useEffect(() => {
+    if (!currentUserId || !navigator.geolocation) return;
+    const owned = emergencies.filter(
+      (emergency) =>
+        currentUserId === emergency.driver.id &&
+        !["COMPLETED", "CANCELLED"].includes(emergency.status),
+    );
+    if (!owned.length) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        owned.forEach((emergency) => {
+          fetch(`/api/emergencies/${emergency.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              action: "update_location",
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }),
+          }).catch(() => undefined);
+        });
+      },
+      () => undefined,
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [currentUserId, emergencies]);
+
   const mapMarkers = useMemo(
     () =>
       emergencies.map((emergency) => ({
@@ -84,6 +115,7 @@ export default function NearbyEmergencyPage() {
         longitude: emergency.longitude,
         title: labels[emergency.type] || emergency.type,
         radiusMeters: emergency.radiusMeters,
+        exactLocation: emergency.exactLocation,
         description: emergency.description,
       })),
     [emergencies],
@@ -197,7 +229,7 @@ export default function NearbyEmergencyPage() {
                       {km !== null && <span className="shrink-0 text-xs font-semibold text-white/35">{km < 1 ? "<1 km" : `${km.toFixed(1)} km`}</span>}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2 text-xs text-white/35">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.035] px-3 py-1.5"><LocationIcon className="h-3.5 w-3.5" /> {emergency.locationLabel || "Location shared"}</span>
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.035] px-3 py-1.5"><LocationIcon className="h-3.5 w-3.5" /> {emergency.locationLabel || "Location shared"}</span><span className="rounded-full bg-red-500/[0.07] px-3 py-1.5 text-red-300/70">{emergency.radiusMeters >= 1000 ? `${emergency.radiusMeters / 1000} km` : `${emergency.radiusMeters}m`} help radius</span>
                       {emergency.vehicle && <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.035] px-3 py-1.5"><CarIcon className="h-3.5 w-3.5" /> {emergency.vehicle.make} {emergency.vehicle.model}</span>}
                     </div>
                     <div className="mt-5 border-t border-white/[0.07] pt-4">

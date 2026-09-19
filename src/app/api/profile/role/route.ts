@@ -48,6 +48,20 @@ export async function POST(request: Request) {
     }
 
     /*
+     * A completed account cannot re-run initial profile setup.
+     * Profile editing belongs in the normal profile/edit flows.
+     */
+    if (user.role !== "USER" || user.onboardingType !== null) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Your Revvam profile setup is already complete.",
+        },
+        { status: 403 }
+      );
+    }
+
+    /*
      * Read the request body.
      */
     const body = await request.json();

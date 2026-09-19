@@ -5,8 +5,8 @@ import { getCurrentUser } from "@/lib/session";
 export const dynamic = "force-dynamic";
 const noStore = { "Cache-Control": "no-store" };
 
-function publicLocation(id: string, latitude: number, longitude: number, exact: boolean) {
-  if (exact) return { latitude, longitude, radiusMeters: 500, exactLocation: true };
+function publicLocation(id: string, latitude: number, longitude: number, radiusMeters: number, exact: boolean) {
+  if (exact) return { latitude, longitude, radiusMeters, exactLocation: true };
 
   // Keep the real roadside position private until the request is accepted.
   // The marker stays inside a 500m assistance radius.
@@ -19,7 +19,7 @@ function publicLocation(id: string, latitude: number, longitude: number, exact: 
   return {
     latitude: latitude + dLat,
     longitude: longitude + dLng,
-    radiusMeters: 500,
+    radiusMeters,
     exactLocation: false,
   };
 }
@@ -66,8 +66,10 @@ export async function POST(request:Request) {
   const photo=typeof body.photo==="string"?body.photo.trim():null;
   const latitude=Number(body.latitude), longitude=Number(body.longitude);
   const vehicleId=typeof body.vehicleId==="string"?body.vehicleId:null;
+  const radiusMeters=Number(body.radiusMeters);
   if(!types.has(type)) return NextResponse.json({success:false,error:"Choose a valid emergency type."},{status:400,headers:noStore});
   if(!description) return NextResponse.json({success:false,error:"Describe the problem."},{status:400,headers:noStore});
+  if(!Number.isFinite(radiusMeters)||![500,1000,2500,5000].includes(radiusMeters)) return NextResponse.json({success:false,error:"Choose a valid assistance radius."},{status:400,headers:noStore});
   if(description.length>1500) return NextResponse.json({success:false,error:"Description is too long."},{status:400,headers:noStore});
   if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude<-90||latitude>90||longitude<-180||longitude>180) return NextResponse.json({success:false,error:"A valid location is required."},{status:400,headers:noStore});
   if(photo && photo.length>12000000) return NextResponse.json({success:false,error:"Photo is too large."},{status:400,headers:noStore});
@@ -75,6 +77,6 @@ export async function POST(request:Request) {
     const vehicle=await prisma.vehicle.findFirst({where:{id:vehicleId,userId:user.id},select:{id:true}});
     if(!vehicle) return NextResponse.json({success:false,error:"Vehicle not found."},{status:400,headers:noStore});
   }
-  const emergency=await prisma.emergencyRequest.create({data:{driverId:user.id,vehicleId,type:type as any,description,photo:photo||null,latitude,longitude,locationLabel:typeof body.locationLabel==="string"?body.locationLabel.trim()||null:null}});
+  const emergency=await prisma.emergencyRequest.create({data:{driverId:user.id,vehicleId,type:type as any,description,photo:photo||null,latitude,longitude,locationLabel:typeof body.locationLabel==="string"?body.locationLabel.trim()||null:null,radiusMeters}});
   return NextResponse.json({success:true,emergency},{status:201,headers:noStore});
 }

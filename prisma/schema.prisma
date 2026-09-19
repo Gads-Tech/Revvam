@@ -22,6 +22,7 @@ model User {
   updatedAt               DateTime                @updatedAt
   onboardingType          OnboardingType?
   driverProfile           DriverProfile?
+  mechanicProfile         MechanicProfile?
   mentionsMade            ModificationMention[]   @relation("MentionedBy")
   mentionsReceived        ModificationMention[]   @relation("MentionedUser")
   postMentionsMade        PostMention[]           @relation("PostMentionedBy")
@@ -55,6 +56,21 @@ model DriverProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MechanicProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  headline        String?
+  about           String?
+  skills          String[] @default([])
+  services        String[] @default([])
+  yearsExperience Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Vehicle {

@@ -5,6 +5,25 @@ import { getCurrentUser } from "@/lib/session";
 export const dynamic = "force-dynamic";
 const noStore = { "Cache-Control": "no-store" };
 
+function publicLocation(id: string, latitude: number, longitude: number, exact: boolean) {
+  if (exact) return { latitude, longitude, radiusMeters: 0, exactLocation: true };
+
+  // Keep the real roadside position private until the request is accepted.
+  // The marker stays inside a 500m assistance radius.
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
+  const offsetMeters = 100 + ((hash >>> 8) % 51);
+  const dLat = (offsetMeters * Math.cos(angle)) / 111_320;
+  const dLng = (offsetMeters * Math.sin(angle)) / (111_320 * Math.max(0.2, Math.cos(latitude * Math.PI / 180)));
+  return {
+    latitude: latitude + dLat,
+    longitude: longitude + dLng,
+    radiusMeters: 500,
+    exactLocation: false,
+  };
+}
+
 const types = new Set(["BREAKDOWN","OVERHEATING","FLAT_TYRE","DEAD_BATTERY","ENGINE_PROBLEM","ACCIDENT","FUEL_PROBLEM","OTHER"]);
 
 export async function GET() {
@@ -13,9 +32,29 @@ export async function GET() {
   const emergencies = await prisma.emergencyRequest.findMany({
     where:{ status:{in:["OPEN","OFFERS_RECEIVED","ACCEPTED","MECHANIC_EN_ROUTE","ARRIVED"]}},
     orderBy:{createdAt:"desc"}, take:50,
-    include:{driver:{select:{id:true,name:true,username:true,image:true}},vehicle:{select:{id:true,make:true,model:true,year:true,image:true}},offers:{select:{id:true,status:true,message:true,mechanic:{select:{id:true,name:true,username:true,image:true,role:true}}}}}
+    include:{driver:{select:{id:true,name:true,username:true,image:true}},vehicle:{select:{id:true,make:true,model:true,year:true,image:true}},offers:{select:{id:true,status:true,message:true,mechanicId:true,mechanic:{select:{id:true,name:true,username:true,image:true,role:true}}}}}
   });
-  return NextResponse.json({success:true,emergencies},{headers:noStore});
+
+  const visible = emergencies.map((emergency) => {
+    const isOwner = emergency.driverId === user.id;
+    const acceptedHelper = emergency.acceptedOfferId
+      ? emergency.offers.some((offer) => offer.id === emergency.acceptedOfferId && offer.mechanicId === user.id)
+      : false;
+    const location = publicLocation(emergency.id, emergency.latitude, emergency.longitude, isOwner || acceptedHelper);
+
+    return {
+      ...emergency,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      radiusMeters: location.radiusMeters,
+      exactLocation: location.exactLocation,
+      // Never expose the real coordinates to the public nearby feed.
+      ...(location.exactLocation ? {} : { description: emergency.description }),
+      offers: emergency.offers.map(({ mechanicId, ...offer }) => offer),
+    };
+  });
+
+  return NextResponse.json({success:true,emergencies:visible},{headers:noStore});
 }
 
 export async function POST(request:Request) {

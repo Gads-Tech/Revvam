@@ -4,8 +4,8 @@ import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-function publicLocation(id: string, latitude: number, longitude: number, exact: boolean) {
-  if (exact) return { latitude, longitude, radiusMeters: 500, exactLocation: true };
+function publicLocation(id: string, latitude: number, longitude: number, radiusMeters: number, exact: boolean) {
+  if (exact) return { latitude, longitude, radiusMeters, exactLocation: true };
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
   const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
@@ -13,7 +13,7 @@ function publicLocation(id: string, latitude: number, longitude: number, exact: 
   return {
     latitude: latitude + (offsetMeters * Math.cos(angle)) / 111_320,
     longitude: longitude + (offsetMeters * Math.sin(angle)) / (111_320 * Math.max(0.2, Math.cos(latitude * Math.PI / 180))),
-    radiusMeters: 500,
+    radiusMeters,
     exactLocation: false,
   };
 }
@@ -66,6 +66,25 @@ export async function PATCH(request: Request, { params }: Context) {
 
   const emergency = await prisma.emergencyRequest.findUnique({ where: { id }, include: { offers: true } });
   if (!emergency) return NextResponse.json({ success: false, error: "Emergency request not found." }, { status: 404, headers: noStore });
+
+  if (action === "update_location") {
+    if (emergency.driverId !== user.id) return NextResponse.json({ success: false, error: "Only the person requesting help can update this location." }, { status: 403, headers: noStore });
+    const latitude = Number(body?.latitude);
+    const longitude = Number(body?.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return NextResponse.json({ success: false, error: "A valid live location is required." }, { status: 400, headers: noStore });
+    }
+    const updated = await prisma.emergencyRequest.update({ where: { id }, data: { liveLatitude: latitude, liveLongitude: longitude } });
+    return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
+  }
+
+  if (action === "radius") {
+    if (emergency.driverId !== user.id) return NextResponse.json({ success: false, error: "Only the person requesting help can change the radius." }, { status: 403, headers: noStore });
+    const radiusMeters = Number(body?.radiusMeters);
+    if (![500, 1000, 2500, 5000].includes(radiusMeters)) return NextResponse.json({ success: false, error: "Choose a valid assistance radius." }, { status: 400, headers: noStore });
+    const updated = await prisma.emergencyRequest.update({ where: { id }, data: { radiusMeters } });
+    return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
+  }
 
   if (action === "cancel") {
     if (emergency.driverId !== user.id && user.role !== "ADMIN") return NextResponse.json({ success: false, error: "Only the driver can cancel this request." }, { status: 403, headers: noStore });

@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/session";
 
 export async function POST(request:Request,{params}:{params:Promise<{id:string}>}) {
  const user=await getCurrentUser(); if(!user) return NextResponse.json({success:false,error:"You must be logged in."},{status:401});
- if(!["MECHANIC","MECHANIC_SHOP","ADMIN"].includes(user.role)) return NextResponse.json({success:false,error:"Only mechanics and mechanic shops can offer help."},{status:403});
  const {id}=await params; const emergency=await prisma.emergencyRequest.findUnique({where:{id},select:{id:true,status:true,driverId:true}});
  if(!emergency||!["OPEN","OFFERS_RECEIVED"].includes(emergency.status)) return NextResponse.json({success:false,error:"This emergency is no longer available."},{status:409});
  if(emergency.driverId===user.id) return NextResponse.json({success:false,error:"You cannot respond to your own emergency."},{status:400});

@@ -111,8 +111,8 @@ export default function NearbyEmergencyPage() {
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/35">Drivers who need roadside assistance appear here. Mechanics and shops can use this view to discover requests close to them.</p>
         </header>
 
-        <section className="mb-7 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-white/[0.025]">
-          <div className="border-b border-white/[0.07] px-5 py-4 sm:px-6">
+        <section className="mb-7 overflow-hidden rounded-[2rem] border border-white/[0.08] bg-gradient-to-b from-white/[0.035] to-white/[0.015] p-2 shadow-[0_30px_90px_rgba(0,0,0,.30)] sm:p-3">
+          <div className="border-b border-white/[0.07] px-3 py-3 sm:px-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-red-400/70">Live network</p>
@@ -126,7 +126,7 @@ export default function NearbyEmergencyPage() {
             userImage={profileImage}
             markers={mapMarkers}
           />
-          <div className="border-t border-white/[0.07] px-5 py-3 text-[10px] text-white/25 sm:px-6">
+          <div className="px-3 py-2.5 text-[9px] text-white/25 sm:px-4">
             Red markers are active roadside requests. Your profile appears at your live location when permission is available.
           </div>
         </section>

@@ -21,7 +21,6 @@ export async function GET() {
 export async function POST(request:Request) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({success:false,error:"You must be logged in."},{status:401,headers:noStore});
-  if (user.role !== "USER" && user.role !== "ADMIN") return NextResponse.json({success:false,error:"Only driver accounts can request roadside help."},{status:403,headers:noStore});
   const body=await request.json();
   const type=typeof body.type==="string"?body.type:"";
   const description=typeof body.description==="string"?body.description.trim():"";

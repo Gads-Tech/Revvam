@@ -35,6 +35,7 @@ export default function EmergencyPage() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number; label: string | null } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [radiusMeters, setRadiusMeters] = useState(500);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -122,6 +123,7 @@ export default function EmergencyPage() {
           latitude: location.latitude,
           longitude: location.longitude,
           locationLabel: location.label,
+          radiusMeters,
         }),
       });
 
@@ -203,7 +205,19 @@ export default function EmergencyPage() {
             </div>
 
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">04 · Add evidence</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">04 · Help radius</p>
+              <p className="mt-2 text-xs leading-5 text-white/30">Choose how widely your emergency should appear. Your exact position stays private until someone accepts your request.</p>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {[500, 1000, 2500, 5000].map((value) => (
+                  <button key={value} type="button" onClick={() => setRadiusMeters(value)} className={`rounded-xl border px-2 py-3 text-xs font-bold transition ${radiusMeters === value ? "border-red-500/40 bg-red-500/10 text-red-100" : "border-white/[.08] bg-white/[.025] text-white/35 hover:text-white"}`}>
+                    {value >= 1000 ? `${value / 1000} km` : `${value} m`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">05 · Add evidence</p>
               <div className="mt-3 flex flex-wrap gap-3">
                 <button type="button" onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-sm font-semibold text-white/55 hover:border-red-500/20 hover:text-white">
                   <CameraIcon className="h-4 w-4" /> {photo ? "Change photo" : "Add photo"}

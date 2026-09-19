@@ -109,7 +109,7 @@ export default function EmergencyMap({
 
       mapInstanceRef.current = map;
 
-      if (userLocation) {
+      if (userLocation && userImage) {
         const you = new Marker3DElement({
           position: {
             lat: userLocation.latitude,
@@ -122,57 +122,43 @@ export default function EmergencyMap({
           zIndex: 1000,
         });
 
-        if (userImage) {
-          const avatar = document.createElement("img");
-          avatar.src = new URL(userImage, window.location.origin).toString();
-          avatar.alt = "";
-          avatar.width = 56;
-          avatar.height = 56;
-          avatar.style.width = "56px";
-          avatar.style.height = "56px";
-          avatar.style.borderRadius = "50%";
-          avatar.style.objectFit = "cover";
-          avatar.style.display = "block";
+        const profilePin = new PinElement({
+          glyph: {
+            url: new URL(userImage, window.location.origin).toString(),
+            scale: 1.5,
+          },
+          background: "transparent",
+          borderColor: "#ffffff",
+          borderWidth: 4,
+          scale: 1.5,
+        });
 
-          const template = document.createElement("template");
-          template.content.append(avatar);
-          you.append(template);
-        } else {
-          you.append(
-            new PinElement({
-              background: "#ef4444",
-              borderColor: "#ffffff",
-              glyphText: "YOU",
-              glyphColor: "#ffffff",
-              scale: 1.2,
-            }),
-          );
-        }
-
+        you.append(profilePin);
         globe.appendChild(you);
-      }
-
-      if (userLocation) {
-        const userPin = new window.google.maps.Marker({
-          map,
-          position: { lat: userLocation.latitude, lng: userLocation.longitude },
-          title: "Your location",
-          icon: userImage
-            ? {
-                url: new URL(userImage, window.location.origin).toString(),
-                scaledSize: new window.google.maps.Size(52, 52),
-                anchor: new window.google.maps.Point(26, 26),
-              }
-            : {
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 9,
-                fillColor: "#ef4444",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 3,
-              },
+      } else if (userLocation) {
+        const you = new Marker3DElement({
+          position: {
+            lat: userLocation.latitude,
+            lng: userLocation.longitude,
+            altitude: 50,
+          },
+          drawsWhenOccluded: true,
+          altitudeMode: "CLAMP_TO_GROUND",
+          sizePreserved: true,
           zIndex: 1000,
         });
+
+        you.append(
+          new PinElement({
+            background: "#ef4444",
+            borderColor: "#ffffff",
+            glyphText: "YOU",
+            glyphColor: "#ffffff",
+            scale: 1.2,
+          }),
+        );
+
+        globe.appendChild(you);
       }
 
       markers.forEach((marker) => {

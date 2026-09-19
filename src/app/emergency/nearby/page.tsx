@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BackIcon, CarIcon, LocationIcon, NavigationIcon, WarningIcon } from "@/components/icons";
 import RevvamMap from "@/components/RevvamMap";
+import LiveSocialActions from "@/components/LiveSocialActions";
+import MobileNav from "@/components/MobileNav";
 
 type Emergency = {
   id: string;
@@ -97,7 +99,10 @@ export default function NearbyEmergencyPage() {
       <div className="relative mx-auto max-w-6xl px-5 pb-24 pt-7 sm:px-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <Link href="/emergency" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white"><BackIcon className="h-4 w-4" /> Request help</Link>
-          <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/[0.07] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-red-300"><WarningIcon className="h-3.5 w-3.5" /> Nearby emergency</div>
+          <div className="flex items-center gap-2">
+            <div className="hidden md:block"><LiveSocialActions /></div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/[0.07] px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-red-300"><WarningIcon className="h-3.5 w-3.5" /> Nearby emergency</div>
+          </div>
         </div>
 
         <header className="mb-7">
@@ -166,6 +171,7 @@ export default function NearbyEmergencyPage() {
           </div>
         )}
       </div>
+      <MobileNav />
     </main>
   );
 }

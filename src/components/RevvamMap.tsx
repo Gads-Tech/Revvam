@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -25,8 +25,11 @@ type Props = {
 export default function RevvamMap({ userLocation, userImage, markers }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const [locating, setLocating] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (!containerRef.current) return;
 
     const cssId = "revvam-maplibre-css";
@@ -151,6 +154,26 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
     };
   }, []);
 
+  const focusLocation = () => {
+    if (!mounted || !navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const center = [position.coords.longitude, position.coords.latitude];
+        mapRef.current?.flyTo({
+          center,
+          zoom: 17,
+          pitch: 55,
+          duration: 1400,
+          essential: true,
+        });
+        setLocating(false);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 },
+    );
+  };
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -204,6 +227,19 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
 
   return (
     <div ref={containerRef} className="relative h-[430px] w-full overflow-hidden sm:h-[560px]">
+      <button
+        type="button"
+        onClick={focusLocation}
+        disabled={!mounted || locating}
+        aria-label="Focus on my location"
+        title="Focus on my location"
+        className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white shadow-2xl backdrop-blur-xl transition hover:border-red-400/50 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
+        </svg>
+      </button>
       <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-red-500/20 bg-[#05070b]/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-red-100/70 shadow-[0_0_24px_rgba(239,68,68,.12)] backdrop-blur-xl">
         Revvam World · Open Map
       </div>

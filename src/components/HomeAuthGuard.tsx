@@ -18,34 +18,28 @@ export default function HomeAuthGuard() {
       // this document as non-bfcache eligible.
     };
 
-    window.addEventListener(
-      "beforeunload",
-      preventBackForwardCache
-    );
+    window.addEventListener("beforeunload", preventBackForwardCache);
 
     /*
-     * Additional protection for browsers that still
-     * restore the page from bfcache.
+     * Only reload when the browser actually restored the
+     * document from bfcache. A normal page load/reload must
+     * never trigger another reload from this handler.
+     *
+     * The previous implementation reloaded on every
+     * pageshow event, which could create reload loops and
+     * unnecessary document requests.
      */
-    const handlePageShow = () => {
-      window.location.reload();
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        window.location.reload();
+      }
     };
 
-    window.addEventListener(
-      "pageshow",
-      handlePageShow
-    );
+    window.addEventListener("pageshow", handlePageShow);
 
     return () => {
-      window.removeEventListener(
-        "beforeunload",
-        preventBackForwardCache
-      );
-
-      window.removeEventListener(
-        "pageshow",
-        handlePageShow
-      );
+      window.removeEventListener("beforeunload", preventBackForwardCache);
+      window.removeEventListener("pageshow", handlePageShow);
     };
   }, []);
 

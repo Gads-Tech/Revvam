@@ -48,23 +48,17 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
         container: containerRef.current,
         maxZoom: 19,
         minZoom: 2,
-        style: {
-          version: 8,
-          sources: {
-            osm: {
-              type: "raster",
-              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-              tileSize: 256,
-              attribution: "© OpenStreetMap contributors",
-            },
-          },
-          layers: [{ id: "osm", type: "raster", source: "osm" }],
-        },
+        // Vector map foundation: OpenFreeMap uses OpenStreetMap data and
+        // gives us a MapLibre-native style we can customize for Revvam.
+        style: "https://tiles.openfreemap.org/styles/liberty",
         center,
         zoom: userLocation ? 14 : 6,
-        pitch: 45,
+        pitch: 52,
         bearing: 0,
-        attributionControl: false,
+        maxPitch: 70,
+        dragRotate: true,
+        touchPitch: true,
+        attributionControl: true,
       });
 
       map.addControl(new window.maplibregl.NavigationControl(), "bottom-right");
@@ -150,7 +144,7 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
 
   return (
     <div ref={containerRef} className="relative h-[430px] w-full overflow-hidden sm:h-[560px]">
-      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/60 backdrop-blur-xl">
+      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-red-500/20 bg-[#05070b]/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-red-100/70 shadow-[0_0_24px_rgba(239,68,68,.12)] backdrop-blur-xl">
         Revvam World · Open Map
       </div>
     </div>

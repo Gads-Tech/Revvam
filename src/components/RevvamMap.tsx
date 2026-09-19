@@ -192,12 +192,12 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
     if (userLocation) {
       const el = document.createElement("div");
       el.className = "revvam-user-marker";
-      el.style.cssText = "width:74px;height:74px;border-radius:50%;padding:4px;background:linear-gradient(135deg,#fff,#ef4444 50%,#8b0000);box-shadow:0 0 0 5px rgba(239,68,68,.22),0 0 30px rgba(239,68,68,.6);overflow:hidden;box-sizing:border-box;";
+      el.style.cssText = "width:92px;height:92px;border-radius:50%;padding:4px;background:linear-gradient(135deg,#fff 0%,#ef4444 48%,#7f1d1d 100%);box-shadow:0 0 0 5px rgba(239,68,68,.20),0 0 34px rgba(239,68,68,.52);overflow:hidden;box-sizing:border-box;";
       if (userImage) {
         const img = document.createElement("img");
         img.src = userImage;
         img.alt = "";
-        img.style.cssText = "width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;";
+        img.style.cssText = "width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;border:2px solid rgba(0,0,0,.55);";
         el.appendChild(img);
       } else {
         el.textContent = "YOU";
@@ -205,7 +205,7 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
         el.style.placeItems = "center";
         el.style.color = "white";
         el.style.fontWeight = "800";
-        el.style.fontSize = "11px";
+        el.style.fontSize = "12px";
       }
       new window.maplibregl.Marker({ element: el, anchor: "center" })
         .setLngLat([userLocation.longitude, userLocation.latitude])
@@ -215,7 +215,7 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
     markers.forEach((m) => {
       const el = document.createElement("div");
       el.className = "revvam-emergency-marker";
-      el.style.cssText = "width:20px;height:20px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 18px rgba(239,68,68,.8);";
+      el.style.cssText = "width:30px;height:30px;border-radius:50%;padding:3px;background:#080808;border:2px solid #ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.14),0 0 22px rgba(239,68,68,.55);box-sizing:border-box;";
       new window.maplibregl.Marker({ element: el })
         .setLngLat([m.longitude, m.latitude])
         .setPopup(new window.maplibregl.Popup({ offset: 18 }).setHTML(`<strong>${m.title}</strong><br/><span>${m.description ?? ""}</span>`))
@@ -224,21 +224,21 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
   }, [userLocation, userImage, markers]);
 
   return (
-    <div ref={containerRef} className="relative h-[430px] w-full overflow-hidden sm:h-[560px]">
+    <div ref={containerRef} className="relative h-[320px] w-full overflow-hidden rounded-[1.7rem] border border-white/[0.10] bg-[#05070b] shadow-[0_24px_70px_rgba(0,0,0,.45)] sm:h-[400px]">
       <button
         type="button"
         onClick={focusLocation}
         disabled={!mounted || locating}
         aria-label="Focus on my location"
         title="Focus on my location"
-        className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white shadow-2xl backdrop-blur-xl transition hover:border-red-400/50 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+        className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/75 text-white shadow-2xl backdrop-blur-xl transition hover:border-red-400/50 hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="3" />
           <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
         </svg>
       </button>
-      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-red-500/20 bg-[#05070b]/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-red-100/70 shadow-[0_0_24px_rgba(239,68,68,.12)] backdrop-blur-xl">
+      <div className="pointer-events-none absolute left-4 top-4 z-10 rounded-full border border-white/[0.10] bg-[#05070b]/80 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-white/60 shadow-[0_0_24px_rgba(239,68,68,.12)] backdrop-blur-xl">
         Revvam World · Open Map
       </div>
     </div>

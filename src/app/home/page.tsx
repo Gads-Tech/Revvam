@@ -26,7 +26,8 @@ export default async function HomePage() {
         mentions: { include: { mentionedUser: { select: { id: true, name: true, username: true, image: true } } } },
       },
     }),
-    prisma.emergencyRequest.findMany({
+    user.role === "MECHANIC" || user.role === "MECHANIC_SHOP"
+      ? prisma.emergencyRequest.findMany({
       where: { status: "OPEN", driverId: { not: user.id } },
       orderBy: { createdAt: "desc" },
       take: 3,
@@ -40,7 +41,8 @@ export default async function HomePage() {
         createdAt: true,
         driver: { select: { username: true, image: true } },
       },
-    }),
+    })
+      : Promise.resolve([]),
     prisma.vehicle.count({ where: { ownerId: user.id } }),
     prisma.post.count({ where: { authorId: user.id } }),
   ]);
@@ -113,12 +115,15 @@ export default async function HomePage() {
 
           <aside className="hidden lg:block">
             <div className="sticky top-24 space-y-4">
+              {(user.role === "MECHANIC" || user.role === "MECHANIC_SHOP") && (
               <section className="overflow-hidden rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025]">
-                <div className="flex items-center justify-between border-b border-white/[0.07] p-4"><div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><h3 className="text-xs font-bold">Live on map</h3></div><Link href="/map" className="text-[10px] font-semibold text-red-300">View all</Link></div>
-                <div className="p-2">
-                  {liveEmergencies.length ? liveEmergencies.map((item) => <Link key={item.id} href="/map" className="block rounded-2xl p-3 transition hover:bg-white/[0.035]"><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-red-500/20 bg-red-500/10 text-red-300">{item.driver.image ? <img src={item.driver.image} alt="" className="h-full w-full object-cover" /> : <WarningIcon className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-xs font-bold">{prettyEmergency(item.type)}</span><span className="shrink-0 text-[9px] text-white/20">{timeAgo(item.createdAt)}</span></div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-white/35">{item.description}</p><div className="mt-2 flex items-center gap-2 text-[9px] text-white/20"><span>{item.ghostMode ? "Location hidden" : item.locationLabel ?? "Live location"}</span><span className="text-red-300">LIVE</span></div></div></div></Link>) : <div className="p-5 text-center text-xs text-white/25">No active road issues nearby.</div>}
-                </div>
-              </section>
+                              <div className="flex items-center justify-between border-b border-white/[0.07] p-4"><div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><h3 className="text-xs font-bold">Live on map</h3></div><Link href="/map" className="text-[10px] font-semibold text-red-300">View all</Link></div>
+                              <div className="p-2">
+                                {liveEmergencies.length ? liveEmergencies.map((item) => <Link key={item.id} href="/map" className="block rounded-2xl p-3 transition hover:bg-white/[0.035]"><div className="flex gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-red-500/20 bg-red-500/10 text-red-300">{item.driver.image ? <img src={item.driver.image} alt="" className="h-full w-full object-cover" /> : <WarningIcon className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2"><span className="truncate text-xs font-bold">{prettyEmergency(item.type)}</span><span className="shrink-0 text-[9px] text-white/20">{timeAgo(item.createdAt)}</span></div><p className="mt-1 line-clamp-2 text-[10px] leading-4 text-white/35">{item.description}</p><div className="mt-2 flex items-center gap-2 text-[9px] text-white/20"><span>{item.ghostMode ? "Location hidden" : item.locationLabel ?? "Live location"}</span><span className="text-red-300">LIVE</span></div></div></div></Link>) : <div className="p-5 text-center text-xs text-white/25">No active road issues nearby.</div>}
+                              </div>
+                            </section>
+              
+                            )}
 
               <section className="rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025] p-4">
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold">Your Revvam</h3><Link href="/profile" className="text-[10px] text-red-300">Profile</Link></div>

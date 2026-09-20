@@ -80,29 +80,6 @@ export async function POST(request:Request) {
     const vehicle=await prisma.vehicle.findFirst({where:{id:vehicleId,userId:user.id},select:{id:true}});
     if(!vehicle) return NextResponse.json({success:false,error:"Vehicle not found."},{status:400,headers:noStore});
   }
-  const emergency=await prisma.$transaction(async (tx) => {
-    const created = await tx.emergencyRequest.create({data:{driverId:user.id,vehicleId,type:type as any,description,photo:photo||null,latitude,longitude,locationLabel:typeof body.locationLabel==="string"?body.locationLabel.trim()||null:null,radiusMeters,ghostMode}});
-
-    // Emergency-help alerts are targeted to mechanics/mechanic shops only.
-    // Regular drivers can still use the public emergency/map experience where permitted,
-    // but they do not receive the mechanic help alert in Discover/Notifications.
-    const mechanics = await tx.user.findMany({
-      where: { role: { in: ["MECHANIC", "MECHANIC_SHOP"] }, id: { not: user.id } },
-      select: { id: true },
-    });
-    if (mechanics.length) {
-      await tx.notification.createMany({
-        data: mechanics.map((mechanic) => ({
-          userId: mechanic.id,
-          actorId: user.id,
-          type: "EMERGENCY_OFFER" as const,
-          title: "Emergency help needed nearby",
-          body: `${user.name} needs help with a ${type.toLowerCase().replaceAll("_", " ")}.`,
-          href: "/map",
-        })),
-      });
-    }
-    return created;
-  });
+  const emergency = await prisma.emergencyRequest.create({data:{driverId:user.id,vehicleId,type:type as any,description,photo:photo||null,latitude,longitude,locationLabel:typeof body.locationLabel==="string"?body.locationLabel.trim()||null:null,radiusMeters,ghostMode}});
   return NextResponse.json({success:true,emergency},{status:201,headers:noStore});
 }

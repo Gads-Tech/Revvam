@@ -106,7 +106,15 @@ export default async function HomePage() {
 
             <section className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-4">
               <QuickLink href="/profile/cars/add" icon={<CarIcon className="h-4 w-4" />} label="Add car" />
-              <QuickLink href="/emergency" icon={<WarningIcon className="h-4 w-4" />} label="Emergency" />
+              {isMechanic ? (
+                <Link href="/emergency/nearby" className="relative flex min-w-0 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-2 py-2.5 text-[10px] font-bold text-red-100 transition hover:border-red-400/50 hover:bg-red-500/15 sm:text-xs">
+                  <WarningIcon className="h-4 w-4 text-red-300" />
+                  <span className="truncate">Emergency Help</span>
+                  {liveEmergencies.length > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{liveEmergencies.length}</span>}
+                </Link>
+              ) : (
+                <QuickLink href="/emergency" icon={<WarningIcon className="h-4 w-4" />} label="Emergency" />
+              )}
               <QuickLink href="/map" icon={<LocationIcon className="h-4 w-4" />} label="Live map" />
               <QuickLink href="/profile" icon={<MoreIcon className="h-4 w-4" />} label="My profile" />
             </section>

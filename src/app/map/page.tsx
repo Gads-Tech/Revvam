@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import RevvamMap from "@/components/RevvamMap";
 import MobileNav from "@/components/MobileNav";
+import AppHeader from "@/components/AppHeader";
 import LiveSocialActions from "@/components/LiveSocialActions";
 
 type Emergency = {
@@ -132,25 +133,8 @@ export default function MapPage() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#030303] text-white">
-      <header className="sticky top-0 z-50 border-b border-white/[.06] bg-black/85 backdrop-blur-2xl">
-        <div className="mx-auto flex h-[74px] max-w-[1500px] items-center gap-7 px-5 lg:px-8">
-          <Link href="/home" className="shrink-0 text-xl font-black tracking-[-.06em]"><span className="text-white">R</span><span className="text-red-500">evvam</span></Link>
-          <nav className="hidden items-center gap-8 md:flex">
-            <Link href="/home" className="text-sm text-white/45 hover:text-white">Discover</Link>
-            <Link href="/map" className="relative py-7 text-sm font-semibold text-white after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-500">Map</Link>
-            <Link href="#" className="text-sm text-white/45 hover:text-white">Mechanics</Link>
-            <Link href="#" className="text-sm text-white/45 hover:text-white">Dealerships</Link>
-            <Link href="#" className="text-sm text-white/45 hover:text-white">Events</Link>
-            <Link href="/messages" className="text-sm text-white/45 hover:text-white">Chat</Link>
-          </nav>
-          <div className="ml-auto hidden items-center gap-3 md:flex">
-            <LiveSocialActions />
-            <Link href="/profile" className="flex h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-white/[.05]">
-              {profileImage ? <img src={profileImage} alt="" className="h-full w-full object-cover" /> : <span className="m-auto text-xs font-bold text-red-300">R</span>}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
+
 
       <div className="mx-auto max-w-[1500px] px-4 pb-28 pt-5 lg:px-7 lg:pb-8">
         <div className="grid gap-5 lg:grid-cols-[330px_minmax(0,1fr)_350px]">

@@ -104,6 +104,16 @@ export default async function HomePage() {
               <QuickLink href="/profile" icon={<MoreIcon className="h-4 w-4" />} label="My profile" />
             </section>
 
+            {(user.role === "MECHANIC" || user.role === "MECHANIC_SHOP") && liveEmergencies.length > 0 && (
+              <Link href="/emergency/nearby" className="mb-6 flex items-center justify-between rounded-[1.35rem] border border-red-500/25 bg-gradient-to-r from-red-950/40 via-red-500/[0.08] to-transparent px-4 py-3.5 transition hover:border-red-400/40 hover:bg-red-500/[0.10]">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/15"><WarningIcon className="h-5 w-5 text-red-300" /></span>
+                  <div><p className="text-[9px] font-bold uppercase tracking-[0.2em] text-red-400/75">Emergency Help</p><p className="mt-0.5 text-sm font-bold text-white">{liveEmergencies.length} active {liveEmergencies.length === 1 ? "request" : "requests"}</p></div>
+                </div>
+                <span className="rounded-full bg-red-500 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white">Emergency Help {liveEmergencies.length}</span>
+              </Link>
+            )}
+
             <section>
               <div className="mb-4 flex items-end justify-between">
                 <div><p className="text-[9px] font-bold uppercase tracking-[0.27em] text-white/20">Live from the community</p><h2 className="mt-1.5 text-xl font-bold tracking-tight sm:text-2xl">What people are posting</h2></div>

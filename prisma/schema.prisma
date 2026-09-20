@@ -348,6 +348,13 @@ model Message {
   conversationId String
   senderId       String
   content        String
+  messageType    MessageType       @default(TEXT)
+  mediaUrl       String?
+  mediaMimeType  String?
+  mediaSize      Int?
+  latitude       Float?
+  longitude      Float?
+  durationMs     Int?
   readAt         DateTime?
   createdAt      DateTime          @default(now())
   replyToId      String?
@@ -480,4 +487,13 @@ enum ChatRequestStatus {
   PENDING
   ACCEPTED
   DECLINED
+}
+
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  LOCATION
 }

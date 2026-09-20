@@ -35,16 +35,18 @@ export async function GET(request: Request, context: RouteContext) {
     const url = new URL(request.url);
     const markRead = url.searchParams.get("markRead") === "1";
 
-    const [conversation, messages, unreadBeforeOpen] = await Promise.all([
-      prisma.conversation.findUnique({
-        where: { id: conversationId },
-        include: {
-          members: {
-            where: { userId: { not: user.id } },
-            include: { user: { select: { id: true, name: true, username: true, image: true } } },
-          },
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        members: {
+          where: { userId: { not: user.id } },
+          include: { user: { select: { id: true, name: true, username: true, image: true } } },
         },
-      }),
+      },
+    });
+    if (!conversation) return NextResponse.json({ success: false, error: "Conversation not found." }, { status: 404, headers: noStoreHeaders });
+
+    const [messages, unreadBeforeOpen] = await Promise.all([
       prisma.message.findMany({
         where: { conversationId, deletions: { none: { userId: user.id } } },
         orderBy: { createdAt: "desc" },

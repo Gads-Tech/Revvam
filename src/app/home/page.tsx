@@ -54,7 +54,6 @@ export default async function HomePage() {
   const emergencyHelpEnabled = isMechanic;
 
   return (
-    <EmergencyHelpLive initialCount={liveEmergencies.length} enabled={emergencyHelpEnabled} />
     <main className="min-h-screen bg-[#020202] text-white">
       <div className="pointer-events-none fixed left-1/2 top-[-360px] z-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-red-600/[0.055] blur-[170px]" />
       <div className="pointer-events-none fixed bottom-[-320px] left-[-160px] z-0 h-[520px] w-[520px] rounded-full bg-red-950/[0.10] blur-[160px]" />
@@ -63,6 +62,7 @@ export default async function HomePage() {
 
 
       <div className="relative z-10 mx-auto max-w-[1480px] px-4 pb-32 pt-5 sm:px-6 md:pb-12 md:pt-7 xl:px-8">
+        <EmergencyHelpLive initialCount={liveEmergencies.length} enabled={emergencyHelpEnabled} />
         <div className="mb-5 flex items-center justify-between md:hidden">
           <Logo href="/home" className="h-9 w-auto scale-[1.7] transform-gpu" />
           <div className="flex items-center gap-2"><Link href="/map" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]"><LocationIcon className="h-4 w-4 text-red-300" /></Link><Link href="/profile" className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10">{user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0)}</Link></div>

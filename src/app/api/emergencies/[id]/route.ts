@@ -98,6 +98,13 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
   }
 
+  if (action === "ghost_mode") {
+    if (emergency.driverId !== user.id) return NextResponse.json({ success: false, error: "Only the person requesting help can change ghost mode." }, { status: 403, headers: noStore });
+    if (["COMPLETED", "CANCELLED", "ACCEPTED", "MECHANIC_EN_ROUTE", "ARRIVED"].includes(emergency.status)) return NextResponse.json({ success: false, error: "Ghost mode can only be changed while the request is open." }, { status: 409, headers: noStore });
+    const ghostMode = Boolean(body?.ghostMode);
+    const updated = await prisma.emergencyRequest.update({ where: { id }, data: { ghostMode } });
+    return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
+  }
   if (action === "radius") {
     if (emergency.driverId !== user.id) return NextResponse.json({ success: false, error: "Only the person requesting help can change the radius." }, { status: 403, headers: noStore });
     const radiusMeters = Number(body?.radiusMeters);
@@ -119,14 +126,18 @@ export async function PATCH(request: Request, { params }: Context) {
     const offer = emergency.offers.find((item) => item.id === offerId);
     if (!offer || offer.status !== "PENDING") return NextResponse.json({ success: false, error: "That offer is no longer available." }, { status: 409, headers: noStore });
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       await tx.emergencyOffer.updateMany({ where: { emergencyId: id, id: { not: offerId }, status: "PENDING" }, data: { status: "DECLINED" } });
       await tx.emergencyOffer.update({ where: { id: offerId }, data: { status: "ACCEPTED" } });
-      await tx.notification.create({ data: { userId: offer.mechanicId, actorId: user.id, type: "EMERGENCY_ACCEPTED", title: "Your help was accepted", body: "Your offer to help has been accepted.", href: "/emergency/nearby" } });
-      return tx.emergencyRequest.update({ where: { id }, data: { acceptedOfferId: offerId, status: "ACCEPTED", acceptedAt: new Date() } });
+      const directKey = [user.id, offer.mechanicId].sort().join(":");
+      const conversation = await tx.conversation.upsert({ where: { directKey }, create: { directKey }, update: {} });
+      await tx.conversationMember.createMany({ data: [{ conversationId: conversation.id, userId: user.id }, { conversationId: conversation.id, userId: offer.mechanicId }], skipDuplicates: true });
+      await tx.notification.create({ data: { userId: offer.mechanicId, actorId: user.id, type: "EMERGENCY_ACCEPTED", title: "Your help was accepted", body: "Your offer to help has been accepted. You can now chat with the requester.", href: "/messages/" + encodeURIComponent(user.name) } });
+      const emergency = await tx.emergencyRequest.update({ where: { id }, data: { acceptedOfferId: offerId, status: "ACCEPTED", acceptedAt: new Date() } });
+      return { emergency, conversationId: conversation.id };
     });
 
-    return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
+    return NextResponse.json({ success: true, emergency: result.emergency, conversationId: result.conversationId }, { headers: noStore });
   }
 
   if (action === "status") {

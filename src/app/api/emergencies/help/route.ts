@@ -6,16 +6,12 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: { "Cache-Control": "no-store" } });
 
-  const isMechanic =
-    user.role === "MECHANIC" ||
-    user.role === "MECHANIC_SHOP" ||
-    user.onboardingType === "MECHANIC" ||
-    user.onboardingType === "MECHANIC_SHOP";
-
-  if (!isMechanic) {
-    return NextResponse.json({ success: true, count: 0 }, { headers: { "Cache-Control": "no-store" } });
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "You must be logged in." },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const count = await prisma.emergencyRequest.count({
@@ -25,5 +21,8 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ success: true, count }, { headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(
+    { success: true, count },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

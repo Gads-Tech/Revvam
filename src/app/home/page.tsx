@@ -30,8 +30,7 @@ export default async function HomePage() {
         mentions: { include: { mentionedUser: { select: { id: true, name: true, username: true, image: true } } } },
       },
     }),
-    (user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP")
-      ? prisma.emergencyRequest.findMany({
+    prisma.emergencyRequest.findMany({
       where: { status: { in: ["OPEN", "OFFERS_RECEIVED"] }, driverId: { not: user.id } },
       orderBy: { createdAt: "desc" },
       take: 3,
@@ -45,13 +44,12 @@ export default async function HomePage() {
         createdAt: true,
         driver: { select: { username: true, image: true } },
       },
-    })
-      : Promise.resolve([]),
+    }),
     prisma.vehicle.count({ where: { ownerId: user.id } }),
     prisma.post.count({ where: { authorId: user.id } }),
   ]);
 
-  const emergencyHelpEnabled = isMechanic;
+  const emergencyHelpEnabled = true;
 
   return (
     <main className="min-h-screen bg-[#020202] text-white">
@@ -106,20 +104,16 @@ export default async function HomePage() {
 
             <section className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-4">
               <QuickLink href="/profile/cars/add" icon={<CarIcon className="h-4 w-4" />} label="Add car" />
-              {isMechanic ? (
-                <Link href="/emergency/nearby" className="relative flex min-w-0 items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-2 py-2.5 text-[10px] font-bold text-red-100 transition hover:border-red-400/50 hover:bg-red-500/15 sm:text-xs">
-                  <WarningIcon className="h-4 w-4 text-red-300" />
-                  <span className="truncate">Emergency Help</span>
-                  {liveEmergencies.length > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{liveEmergencies.length}</span>}
-                </Link>
-              ) : (
-                <QuickLink href="/emergency" icon={<WarningIcon className="h-4 w-4" />} label="Emergency" />
-              )}
+              <Link href="/emergency/nearby" className={`relative flex min-w-0 items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-[10px] font-bold transition sm:text-xs ${liveEmergencies.length > 0 ? "border-red-500/30 bg-red-500/10 text-red-100 hover:border-red-400/50 hover:bg-red-500/15" : "border-white/[0.08] bg-white/[0.025] text-white/50 hover:border-red-400/20 hover:bg-red-500/[0.06] hover:text-white"}`}>
+                <WarningIcon className={`h-4 w-4 ${liveEmergencies.length > 0 ? "text-red-300" : "text-red-300/80"}`} />
+                <span className="truncate">Emergency Help</span>
+                {liveEmergencies.length > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{liveEmergencies.length}</span>}
+              </Link>
               <QuickLink href="/map" icon={<LocationIcon className="h-4 w-4" />} label="Live map" />
               <QuickLink href="/profile" icon={<MoreIcon className="h-4 w-4" />} label="My profile" />
             </section>
 
-            <EmergencyHelpLive initialCount={liveEmergencies.length} enabled={user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP"} />            <section>
+            <section>
               <div className="mb-4 flex items-end justify-between">
                 <div><p className="text-[9px] font-bold uppercase tracking-[0.27em] text-white/20">Live from the community</p><h2 className="mt-1.5 text-xl font-bold tracking-tight sm:text-2xl">What people are posting</h2></div>
                 <span className="hidden rounded-full border border-white/[0.07] px-3 py-1 text-[9px] font-semibold text-white/25 sm:inline-flex">{posts.length} recent posts</span>
@@ -130,7 +124,6 @@ export default async function HomePage() {
 
           <aside className="hidden lg:block">
             <div className="sticky top-24 space-y-4">
-              {((user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP")) && (
               <section className="overflow-hidden rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025]">
                               <div className="flex items-center justify-between border-b border-white/[0.07] p-4"><div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><h3 className="text-xs font-bold">Live on map</h3></div><Link href="/map" className="text-[10px] font-semibold text-red-300">View all</Link></div>
                               <div className="p-2">
@@ -138,7 +131,6 @@ export default async function HomePage() {
                               </div>
                             </section>
               
-                            )}
 
               <section className="rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025] p-4">
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold">Your Revvam</h3><Link href="/profile" className="text-[10px] text-red-300">Profile</Link></div>

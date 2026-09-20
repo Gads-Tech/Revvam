@@ -28,7 +28,7 @@ export default async function HomePage() {
     }),
     user.role === "MECHANIC" || user.role === "MECHANIC_SHOP"
       ? prisma.emergencyRequest.findMany({
-      where: { status: "OPEN", driverId: { not: user.id } },
+      where: { status: { in: ["OPEN", "OFFERS_RECEIVED"] }, driverId: { not: user.id } },
       orderBy: { createdAt: "desc" },
       take: 3,
       select: {

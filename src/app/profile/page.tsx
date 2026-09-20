@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/session";
 import FollowBackButton from "@/components/FollowBackButton";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
+import AppHeader from "@/components/AppHeader";
 import MobileProfileLogout from "@/components/MobileProfileLogout";
 import BackButton from "@/components/BackButton";
 
@@ -54,22 +55,8 @@ export default async function ProfilePage() {
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_0%,rgba(220,38,38,0.10),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(127,29,29,0.10),transparent_30%)]" />
       <div className="pointer-events-none fixed left-1/2 top-[-320px] z-0 h-[620px] w-[620px] -translate-x-1/2 rounded-full bg-red-600/[0.05] blur-[170px]" />
 
-      <header className="sticky top-0 z-50 hidden border-b border-white/[0.07] bg-black/75 backdrop-blur-2xl md:block">
-        <div className="mx-auto flex h-[76px] max-w-7xl items-center gap-8 px-6 lg:px-8">
-          <Logo className="h-11 w-auto shrink-0" />
-          <nav className="flex flex-1 items-center justify-center gap-8">
-            <Link href="/home" className="relative py-7 text-sm font-medium text-white/75 transition hover:text-white after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-500">Discover</Link>
-            <Link href="/profile/mechanic" className="text-sm font-medium text-white/45 transition hover:text-white">Mechanics</Link>
-            <Link href="/map" className="text-sm font-medium text-white/45 transition hover:text-white">Dealerships</Link>
-            <Link href="/map" className="text-sm font-medium text-white/45 transition hover:text-white">Events</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <HeaderAction href="/profile/notifications" label="Notifications" icon={<BellIcon className="h-4 w-4" />} count={unreadNotifications} />
-            <HeaderAction href="/messages" label="Messages" icon={<MessageIcon className="h-4 w-4" />} count={unreadMessages} />
-            <Link href="/profile" className="ml-1 flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.035] py-1.5 pl-1.5 pr-3 transition hover:border-red-500/25 hover:bg-red-500/[0.06]"><Avatar image={user.image} fallback={firstLetter} size="sm" /><span className="max-w-28 truncate text-xs font-medium text-white/70">@{user.username}</span></Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
+
 
       <div className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-32 pt-6 sm:px-6 sm:pt-10 lg:px-8">
         <div className="mb-6 flex items-center justify-start gap-4 md:mb-8"><BackButton /></div>

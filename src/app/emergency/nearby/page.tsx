@@ -16,6 +16,7 @@ type Emergency = {
   latitude: number;
   longitude: number;
   radiusMeters: number;
+  ghostMode: boolean;
   exactLocation: boolean;
   locationLabel: string | null;
   createdAt: string;
@@ -121,6 +122,7 @@ export default function NearbyEmergencyPage() {
         radiusMeters: emergency.radiusMeters,
         exactLocation: emergency.exactLocation,
         description: emergency.description,
+        ghostMode: emergency.ghostMode,
       })),
     [emergencies],
   );
@@ -215,7 +217,8 @@ export default function NearbyEmergencyPage() {
           <RevvamMap
             userLocation={location}
             userImage={profileImage}
-            markers={mapMarkers}
+            markers={mapMarkers.filter((marker) => !marker.ghostMode)}
+            onOfferHelp={offerHelp}
           />
           <div className="px-3 py-2.5 text-[9px] text-white/25 sm:px-4">
             Red markers are active roadside requests. Your profile appears at your live location when permission is available.

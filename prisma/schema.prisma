@@ -15,37 +15,37 @@ model User {
   role                    UserRole                @default(USER)
   image                   String?
   bio                     String?
-  location                String?
-  readReceiptsEnabled     Boolean                 @default(true)
   emailVerified           DateTime?
   createdAt               DateTime                @default(now())
   updatedAt               DateTime                @updatedAt
   onboardingType          OnboardingType?
+  location                String?
+  readReceiptsEnabled     Boolean                 @default(true)
+  chatRequestsReceived    ChatRequest[]           @relation("ChatRequestRecipient")
+  chatRequestsSent        ChatRequest[]           @relation("ChatRequestSender")
+  conversationMemberships ConversationMember[]
   driverProfile           DriverProfile?
-  mechanicProfile         MechanicProfile?
-  mentionsMade            ModificationMention[]   @relation("MentionedBy")
-  mentionsReceived        ModificationMention[]   @relation("MentionedUser")
-  postMentionsMade        PostMention[]           @relation("PostMentionedBy")
-  postMentionsReceived    PostMention[]           @relation("PostMentionedUser")
-  postLikes               PostLike[]
-  postComments            PostComment[]
-  postShares              PostShare[]
-  sessions                Session[]
-  vehicles                Vehicle[]
+  emergencyOffers         EmergencyOffer[]        @relation("EmergencyOfferMechanic")
   emergencyRequests       EmergencyRequest[]
-  emergencyOffers         EmergencyOffer[] @relation("EmergencyOfferMechanic")
-  posts                   Post[]
   following               Follow[]                @relation("Following")
   followers               Follow[]                @relation("Followers")
-  notificationsReceived   Notification[]          @relation("NotificationRecipient")
-  notificationsSent       Notification[]          @relation("NotificationActor")
-  conversationMemberships ConversationMember[]
+  mechanicProfile         MechanicProfile?
   messagesSent            Message[]               @relation("MessagesSent")
-  chatRequestsSent        ChatRequest[]           @relation("ChatRequestSender")
-  chatRequestsReceived    ChatRequest[]           @relation("ChatRequestRecipient")
+  messageDeletions        MessageDeletion[]       @relation("MessageDeletionUser")
+  mentionsMade            ModificationMention[]   @relation("MentionedBy")
+  mentionsReceived        ModificationMention[]   @relation("MentionedUser")
+  notificationsSent       Notification[]          @relation("NotificationActor")
+  notificationsReceived   Notification[]          @relation("NotificationRecipient")
+  posts                   Post[]
+  postComments            PostComment[]
+  postLikes               PostLike[]
+  postMentionsMade        PostMention[]           @relation("PostMentionedBy")
+  postMentionsReceived    PostMention[]           @relation("PostMentionedUser")
+  postShares              PostShare[]
   readReceiptPreferences  ReadReceiptPreference[] @relation("ReadReceiptOwner")
   readReceiptOverrides    ReadReceiptPreference[] @relation("ReadReceiptTarget")
-  messageDeletions        MessageDeletion[]       @relation("MessageDeletionUser")
+  sessions                Session[]
+  vehicles                Vehicle[]
 }
 
 model DriverProfile {
@@ -74,20 +74,20 @@ model MechanicProfile {
 }
 
 model Vehicle {
-  id            String                @id @default(cuid())
-  userId        String
-  make          String
-  model         String
-  year          Int?
-  image         String?
-  isFeatured    Boolean               @default(false)
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  type          String?
-  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  modifications VehicleModification[]
-  photos        VehiclePhoto[]
+  id                String                @id @default(cuid())
+  userId            String
+  make              String
+  model             String
+  year              Int?
+  image             String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  type              String?
+  isFeatured        Boolean               @default(false)
   emergencyRequests EmergencyRequest[]
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modifications     VehicleModification[]
+  photos            VehiclePhoto[]
 
   @@index([userId])
 }
@@ -137,10 +137,10 @@ model ModificationMention {
   modificationId  String
   mentionedUserId String
   mentionedById   String
-  createdAt       DateTime             @default(now())
-  mentionedBy     User                 @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
-  mentionedUser   User                 @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
-  modification    VehicleModification  @relation(fields: [modificationId], references: [id], onDelete: Cascade)
+  createdAt       DateTime            @default(now())
+  mentionedBy     User                @relation("MentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
+  mentionedUser   User                @relation("MentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  modification    VehicleModification @relation(fields: [modificationId], references: [id], onDelete: Cascade)
 
   @@unique([modificationId, mentionedUserId])
   @@index([mentionedUserId])
@@ -149,63 +149,64 @@ model ModificationMention {
 }
 
 model Post {
-  id        String         @id @default(cuid())
+  id        String        @id @default(cuid())
   authorId  String
   content   String
   image     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   video     String?
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  likes     PostLike[]
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   comments  PostComment[]
-  shares    PostShare[]
+  likes     PostLike[]
   mentions  PostMention[]
+  shares    PostShare[]
 
   @@index([authorId, createdAt])
 }
 
 model EmergencyRequest {
-  id                  String                @id @default(cuid())
-  driverId            String
-  vehicleId           String?
-  type                EmergencyType
-  status              EmergencyStatus       @default(OPEN)
-  description         String
-  photo               String?
-  latitude            Float
-  longitude           Float
-  radiusMeters        Int                  @default(500)
-  ghostMode           Boolean              @default(false)
-  liveLatitude        Float?
-  liveLongitude       Float?
-  locationLabel       String?
-  acceptedOfferId     String?               @unique
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  acceptedAt          DateTime?
-  completedAt         DateTime?
-  driver              User                  @relation(fields: [driverId], references: [id], onDelete: Cascade)
-  vehicle             Vehicle?              @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
-  offers              EmergencyOffer[]
-  acceptedOffer       EmergencyOffer?       @relation("AcceptedEmergencyOffer", fields: [acceptedOfferId], references: [id], onDelete: SetNull)
+  id              String           @id @default(cuid())
+  driverId        String
+  vehicleId       String?
+  type            EmergencyType
+  status          EmergencyStatus  @default(OPEN)
+  description     String
+  photo           String?
+  latitude        Float
+  longitude       Float
+  locationLabel   String?
+  acceptedOfferId String?          @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  acceptedAt      DateTime?
+  completedAt     DateTime?
+  radiusMeters    Int              @default(500)
+  liveLatitude    Float?
+  liveLongitude   Float?
+  ghostMode       Boolean          @default(false)
+  offers          EmergencyOffer[]
+  acceptedOffer   EmergencyOffer?  @relation("AcceptedEmergencyOffer", fields: [acceptedOfferId], references: [id])
+  driver          User             @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle?         @relation(fields: [vehicleId], references: [id])
 
   @@index([status, createdAt])
   @@index([latitude, longitude])
   @@index([driverId, createdAt])
+  @@index([status, radiusMeters])
 }
 
 model EmergencyOffer {
-  id             String             @id @default(cuid())
-  emergencyId    String
-  mechanicId     String
-  message        String?
-  status         EmergencyOfferStatus @default(PENDING)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  emergency      EmergencyRequest   @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
-  mechanic       User               @relation("EmergencyOfferMechanic", fields: [mechanicId], references: [id], onDelete: Cascade)
-  acceptedFor    EmergencyRequest?  @relation("AcceptedEmergencyOffer")
+  id          String               @id @default(cuid())
+  emergencyId String
+  mechanicId  String
+  message     String?
+  status      EmergencyOfferStatus @default(PENDING)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  emergency   EmergencyRequest     @relation(fields: [emergencyId], references: [id], onDelete: Cascade)
+  mechanic    User                 @relation("EmergencyOfferMechanic", fields: [mechanicId], references: [id], onDelete: Cascade)
+  acceptedFor EmergencyRequest?    @relation("AcceptedEmergencyOffer")
 
   @@unique([emergencyId, mechanicId])
   @@index([mechanicId, status])
@@ -225,17 +226,17 @@ model PostLike {
 }
 
 model PostComment {
-  id        String         @id @default(cuid())
+  id        String        @id @default(cuid())
   postId    String
   authorId  String
-  parentId  String?
   content   String
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  post      Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent    PostComment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   PostComment[]  @relation("CommentReplies")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  parentId  String?
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    PostComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   PostComment[] @relation("CommentReplies")
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId, createdAt])
   @@index([authorId, createdAt])
@@ -243,11 +244,11 @@ model PostComment {
 }
 
 model PostShare {
-  id        String          @id @default(cuid())
+  id        String           @id @default(cuid())
   postId    String
   userId    String
   channel   PostShareChannel @default(REVVAM)
-  createdAt DateTime        @default(now())
+  createdAt DateTime         @default(now())
   post      Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -261,9 +262,9 @@ model PostMention {
   mentionedUserId String
   mentionedById   String
   createdAt       DateTime @default(now())
-  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  mentionedUser   User     @relation("PostMentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
   mentionedBy     User     @relation("PostMentionedBy", fields: [mentionedById], references: [id], onDelete: Cascade)
+  mentionedUser   User     @relation("PostMentionedUser", fields: [mentionedUserId], references: [id], onDelete: Cascade)
+  post            Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, mentionedUserId])
   @@index([mentionedUserId])
@@ -294,9 +295,9 @@ model Notification {
   readAt        DateTime?
   createdAt     DateTime         @default(now())
   chatRequestId String?          @unique
-  user          User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
   actor         User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   chatRequest   ChatRequest?     @relation(fields: [chatRequestId], references: [id], onDelete: Cascade)
+  user          User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
@@ -306,12 +307,12 @@ model ChatRequest {
   id           String            @id @default(cuid())
   senderId     String
   recipientId  String
-  message      String?
   status       ChatRequestStatus @default(PENDING)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  sender       User              @relation("ChatRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  message      String?
   recipient    User              @relation("ChatRequestRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender       User              @relation("ChatRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
   notification Notification?
 
   @@unique([senderId, recipientId])
@@ -347,13 +348,13 @@ model Message {
   conversationId String
   senderId       String
   content        String
-  replyToId      String?
   readAt         DateTime?
   createdAt      DateTime          @default(now())
+  replyToId      String?
   conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User              @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
-  replyTo        Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replyTo        Message?          @relation("MessageReplies", fields: [replyToId], references: [id])
   replies        Message[]         @relation("MessageReplies")
+  sender         User              @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
   deletions      MessageDeletion[]
 
   @@index([conversationId, createdAt])
@@ -433,18 +434,18 @@ enum PostShareChannel {
 
 enum UserRole {
   USER
-  ADMIN
   MECHANIC
-  MECHANIC_SHOP
   DEALERSHIP
+  ADMIN
+  MECHANIC_SHOP
 }
 
 enum OnboardingType {
   DRIVER
-  EXPLORER
   MECHANIC
   MECHANIC_SHOP
   DEALERSHIP
+  EXPLORER
 }
 
 enum ModificationCategory {

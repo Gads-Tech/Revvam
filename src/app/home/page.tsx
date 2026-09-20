@@ -55,9 +55,9 @@ export default async function HomePage() {
           <nav className="flex items-center gap-9">
             <NavLink href="/home" active>Discover</NavLink>
             <NavLink href="/map">Map</NavLink>
-            <NavLink href="/mechanics">Mechanics</NavLink>
-            <NavLink href="/dealerships">Dealerships</NavLink>
-            <NavLink href="/events">Events</NavLink>
+            <NavLink href="/profile/mechanic">Mechanics</NavLink>
+            <NavLink href="/map">Dealerships</NavLink>
+            <NavLink href="/map">Events</NavLink>
             <NavLink href="/messages">Chat</NavLink>
           </nav>
           <div className="flex items-center gap-2">
@@ -86,9 +86,9 @@ export default async function HomePage() {
                 <div className="p-2">
                   <SideLink href="/home" label="Discover" active />
                   <SideLink href="/map" label="Live map" badge={liveEmergencies.length ? String(liveEmergencies.length) : undefined} />
-                  <SideLink href="/mechanics" label="Mechanics" />
-                  <SideLink href="/dealerships" label="Dealerships" />
-                  <SideLink href="/events" label="Events" />
+                  <SideLink href="/profile/mechanic" label="Mechanics" />
+                  <SideLink href="/map" label="Dealerships" />
+                  <SideLink href="/map" label="Events" />
                   <SideLink href="/messages" label="Messages" />
                 </div>
               </section>

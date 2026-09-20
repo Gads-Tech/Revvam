@@ -159,8 +159,10 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
   }, []);
 
   const focusLocation = () => {
-    if (!mounted || !navigator.geolocation) return;
+    if (!mounted || !navigator.geolocation || locating) return;
     setLocating(true);
+
+    // Always request a fresh position when the button is pressed.
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const center = [position.coords.longitude, position.coords.latitude];
@@ -174,10 +176,9 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
         setLocating(false);
       },
       () => setLocating(false),
-      { enableHighAccuracy: true, maximumAge: 3000, timeout: 15000 },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
   };
-
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

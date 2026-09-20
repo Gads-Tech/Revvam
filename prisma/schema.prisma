@@ -176,6 +176,7 @@ model EmergencyRequest {
   latitude            Float
   longitude           Float
   radiusMeters        Int                  @default(500)
+  ghostMode           Boolean              @default(false)
   liveLatitude        Float?
   liveLongitude       Float?
   locationLabel       String?
@@ -469,6 +470,9 @@ enum NotificationType {
   POST_COMMENT
   POST_SHARE
   POST_MENTION
+  EMERGENCY_OFFER
+  EMERGENCY_ACCEPTED
+  EMERGENCY_DECLINED
 }
 
 enum ChatRequestStatus {

@@ -11,37 +11,6 @@ export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ success: false, error: "You must be logged in." }, { status: 401, headers: noStore });
-    // Keep mechanic emergency alerts reliable even if an emergency was created while
-    // the mechanic was offline or before the notification fan-out completed.
-    if (user.role === "MECHANIC" || user.role === "MECHANIC_SHOP") {
-      const openEmergencies = await prisma.emergencyRequest.findMany({
-        where: { status: { in: ["OPEN", "OFFERS_RECEIVED"] }, driverId: { not: user.id } },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        select: { id: true, driverId: true, type: true, description: true, createdAt: true, driver: { select: { name: true } } },
-      });
-
-      for (const emergency of openEmergencies) {
-        const href = "/map";
-        const existing = await prisma.notification.findFirst({
-          where: { userId: user.id, type: "EMERGENCY_OFFER", href, body: { contains: emergency.id } },
-          select: { id: true },
-        });
-        if (!existing) {
-          await prisma.notification.create({
-            data: {
-              userId: user.id,
-              actorId: emergency.driverId,
-              type: "EMERGENCY_OFFER",
-              title: "Emergency help needed nearby",
-              body: \`Emergency \${emergency.id}: \${emergency.driver.name} needs help with a \${emergency.type.toLowerCase().replaceAll("_", " ")}. \${emergency.description.slice(0, 220)}\`,
-              href,
-            },
-          });
-        }
-      }
-    }
-
     const notifications = await prisma.notification.findMany({
       where: notificationWhere(user.id), orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
       include: { actor: { select: { id: true, name: true, username: true, image: true } }, chatRequest: { select: { id: true, status: true, message: true } } },

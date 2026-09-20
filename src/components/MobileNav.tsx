@@ -25,6 +25,7 @@ export default function MobileNav() {
   const [loggingOut, setLoggingOut] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
+  const [emergencyCount, setEmergencyCount] = useState(0);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
@@ -67,6 +68,18 @@ export default function MobileNav() {
 
       setNotificationCount(Number(data.unreadNotifications) || 0);
       setMessageCount(Number(data.unreadMessages) || 0);
+      try {
+        const emergencyResponse = await fetch(`/api/emergencies/help?_=${Date.now()}`, {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+          signal,
+        });
+        const emergencyData = await emergencyResponse.json().catch(() => null);
+        if (emergencyResponse.ok && emergencyData?.success && !signal?.aborted) {
+          setEmergencyCount(Number(emergencyData.count) || 0);
+        }
+      } catch {}
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
     }
@@ -148,7 +161,7 @@ export default function MobileNav() {
                 <img src="/logo_mark.svg" alt="Revvam" className="h-8 w-8 object-contain" />
               </span>
             </Link>
-            <MobileNavItem icon={<BellIcon className="h-4 w-4" />} label="Alerts" href="/profile/notifications" active={pathname?.startsWith("/profile/notifications")} />
+            <MobileNavItem icon={<BellIcon className="h-4 w-4" />} label="Alerts" href="/profile/notifications" active={pathname?.startsWith("/profile/notifications")} badge={emergencyCount} />
             <MobileNavItem icon={<MessageIcon className="h-4 w-4" />} label="Messages" href="/messages" active={pathname?.startsWith("/messages")} />
           </nav>
         </div>
@@ -157,9 +170,9 @@ export default function MobileNav() {
   );
 }
 
-function MobileNavItem({ icon, label, href, onClick, active = false }: { icon: React.ReactNode; label: string; href?: string; onClick?: () => void; active?: boolean }) {
+function MobileNavItem({ icon, label, href, onClick, active = false, badge = 0 }: { icon: React.ReactNode; label: string; href?: string; onClick?: () => void; active?: boolean; badge?: number }) {
   const className = `flex h-full min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[15px] px-0.5 py-1 transition-all active:scale-[0.96] ${active ? "bg-red-500/[0.10] text-red-300" : "text-white/50 active:bg-white/[0.05]"}`;
-  const content = <><span className="flex h-5 items-center justify-center">{icon}</span><span className="mt-1 w-full truncate text-center text-[8px] font-medium leading-none tracking-tight sm:text-[9px]">{label}</span></>;
+  const content = <><span className="relative flex h-5 items-center justify-center">{icon}{badge > 0 && <span className="absolute -right-2 -top-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 text-[7px] font-black text-white">{badge > 99 ? "99+" : badge}</span>}</span><span className="mt-1 w-full truncate text-center text-[8px] font-medium leading-none tracking-tight sm:text-[9px]">{label}</span></>;
   if (onClick) return <button type="button" onClick={onClick} className={className} style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>{content}</button>;
   return <Link href={href ?? "#"} className={className} style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>{content}</Link>;
 }

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import GlassCard from "@/components/GlassCard";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
+import AppHeader from "@/components/AppHeader";
 import LiveSocialActions from "@/components/LiveSocialActions";
 import PostCard from "@/components/PostCard";
 
@@ -49,28 +50,8 @@ export default async function HomePage() {
       <div className="pointer-events-none fixed left-1/2 top-[-360px] z-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-red-600/[0.055] blur-[170px]" />
       <div className="pointer-events-none fixed bottom-[-320px] left-[-160px] z-0 h-[520px] w-[520px] rounded-full bg-red-950/[0.10] blur-[160px]" />
 
-      <header className="sticky top-0 z-50 hidden border-b border-white/[0.07] bg-black/80 backdrop-blur-2xl md:block">
-        <div className="mx-auto flex h-[76px] max-w-[1480px] items-center justify-between px-6 xl:px-8">
-          <Logo href="/home" className="h-11 w-auto scale-[1.55] transform-gpu" />
-          <nav className="flex items-center gap-9">
-            <NavLink href="/home" active>Discover</NavLink>
-            <NavLink href="/map">Map</NavLink>
-            <NavLink href="/profile/mechanic">Mechanics</NavLink>
-            <NavLink href="/map">Dealerships</NavLink>
-            <NavLink href="/map">Events</NavLink>
-            <NavLink href="/messages">Chat</NavLink>
-          </nav>
-          <div className="flex items-center gap-2">
-            <LiveSocialActions />
-            <Link href="/profile" className="ml-2 flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.025] px-2 py-1.5 transition hover:border-red-400/20">
-              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-red-500/10 text-xs font-bold text-red-300">
-                {user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0).toUpperCase()}
-              </span>
-              <span className="hidden text-left lg:block"><span className="block max-w-24 truncate text-xs font-semibold">{user.name}</span><span className="block text-[9px] text-white/30">@{user.username}</span></span>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
+
 
       <div className="relative z-10 mx-auto max-w-[1480px] px-4 pb-32 pt-5 sm:px-6 md:pb-12 md:pt-7 xl:px-8">
         <div className="mb-5 flex items-center justify-between md:hidden">

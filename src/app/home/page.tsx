@@ -26,7 +26,7 @@ export default async function HomePage() {
         mentions: { include: { mentionedUser: { select: { id: true, name: true, username: true, image: true } } } },
       },
     }),
-    user.role === "MECHANIC" || user.role === "MECHANIC_SHOP"
+    (user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP")
       ? prisma.emergencyRequest.findMany({
       where: { status: { in: ["OPEN", "OFFERS_RECEIVED"] }, driverId: { not: user.id } },
       orderBy: { createdAt: "desc" },
@@ -104,7 +104,7 @@ export default async function HomePage() {
               <QuickLink href="/profile" icon={<MoreIcon className="h-4 w-4" />} label="My profile" />
             </section>
 
-            {(user.role === "MECHANIC" || user.role === "MECHANIC_SHOP") && liveEmergencies.length > 0 && (
+            {((user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP")) && liveEmergencies.length > 0 && (
               <Link href="/emergency/nearby" className="mb-6 flex items-center justify-between rounded-[1.35rem] border border-red-500/25 bg-gradient-to-r from-red-950/40 via-red-500/[0.08] to-transparent px-4 py-3.5 transition hover:border-red-400/40 hover:bg-red-500/[0.10]">
                 <div className="flex items-center gap-3">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/15"><WarningIcon className="h-5 w-5 text-red-300" /></span>
@@ -125,7 +125,7 @@ export default async function HomePage() {
 
           <aside className="hidden lg:block">
             <div className="sticky top-24 space-y-4">
-              {(user.role === "MECHANIC" || user.role === "MECHANIC_SHOP") && (
+              {((user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP")) && (
               <section className="overflow-hidden rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025]">
                               <div className="flex items-center justify-between border-b border-white/[0.07] p-4"><div className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-red-500" /><h3 className="text-xs font-bold">Live on map</h3></div><Link href="/map" className="text-[10px] font-semibold text-red-300">View all</Link></div>
                               <div className="p-2">

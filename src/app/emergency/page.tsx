@@ -36,6 +36,7 @@ export default function EmergencyPage() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number; label: string | null } | null>(null);
   const [locating, setLocating] = useState(false);
   const [radiusMeters, setRadiusMeters] = useState(500);
+  const [ghostMode, setGhostMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -124,6 +125,7 @@ export default function EmergencyPage() {
           longitude: location.longitude,
           locationLabel: location.label,
           radiusMeters,
+          ghostMode,
         }),
       });
 
@@ -216,6 +218,18 @@ export default function EmergencyPage() {
               </div>
             </div>
 
+            <div className="rounded-[1.5rem] border border-white/[0.08] bg-white/[0.025] p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">05 · Privacy mode</p>
+                  <h2 className="mt-1 text-base font-bold">Ghost mode</h2>
+                  <p className="mt-2 max-w-xl text-xs leading-5 text-white/30">Hide your live position from the emergency map. Your request will appear as a written roadside alert so members can still offer help.</p>
+                </div>
+                <button type="button" aria-pressed={ghostMode} onClick={() => setGhostMode((value) => !value)} className={"relative h-7 w-12 shrink-0 rounded-full border transition " + (ghostMode ? "border-red-400/40 bg-red-500/30" : "border-white/10 bg-white/[.05]")}>
+                  <span className={"absolute top-1 h-5 w-5 rounded-full bg-white transition " + (ghostMode ? "left-6" : "left-1")} />
+                </button>
+              </div>
+            </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25">05 · Add evidence</p>
               <div className="mt-3 flex flex-wrap gap-3">

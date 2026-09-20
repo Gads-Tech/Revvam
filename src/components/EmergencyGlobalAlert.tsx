@@ -4,77 +4,116 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { WarningIcon } from "@/components/icons";
 
+type AlertData = {
+  count: number;
+  latest: {
+    id: string;
+    type: string;
+    description: string;
+    locationLabel: string | null;
+    ghostMode: boolean;
+    radiusMeters: number;
+  } | null;
+};
+
 export default function EmergencyGlobalAlert() {
-  const [count, setCount] = useState(0);
-  const [visible, setVisible] = useState(false);
-  const previousCount = useRef(0);
+  const [data, setData] = useState<AlertData>({ count: 0, latest: null });
+  const [showPulse, setShowPulse] = useState(false);
+  const lastLatestId = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    let timer: number | undefined;
 
     const check = async () => {
       try {
         const response = await fetch("/api/emergencies/help?_=" + Date.now(), {
+          method: "GET",
           credentials: "include",
           cache: "no-store",
-          headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+          headers: {
+            Accept: "application/json",
+            "Cache-Control": "no-cache, no-store, max-age=0",
+          },
         });
-        const data = await response.json().catch(() => null);
-        if (!active || !response.ok || typeof data?.count !== "number") return;
 
-        const next = Math.max(0, data.count);
-        setCount(next);
+        const json = await response.json().catch(() => null);
+        if (!active || !response.ok || !json?.success) return;
 
-        // Pop the alert when a new emergency appears.
-        if (next > previousCount.current) {
-          setVisible(true);
+        const next: AlertData = {
+          count: Number(json.count) || 0,
+          latest: json.latest ?? null,
+        };
+
+        if (next.latest?.id && next.latest.id !== lastLatestId.current) {
+          setShowPulse(true);
           window.setTimeout(() => {
-            if (active) setVisible(false);
-          }, 9000);
-        } else if (next === 0) {
-          setVisible(false);
+            if (active) setShowPulse(false);
+          }, 8000);
         }
 
-        previousCount.current = next;
+        lastLatestId.current = next.latest?.id ?? null;
+        setData(next);
       } catch {
-        // Keep the last known state if the network briefly fails.
+        // A temporary network failure must not make the existing alert disappear.
       }
     };
 
-    check();
-    const timer = window.setInterval(check, 2500);
+    void check();
+    timer = window.setInterval(() => void check(), 2500);
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       active = false;
-      window.clearInterval(timer);
+      if (timer) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 
-  if (count < 1) return null;
+  if (data.count < 1) return null;
+
+  const latestText = data.latest
+    ? data.latest.type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter: string) => letter.toUpperCase())
+    : "Roadside assistance";
 
   return (
-    <>
+    <div
+      className="pointer-events-none fixed inset-x-0 top-0 z-[2147483640] flex justify-center px-3 pt-[max(10px,env(safe-area-inset-top))] md:pt-4"
+      role="status"
+      aria-live="polite"
+    >
       <Link
         href="/emergency/nearby"
-        aria-label={`Open ${count} active emergency help request${count === 1 ? "" : "s"}`}
-        className={`fixed left-1/2 top-[max(10px,env(safe-area-inset-top))] z-[2147483640] w-[min(92vw,430px)] -translate-x-1/2 rounded-2xl border border-red-500/35 bg-[#120303]/95 px-4 py-3 text-white shadow-[0_14px_50px_rgba(0,0,0,.75),0_0_35px_rgba(239,68,68,.16)] backdrop-blur-xl transition-all duration-300 md:top-4 ${visible ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-95"}`}
+        className={`pointer-events-auto flex w-full max-w-[520px] items-center gap-3 rounded-2xl border border-red-500/40 bg-[#110303]/[0.98] px-4 py-3 text-white shadow-[0_18px_60px_rgba(0,0,0,.85),0_0_45px_rgba(239,68,68,.18)] backdrop-blur-2xl transition-all hover:border-red-400/60 hover:bg-[#180404] ${showPulse ? "ring-2 ring-red-500/25" : ""}`}
       >
-        <div className="flex items-center gap-3">
-          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/15 text-red-300">
-            <span className="absolute inset-0 animate-ping rounded-xl bg-red-500/10" />
-            <WarningIcon className="relative h-5 w-5" />
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-400/20 bg-red-500/15 text-red-300">
+          <span className="absolute inset-0 animate-ping rounded-xl bg-red-500/10" />
+          <WarningIcon className="relative h-5 w-5" />
+        </span>
+
+        <span className="min-w-0 flex-1">
+          <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-red-400">
+            Emergency Help
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-red-400">Emergency Help</span>
-            <span className="mt-0.5 block truncate text-sm font-bold">
-              {count} active {count === 1 ? "roadside request" : "roadside requests"}
+          <span className="mt-0.5 block truncate text-sm font-bold">
+            {data.count} active {data.count === 1 ? "request" : "requests"} · {latestText}
+          </span>
+          {data.latest?.description && (
+            <span className="mt-0.5 block truncate text-[10px] text-white/35">
+              {data.latest.description}
             </span>
-          </span>
-          <span className="shrink-0 rounded-full bg-red-500 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white">
-            View
-          </span>
-        </div>
+          )}
+        </span>
+
+        <span className="shrink-0 rounded-full bg-red-500 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-white">
+          View
+        </span>
       </Link>
-    </>
+    </div>
   );
 }

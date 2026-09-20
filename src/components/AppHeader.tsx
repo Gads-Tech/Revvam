@@ -26,9 +26,23 @@ export default function AppHeader() {
       .then((r) => r.json())
       .then((data) => {
         if (!active || !data?.success || !data.user) return;
-        setProfile({ name: data.user.name, username: data.user.username, image: data.user.image ?? null, isMechanic: data.user.role === "MECHANIC" || data.user.role === "MECHANIC_SHOP" || data.user.onboardingType === "MECHANIC" || data.user.onboardingType === "MECHANIC_SHOP" });
-      }).catch(() => undefined);
-    useEffect(() => {
+        const isMechanic =
+          data.user.role === "MECHANIC" ||
+          data.user.role === "MECHANIC_SHOP" ||
+          data.user.onboardingType === "MECHANIC" ||
+          data.user.onboardingType === "MECHANIC_SHOP";
+        setProfile({
+          name: data.user.name,
+          username: data.user.username,
+          image: data.user.image ?? null,
+          isMechanic,
+        });
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     if (!profile?.isMechanic) {
       setEmergencyCount(0);
       return;
@@ -36,14 +50,22 @@ export default function AppHeader() {
     let active = true;
     const check = async () => {
       try {
-        const response = await fetch("/api/emergencies/help", { credentials: "include", cache: "no-store" });
+        const response = await fetch("/api/emergencies/help", {
+          credentials: "include",
+          cache: "no-store",
+        });
         const data = await response.json();
-        if (active && response.ok && typeof data?.count === "number") setEmergencyCount(data.count);
+        if (active && response.ok && typeof data?.count === "number") {
+          setEmergencyCount(data.count);
+        }
       } catch {}
     };
     check();
     const timer = window.setInterval(check, 3000);
     return () => { active = false; window.clearInterval(timer); };
+  }, [profile?.isMechanic]);
+
+  return () => { active = false; window.clearInterval(timer); };
   }, [profile?.isMechanic]);
 
   return () => { active = false; };

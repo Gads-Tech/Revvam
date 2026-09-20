@@ -34,6 +34,7 @@ export default async function HomePage() {
           <Logo href="/home" className="h-12 w-auto scale-[1.65] transform-gpu" />
           <nav className="flex items-center gap-8">
             <Link href="/home" className="text-sm font-medium text-white hover:text-red-400">Discover</Link>
+            <Link href="/map" className="text-sm font-medium text-white/40 hover:text-white">Map</Link>
             <Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Mechanics</Link>
             <Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Dealerships</Link>
             <Link href="#" className="text-sm font-medium text-white/40 hover:text-white">Events</Link>

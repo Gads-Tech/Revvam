@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import EmergencyHelpLive from "@/components/EmergencyHelpLive";
 import { redirect } from "next/navigation";
 import { CarIcon, MessageIcon, MoreIcon, SearchIcon, WarningIcon, LocationIcon, BellIcon } from "@/components/icons";
 
@@ -18,7 +16,6 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/");
 
-  const isMechanic = user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP";
 
   const [posts, liveEmergencies, vehicleCount, postCount] = await Promise.all([
     prisma.post.findMany({
@@ -161,28 +158,6 @@ export default async function HomePage() {
 
 function NavLink({ href, active = false, children }: { href: string; active?: boolean; children: React.ReactNode }) {
   return <Link href={href} className={`relative py-7 text-xs font-semibold transition ${active ? "text-white after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-500" : "text-white/40 hover:text-white"}`}>{children}</Link>;
-}
-
-function EmergencyHelpLive({ initialCount, enabled }: { initialCount: number; enabled: boolean }) {
-  const [count, setCount] = useState(initialCount);
-  useEffect(() => {
-    if (!enabled) return;
-    let active = true;
-    const check = async () => {
-      try {
-        const response = await fetch("/api/emergencies", { cache: "no-store", credentials: "include" });
-        if (!response.ok) return;
-        const data = await response.json();
-        if (!active || !Array.isArray(data?.emergencies)) return;
-        setCount(data.emergencies.filter((e: { status?: string }) => e.status === "OPEN" || e.status === "OFFERS_RECEIVED").length);
-      } catch {}
-    };
-    check();
-    const timer = window.setInterval(check, 5000);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [enabled]);
-  if (!enabled || count < 1) return null;
-  return null;
 }
 
 function SideLink({ href, label, active = false, badge }: { href: string; label: string; active?: boolean; badge?: string }) {

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import LiveSocialActions from "@/components/LiveSocialActions";
 import Logo from "@/components/Logo";
 
-type Profile = { name: string; username: string; image: string | null };
+type Profile = { name: string; username: string; image: string | null; isMechanic: boolean };
 
 const links = [
   { href: "/home", label: "Discover" },
@@ -19,15 +19,34 @@ const links = [
 export default function AppHeader() {
   const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [emergencyCount, setEmergencyCount] = useState(0);
   useEffect(() => {
     let active = true;
     fetch("/api/profile", { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         if (!active || !data?.success || !data.user) return;
-        setProfile({ name: data.user.name, username: data.user.username, image: data.user.image ?? null });
+        setProfile({ name: data.user.name, username: data.user.username, image: data.user.image ?? null, isMechanic: data.user.role === "MECHANIC" || data.user.role === "MECHANIC_SHOP" || data.user.onboardingType === "MECHANIC" || data.user.onboardingType === "MECHANIC_SHOP" });
       }).catch(() => undefined);
-    return () => { active = false; };
+    useEffect(() => {
+    if (!profile?.isMechanic) {
+      setEmergencyCount(0);
+      return;
+    }
+    let active = true;
+    const check = async () => {
+      try {
+        const response = await fetch("/api/emergencies/help", { credentials: "include", cache: "no-store" });
+        const data = await response.json();
+        if (active && response.ok && typeof data?.count === "number") setEmergencyCount(data.count);
+      } catch {}
+    };
+    check();
+    const timer = window.setInterval(check, 3000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [profile?.isMechanic]);
+
+  return () => { active = false; };
   }, []);
   return (
     <header className="sticky top-0 z-50 border-b border-white/[0.07] bg-black/80 backdrop-blur-2xl">
@@ -40,6 +59,12 @@ export default function AppHeader() {
           })}
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
+          {profile?.isMechanic && emergencyCount > 0 && (
+            <Link href="/emergency/nearby" className="flex items-center gap-2 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-red-200 shadow-[0_0_24px_rgba(239,68,68,.12)] hover:bg-red-500/15" title="Active emergency help requests">
+              <span className="flex h-2 w-2 animate-pulse rounded-full bg-red-400" />
+              Emergency Help {emergencyCount}
+            </Link>
+          )}
           <div className="hidden md:block"><LiveSocialActions /></div>
           <Link href="/profile" aria-label={profile ? `Open @${profile.username} profile` : "Open profile"} className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-1.5 py-1.5 transition hover:border-red-400/25">
             <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-red-500/10 text-xs font-bold text-red-300">{profile?.image ? <img src={profile.image} alt="" className="h-full w-full object-cover" /> : (profile?.name?.charAt(0).toUpperCase() || "R")}</span>

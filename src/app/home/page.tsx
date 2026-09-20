@@ -17,6 +17,8 @@ export default async function HomePage() {
   if (!user) redirect("/");
 
 
+  const isMechanic = user.role === "MECHANIC" || user.role === "MECHANIC_SHOP" || user.onboardingType === "MECHANIC" || user.onboardingType === "MECHANIC_SHOP";
+
   const [posts, liveEmergencies, vehicleCount, postCount] = await Promise.all([
     prisma.post.findMany({
       orderBy: { createdAt: "desc" },
@@ -49,7 +51,10 @@ export default async function HomePage() {
     prisma.post.count({ where: { authorId: user.id } }),
   ]);
 
+  const emergencyHelpEnabled = isMechanic;
+
   return (
+    <EmergencyHelpLive initialCount={liveEmergencies.length} enabled={emergencyHelpEnabled} />
     <main className="min-h-screen bg-[#020202] text-white">
       <div className="pointer-events-none fixed left-1/2 top-[-360px] z-0 h-[720px] w-[720px] -translate-x-1/2 rounded-full bg-red-600/[0.055] blur-[170px]" />
       <div className="pointer-events-none fixed bottom-[-320px] left-[-160px] z-0 h-[520px] w-[520px] rounded-full bg-red-950/[0.10] blur-[160px]" />

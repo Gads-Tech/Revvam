@@ -58,10 +58,10 @@ export default async function ProfilePage() {
         <div className="mx-auto flex h-[76px] max-w-7xl items-center gap-8 px-6 lg:px-8">
           <Logo className="h-11 w-auto shrink-0" />
           <nav className="flex flex-1 items-center justify-center gap-8">
-            <Link href="/home" className="text-sm font-medium text-white/45 transition hover:text-white">Discover</Link>
-            <Link href="#" className="text-sm font-medium text-white/45 transition hover:text-white">Mechanics</Link>
-            <Link href="#" className="text-sm font-medium text-white/45 transition hover:text-white">Dealerships</Link>
-            <Link href="#" className="text-sm font-medium text-white/45 transition hover:text-white">Events</Link>
+            <Link href="/home" className="relative py-7 text-sm font-medium text-white/75 transition hover:text-white after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-red-500">Discover</Link>
+            <Link href="/profile/mechanic" className="text-sm font-medium text-white/45 transition hover:text-white">Mechanics</Link>
+            <Link href="/map" className="text-sm font-medium text-white/45 transition hover:text-white">Dealerships</Link>
+            <Link href="/map" className="text-sm font-medium text-white/45 transition hover:text-white">Events</Link>
           </nav>
           <div className="flex items-center gap-2">
             <HeaderAction href="/profile/notifications" label="Notifications" icon={<BellIcon className="h-4 w-4" />} count={unreadNotifications} />

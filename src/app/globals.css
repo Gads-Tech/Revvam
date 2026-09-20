@@ -4,7 +4,11 @@
 @theme inline { --color-background: var(--background); --color-foreground: var(--foreground); --font-sans: var(--font-geist-sans); --font-mono: var(--font-geist-mono); }
 @media (prefers-color-scheme: dark) { :root { --background: #0a0a0a; --foreground: #ededed; } }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; overscroll-behavior-x: none; }
+body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-serif; overscroll-behavior-x: none; }
+.revvam-shell { position: relative; min-height: 100vh; overflow-x: hidden; background: #020202; color: #fff; }
+.revvam-shell::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; background: radial-gradient(circle at 50% 0%, rgba(220,38,38,.075), transparent 32%), radial-gradient(circle at 100% 100%, rgba(127,29,29,.07), transparent 28%); }
+.revvam-panel { border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); border-radius: 1.7rem; backdrop-filter: blur(24px); box-shadow: 0 24px 70px rgba(0,0,0,.28); }
+.revvam-panel-red { border: 1px solid rgba(239,68,68,.16); background: linear-gradient(135deg, rgba(127,29,29,.20), rgba(255,255,255,.025), transparent); border-radius: 1.7rem; }
 @media (max-width: 767px) { html, body { touch-action: pan-x pan-y; overscroll-behavior-x: none; } input, textarea, select, button, a { touch-action: manipulation; } }
 .mobile-nav-root { visibility: visible; -webkit-user-select: none; user-select: none; }
 @media (min-width: 768px) { .mobile-nav-root { display: none !important; } }

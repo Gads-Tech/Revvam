@@ -116,7 +116,20 @@ export async function POST(request: Request, context: RouteContext) {
     const body = await request.json().catch(() => ({}));
     const content = typeof body.content === "string" ? body.content.trim() : "";
     const replyToId = typeof body.replyToId === "string" ? body.replyToId : null;
-    if (!content) return NextResponse.json({ success: false, error: "Message cannot be empty." }, { status: 400, headers: noStoreHeaders });
+    const messageType = typeof body.messageType === "string" ? body.messageType : "TEXT";
+    const mediaUrl = typeof body.mediaUrl === "string" ? body.mediaUrl : null;
+    const mediaMimeType = typeof body.mediaMimeType === "string" ? body.mediaMimeType : null;
+    const mediaSize = Number.isFinite(body.mediaSize) ? Number(body.mediaSize) : null;
+    const latitude = Number.isFinite(body.latitude) ? Number(body.latitude) : null;
+    const longitude = Number.isFinite(body.longitude) ? Number(body.longitude) : null;
+    const durationMs = Number.isFinite(body.durationMs) ? Number(body.durationMs) : null;
+    const allowedTypes = new Set(["TEXT", "IMAGE", "VIDEO", "AUDIO", "LOCATION"]);
+    if (!allowedTypes.has(messageType)) return NextResponse.json({ success: false, error: "Invalid message type." }, { status: 400, headers: noStoreHeaders });
+    if (messageType === "TEXT" && !content) return NextResponse.json({ success: false, error: "Message cannot be empty." }, { status: 400, headers: noStoreHeaders });
+    if (messageType !== "TEXT" && !mediaUrl && messageType !== "LOCATION") return NextResponse.json({ success: false, error: "Media is required." }, { status: 400, headers: noStoreHeaders });
+    if (messageType === "VIDEO" && (!mediaSize || mediaSize > 10 * 1024 * 1024)) return NextResponse.json({ success: false, error: "Video must not exceed 10 MB." }, { status: 400, headers: noStoreHeaders });
+    if (messageType === "AUDIO" && (!durationMs || durationMs > 60_000)) return NextResponse.json({ success: false, error: "Audio must not exceed 1 minute." }, { status: 400, headers: noStoreHeaders });
+    if (messageType === "VIDEO" && durationMs && durationMs > 60_000) return NextResponse.json({ success: false, error: "Video must not exceed 1 minute." }, { status: 400, headers: noStoreHeaders });
     if (content.length > 2000) return NextResponse.json({ success: false, error: "Message must be 2000 characters or less." }, { status: 400, headers: noStoreHeaders });
 
     const recipient = await prisma.conversationMember.findFirst({ where: { conversationId, userId: { not: user.id } }, select: { userId: true } });
@@ -130,7 +143,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const message = await prisma.$transaction(async (tx) => {
-      const created = await tx.message.create({ data: { conversationId, senderId: user.id, content, replyToId: validReplyToId }, include: messageInclude });
+      const created = await tx.message.create({ data: { conversationId, senderId: user.id, content, replyToId: validReplyToId, messageType: messageType as any, mediaUrl, mediaMimeType, mediaSize, latitude, longitude, durationMs }, include: messageInclude });
       await tx.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
       return created;
     });

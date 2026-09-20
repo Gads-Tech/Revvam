@@ -48,8 +48,10 @@ export async function GET() {
       longitude: location.longitude,
       radiusMeters: location.radiusMeters,
       exactLocation: location.exactLocation,
+      ghostMode: emergency.ghostMode,
       // Never expose the real coordinates to the public nearby feed.
       ...(location.exactLocation ? {} : { description: emergency.description }),
+      ...(emergency.ghostMode ? { latitude: undefined, longitude: undefined, exactLocation: false } : {}),
       offers: emergency.offers.map(({ mechanicId, ...offer }) => offer),
     };
   });
@@ -67,6 +69,7 @@ export async function POST(request:Request) {
   const latitude=Number(body.latitude), longitude=Number(body.longitude);
   const vehicleId=typeof body.vehicleId==="string"?body.vehicleId:null;
   const radiusMeters=Number(body.radiusMeters);
+  const ghostMode=Boolean(body.ghostMode);
   if(!types.has(type)) return NextResponse.json({success:false,error:"Choose a valid emergency type."},{status:400,headers:noStore});
   if(!description) return NextResponse.json({success:false,error:"Describe the problem."},{status:400,headers:noStore});
   if(!Number.isFinite(radiusMeters)||![500,1000,2500,5000].includes(radiusMeters)) return NextResponse.json({success:false,error:"Choose a valid assistance radius."},{status:400,headers:noStore});
@@ -77,6 +80,6 @@ export async function POST(request:Request) {
     const vehicle=await prisma.vehicle.findFirst({where:{id:vehicleId,userId:user.id},select:{id:true}});
     if(!vehicle) return NextResponse.json({success:false,error:"Vehicle not found."},{status:400,headers:noStore});
   }
-  const emergency=await prisma.emergencyRequest.create({data:{driverId:user.id,vehicleId,type:type as any,description,photo:photo||null,latitude,longitude,locationLabel:typeof body.locationLabel==="string"?body.locationLabel.trim()||null:null,radiusMeters}});
+  const emergency=await prisma.emergencyRequest.create({data:{driverId:user.id,vehicleId,type:type as any,description,photo:photo||null,latitude,longitude,locationLabel:typeof body.locationLabel==="string"?body.locationLabel.trim()||null:null,radiusMeters,ghostMode}});
   return NextResponse.json({success:true,emergency},{status:201,headers:noStore});
 }

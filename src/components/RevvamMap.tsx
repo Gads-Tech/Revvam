@@ -16,15 +16,17 @@ type Marker = {
   description?: string;
   radiusMeters?: number;
   exactLocation?: boolean;
+  ghostMode?: boolean;
 };
 
 type Props = {
   userLocation: { latitude: number; longitude: number } | null;
   userImage: string | null;
   markers: Marker[];
+  onOfferHelp?: (emergencyId: string) => void;
 };
 
-export default function RevvamMap({ userLocation, userImage, markers }: Props) {
+export default function RevvamMap({ userLocation, userImage, markers, onOfferHelp }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const [locating, setLocating] = useState(false);
@@ -229,10 +231,15 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
       el.className = "revvam-emergency-marker";
       el.style.cssText = "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ef4444;border:3px solid #fff;color:#fff;font-weight:900;font-size:22px;box-shadow:0 0 0 4px rgba(239,68,68,.16),0 0 24px rgba(239,68,68,.58);box-sizing:border-box;";
       el.textContent = "!";
-      const popupText = "<strong>⚠ " + m.title + "</strong><br/><span>" + (m.description ?? "") + "</span><br/><small>" + (m.exactLocation ? "Exact live location" : "Approximate location") + " · " + (m.radiusMeters ?? 500) + "m radius</small>";
+      const popupText = "<div style=\"min-width:190px\"><strong>⚠ " + m.title + "</strong><br/><span>" + (m.description ?? "") + "</span><br/><small>" + (m.exactLocation ? "Exact live location" : "Approximate location") + " · " + (m.radiusMeters ?? 500) + "m radius</small><br/><button type=\"button\" data-revvam-offer=\"" + m.id + "\" style=\"margin-top:8px;width:100%;border:0;border-radius:10px;background:#ef4444;color:white;padding:8px;font-weight:700;cursor:pointer\">Offer to help</button></div>";
+      const popup = new window.maplibregl.Popup({ offset: 22 }).setHTML(popupText);
+      popup.on("open", () => {
+        const node = popup.getElement()?.querySelector("[data-revvam-offer]");
+        node?.addEventListener("click", () => onOfferHelp?.(m.id));
+      });
       const marker = new window.maplibregl.Marker({ element: el })
         .setLngLat([m.longitude, m.latitude])
-        .setPopup(new window.maplibregl.Popup({ offset: 22 }).setHTML(popupText))
+        .setPopup(popup)
         .addTo(map);
       markersRef.current.push(marker);
 
@@ -267,7 +274,7 @@ export default function RevvamMap({ userLocation, userImage, markers }: Props) {
       }
     });
 
-  }, [userLocation, userImage, markers]);
+  }, [userLocation, userImage, markers, onOfferHelp]);
 
   return (
     <div ref={containerRef} className="relative h-[320px] w-full overflow-hidden rounded-[1.7rem] border border-white/[0.10] bg-[#05070b] shadow-[0_24px_70px_rgba(0,0,0,.45)] sm:h-[400px]">

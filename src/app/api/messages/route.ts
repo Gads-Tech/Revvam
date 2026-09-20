@@ -23,7 +23,7 @@ export async function GET() {
       orderBy: { updatedAt: "desc" },
       include: {
         members: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
-        messages: { orderBy: { createdAt: "desc" }, take: 1 },
+        messages: { orderBy: { createdAt: "desc" }, take: 1, select: { content: true, createdAt: true, senderId: true, readAt: true } },
       },
     });
 

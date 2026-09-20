@@ -140,19 +140,16 @@ export default function MobileNav() {
             <button type="button" onClick={handleLogout} disabled={loggingOut} className="flex min-h-11 w-full items-center rounded-xl px-3 text-left text-sm font-semibold text-red-300 active:bg-red-500/[0.12] disabled:opacity-50" style={{ touchAction: "manipulation" }}><BackIcon className="mr-3 h-4 w-4 rotate-180 text-red-400/80" />{loggingOut ? "Logging out…" : "Log out"}</button>
           </div>}
 
-          <nav aria-label="Mobile navigation" className="relative z-[2147483647] flex h-16 w-full flex-row items-stretch overflow-hidden rounded-[20px] border border-white/[0.12] bg-[#080808] p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)]" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
-            <MobileNavItem icon={<BackIcon className="h-4 w-4" />} label="Back" onClick={handleBack} />
-            <DiscoverLink className={`flex h-full min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[15px] px-0.5 py-1 transition-all active:scale-[0.96] ${pathname === "/home" ? "bg-red-500/[0.10] text-red-300" : "text-white/50 active:bg-white/[0.05]"}`}>
-              <span className="flex h-5 items-center justify-center"><SearchIcon className="h-4 w-4" /></span>
-              <span className="mt-1 w-full truncate text-center text-[8px] font-medium leading-none tracking-tight sm:text-[9px]">Discover</span>
-            </DiscoverLink>
-            <MobileNavItem icon={<CarIcon className="h-4 w-4" />} label="Mechanics" href="#" />
-            <MobileNavItem icon={<CarIcon className="h-4 w-4" />} label="Dealers" href="#" />
-            <MobileNavItem icon={<LocationIcon className="h-4 w-4" />} label="Events" href="#" />
-            <button data-revvam-profile-toggle type="button" onClick={() => setProfileMenuOpen((open) => !open)} aria-expanded={profileMenuOpen} aria-label={`Profile menu${combinedCount ? `, ${combinedCount} unread` : ""}`} className={`relative flex h-full min-w-0 flex-1 touch-manipulation flex-col items-center justify-center rounded-[15px] px-0.5 py-1 transition-all active:scale-[0.96] ${pathname?.startsWith("/profile") || profileMenuOpen ? "bg-red-500/[0.10] text-red-300" : "text-white/50 active:bg-white/[0.05]"}`} style={{ WebkitTapHighlightColor: "transparent", touchAction: "manipulation" }}>
-              <span className="relative flex h-5 w-5 items-center justify-center rounded-full border border-current/20 bg-white/[0.05] text-[10px] font-bold leading-none"><UserIcon className="h-3.5 w-3.5" />{combinedCount > 0 && <span className="absolute -right-3 -top-2 min-w-4 rounded-full bg-red-500 px-1 text-center text-[8px] font-black leading-4 text-white">{combinedCount > 99 ? "99+" : combinedCount}</span>}</span>
-              <span className="mt-1 w-full truncate text-center text-[9px] font-medium leading-none tracking-tight">Profile</span>
-            </button>
+          <nav aria-label="Mobile navigation" className="relative z-[2147483647] flex h-16 w-full items-stretch overflow-hidden rounded-[22px] border border-white/[0.12] bg-[#080808]/95 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)] backdrop-blur-xl" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
+            <MobileNavItem icon={<SearchIcon className="h-4 w-4" />} label="Discover" href="/home" active={pathname === "/home"} />
+            <MobileNavItem icon={<LocationIcon className="h-4 w-4" />} label="Map" href="/map" active={pathname === "/map"} />
+            <Link href="/emergency" aria-label="Revvam emergency" className="flex h-full min-w-0 flex-1 items-center justify-center px-1">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-red-500/45 bg-black shadow-[0_0_28px_rgba(239,68,68,.18)]">
+                <img src="/logo_mark.svg" alt="Revvam" className="h-8 w-8 object-contain" />
+              </span>
+            </Link>
+            <MobileNavItem icon={<BellIcon className="h-4 w-4" />} label="Alerts" href="/profile/notifications" active={pathname?.startsWith("/profile/notifications")} />
+            <MobileNavItem icon={<MessageIcon className="h-4 w-4" />} label="Messages" href="/messages" active={pathname?.startsWith("/messages")} />
           </nav>
         </div>
       </div>

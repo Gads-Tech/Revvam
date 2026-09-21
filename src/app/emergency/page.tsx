@@ -65,19 +65,44 @@ export default function EmergencyPage() {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          setLocating(false);
+          setMessage("We could not get a valid location. Please try again.");
+          return;
+        }
+
         setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude,
+          longitude,
           label: null,
         });
         setLocating(false);
-        setMessage("Your current location is ready to share with nearby helpers.");
+        setMessage(
+          Number.isFinite(accuracy)
+            ? `Location shared (about ${Math.round(accuracy)}m accuracy).`
+            : "Your current location is ready to share with nearby helpers.",
+        );
       },
-      () => {
+      (error) => {
         setLocating(false);
-        setMessage("We need your location before an emergency can be posted.");
+
+        if (error.code === 1) {
+          setMessage("Location permission was denied. Allow location access for localhost in your browser, then tap Share location again.");
+        } else if (error.code === 2) {
+          setMessage("Your location could not be determined. Check that Location Services are enabled, then try again.");
+        } else if (error.code === 3) {
+          setMessage("Location lookup timed out. Make sure Location Services are enabled and try Share location again.");
+        } else {
+          setMessage("We could not get your location. Please try again.");
+        }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      {
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 0,
+      },
     );
   }
 

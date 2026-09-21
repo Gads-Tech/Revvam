@@ -46,6 +46,7 @@ model User {
   readReceiptOverrides    ReadReceiptPreference[] @relation("ReadReceiptTarget")
   sessions                Session[]
   vehicles                Vehicle[]
+  hostedEvents             Event[]
 }
 
 model DriverProfile {
@@ -163,6 +164,26 @@ model Post {
   shares    PostShare[]
 
   @@index([authorId, createdAt])
+}
+
+model Event {
+  id            String   @id @default(cuid())
+  hostId        String
+  title         String
+  description   String?
+  latitude      Float
+  longitude     Float
+  locationLabel String?
+  startsAt      DateTime
+  endsAt        DateTime?
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  host          User     @relation(fields: [hostId], references: [id], onDelete: Cascade)
+
+  @@index([startsAt, endsAt])
+  @@index([latitude, longitude])
+  @@index([hostId, createdAt])
 }
 
 model EmergencyRequest {

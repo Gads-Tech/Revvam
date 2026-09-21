@@ -69,7 +69,24 @@ export default function ProfileNotificationsPage() {
   async function sendEmergencyChatRequest(item: Notification) {
     setBusy(item.id);
     try {
-      const response = await fetch(`/api/users/${encodeURIComponent(item.actor.username)}/chat-request`, {
+      const username = encodeURIComponent(item.actor.username);
+      const statusResponse = await fetch(`/api/users/${username}/chat-request`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+      const statusData = await statusResponse.json().catch(() => null);
+      if (!statusResponse.ok || !statusData?.success) throw new Error(statusData?.error || "Unable to check the chat.");
+      
+      // If the two users already have a direct conversation, never create or
+      // request another chat. Take the helper straight into the existing chat.
+      if (statusData.status === "ACCEPTED") {
+        await markRead(item.id);
+        window.location.href = `/messages/${username}`;
+        return;
+      }
+
+      const response = await fetch(`/api/users/${username}/chat-request`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -127,7 +144,7 @@ export default function ProfileNotificationsPage() {
                 <span className="text-[10px] text-white/20">{timeLabel(item.createdAt)}</span>
               </div>
               <button type="button" disabled={busy === item.id} onClick={() => void sendEmergencyChatRequest(item)} className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-semibold text-red-200 disabled:opacity-40">
-                {busy === item.id ? "Sending..." : "Send chat request"}
+                {busy === item.id ? "Opening..." : "Chat / Send chat request"}
               </button>
             </div>
           </div>

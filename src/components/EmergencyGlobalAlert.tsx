@@ -19,6 +19,7 @@ type AlertData = {
 export default function EmergencyGlobalAlert() {
   const [data, setData] = useState<AlertData>({ count: 0, latest: null });
   const [showPulse, setShowPulse] = useState(false);
+  const [visible, setVisible] = useState(false);
   const lastLatestId = useRef<string | null>(null);
 
   useEffect(() => {
@@ -59,9 +60,13 @@ export default function EmergencyGlobalAlert() {
 
         if (next.latest?.id && next.latest.id !== lastLatestId.current) {
           setShowPulse(true);
+          setVisible(true);
           window.setTimeout(() => {
             if (active) setShowPulse(false);
           }, 8000);
+          window.setTimeout(() => {
+            if (active) setVisible(false);
+          }, 4000);
         }
 
         lastLatestId.current = next.latest?.id ?? null;
@@ -87,7 +92,7 @@ export default function EmergencyGlobalAlert() {
     };
   }, []);
 
-  if (data.count < 1) return null;
+  if (data.count < 1 || !visible) return null;
 
   const latestText = data.latest
     ? data.latest.type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter: string) => letter.toUpperCase())
@@ -100,7 +105,7 @@ export default function EmergencyGlobalAlert() {
       aria-live="polite"
     >
       <Link
-        href="/emergency/nearby"
+        href={data.latest?.id ? `/map?emergency=${encodeURIComponent(data.latest.id)}` : "/map"}
         className={`pointer-events-auto flex w-full max-w-[520px] items-center gap-3 rounded-2xl border border-red-500/40 bg-[#110303]/[0.98] px-4 py-3 text-white shadow-[0_18px_60px_rgba(0,0,0,.85),0_0_45px_rgba(239,68,68,.18)] backdrop-blur-2xl transition-all hover:border-red-400/60 hover:bg-[#180404] ${showPulse ? "ring-2 ring-red-500/25" : ""}`}
       >
         <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-red-400/20 bg-red-500/15 text-red-300">

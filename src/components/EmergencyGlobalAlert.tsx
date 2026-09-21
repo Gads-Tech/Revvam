@@ -100,7 +100,7 @@ export default function EmergencyGlobalAlert() {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 top-0 z-[2147483640] flex justify-center px-3 pt-[max(10px,env(safe-area-inset-top))] md:pt-4"
+      className="pointer-events-none fixed inset-x-0 top-0 z-[2147483640] hidden justify-center md:flex px-3 pt-[max(10px,env(safe-area-inset-top))] md:pt-4"
       role="status"
       aria-live="polite"
     >

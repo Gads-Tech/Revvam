@@ -77,7 +77,13 @@ export default function MobileNav() {
         });
         const emergencyData = await emergencyResponse.json().catch(() => null);
         if (emergencyResponse.ok && emergencyData?.success && !signal?.aborted) {
-          setEmergencyCount(Number(emergencyData.count) || 0);
+          const items = Array.isArray(emergencyData.emergencies) ? emergencyData.emergencies : [];
+          let viewed = new Set<string>();
+          try {
+            viewed = new Set(JSON.parse(localStorage.getItem("revvam-viewed-emergencies") || "[]"));
+          } catch {}
+          const unseen = items.filter((item: { id?: string }) => item.id && !viewed.has(item.id)).length;
+          setEmergencyCount(unseen);
         }
       } catch {}
     } catch (error) {
@@ -97,6 +103,28 @@ export default function MobileNav() {
       controller.abort();
       window.clearInterval(timer);
     };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!pathname?.startsWith("/profile/notifications")) return;
+    const markEmergencyAlertsViewed = async () => {
+      try {
+        const response = await fetch("/api/emergencies/help?_=" + Date.now(), {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.success || !Array.isArray(data.emergencies)) return;
+        const ids = data.emergencies.map((item: { id?: string }) => item.id).filter(Boolean);
+        let existing: string[] = [];
+        try { existing = JSON.parse(localStorage.getItem("revvam-viewed-emergencies") || "[]"); } catch {}
+        const merged = Array.from(new Set([...existing, ...ids])).slice(-100);
+        localStorage.setItem("revvam-viewed-emergencies", JSON.stringify(merged));
+        setEmergencyCount(0);
+      } catch {}
+    };
+    void markEmergencyAlertsViewed();
   }, [pathname]);
 
   useEffect(() => {

@@ -69,6 +69,7 @@ export default function MapPage() {
   const [tab, setTab] = useState<"live" | "mechanics" | "dealerships">("live");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
   const initialMode = searchParams.get("mode");
   useEffect(() => {
     if (initialMode === "events" || initialMode === "emergencies" || initialMode === "both") {

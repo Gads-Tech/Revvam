@@ -1,11 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { WarningIcon } from "@/components/icons";
 
 export default function EmergencyHelpButton({ initialCount = 0 }: { initialCount?: number }) {
+  const router = useRouter();
   const [count, setCount] = useState(initialCount);
+
+  useEffect(() => {
+    setCount(initialCount);
+  }, [initialCount]);
 
   useEffect(() => {
     let active = true;
@@ -31,7 +37,12 @@ export default function EmergencyHelpButton({ initialCount = 0 }: { initialCount
     };
 
     void check();
-    const timer = window.setInterval(() => void check(), 2500);
+    const timer = window.setInterval(() => {
+      void check();
+      // Also refresh the server component snapshot. This is a fallback for
+      // browsers/proxies that interfere with client polling responses.
+      router.refresh();
+    }, 3000);
 
     const onVisible = () => {
       if (document.visibilityState === "visible") void check();
@@ -44,7 +55,7 @@ export default function EmergencyHelpButton({ initialCount = 0 }: { initialCount
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [router]);
 
   const hasEmergency = count > 0;
 

@@ -18,9 +18,31 @@ export async function GET() {
 
     const cutoff = new Date(Date.now() - ONLINE_WINDOW_MS);
 
+    // Live Community is intentionally limited to people the current user
+    // already has a private conversation with. This prevents it from becoming
+    // a global directory of everyone currently online.
+    const chatContacts = await prisma.conversationMember.findMany({
+      where: {
+        conversation: {
+          members: {
+            some: { userId: currentUser.id },
+          },
+        },
+        userId: { not: currentUser.id },
+      },
+      select: { userId: true },
+      distinct: ["userId"],
+    });
+
+    const contactIds = chatContacts.map((member) => member.userId);
+
+    if (contactIds.length === 0) {
+      return NextResponse.json({ success: true, users: [] });
+    }
+
     const users = await prisma.user.findMany({
       where: {
-        id: { not: currentUser.id },
+        id: { in: contactIds },
         showOnlineStatus: true,
         lastSeenAt: { gte: cutoff },
       },

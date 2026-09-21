@@ -34,6 +34,9 @@ export async function GET(
         bio: true,
         location: true,
         role: true,
+        lastSeenAt: true,
+        showOnlineStatus: true,
+        showLastSeen: true,
         onboardingType: true,
         mechanicProfile: { select: { headline: true, about: true, skills: true, services: true, yearsExperience: true } },
         createdAt: true,
@@ -120,6 +123,11 @@ export async function GET(
     };
 
     const currentUser = await getCurrentUser();
+    const online = Boolean(user.lastSeenAt && user.lastSeenAt.getTime() >= Date.now() - 90_000);
+    const visibleOnline = user.showOnlineStatus ? online : null;
+    const visibleLastSeen = user.showLastSeen && (!online || user.showOnlineStatus)
+      ? user.lastSeenAt?.toISOString() ?? null
+      : null;
     let following = false;
 
     if (currentUser && currentUser.id !== user.id) {
@@ -137,7 +145,16 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      user: publicUser,
+      user: {
+        ...publicUser,
+        lastSeenAt: undefined,
+        showOnlineStatus: undefined,
+        showLastSeen: undefined,
+        presence: {
+          online: visibleOnline,
+          lastSeenAt: visibleLastSeen,
+        },
+      },
       following,
       isOwnProfile: currentUser?.id === user.id,
     });

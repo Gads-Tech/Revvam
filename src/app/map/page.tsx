@@ -56,7 +56,7 @@ export default function MapPage() {
 
   async function load() {
     try {
-      const [emergencyResponse, profileResponse] = await Promise.all([
+      const [emergencyResponse, eventResponse, profileResponse] = await Promise.all([
         fetch("/api/emergencies", { credentials: "include", cache: "no-store" }),
         fetch("/api/profile", { credentials: "include", cache: "no-store" }),
       ]);
@@ -100,7 +100,14 @@ export default function MapPage() {
     );
   }, [emergencies, search]);
 
-  const markers = filteredEmergencies.map(e => ({
+  const filteredEvents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return events;
+    return events.filter(e => [e.title, e.description || "", e.locationLabel || "", e.host.username].join(" ").toLowerCase().includes(q));
+  }, [events, search]);
+
+  const markers = [
+    ...filteredEmergencies.map(e => ({
     id: e.id,
     latitude: e.ghostMode ? e.latitude : (e.liveLatitude ?? e.latitude),
     longitude: e.ghostMode ? e.longitude : (e.liveLongitude ?? e.longitude),
@@ -109,7 +116,19 @@ export default function MapPage() {
     radiusMeters: e.radiusMeters,
     exactLocation: e.exactLocation,
     ghostMode: e.ghostMode,
-  }));
+    kind: "emergency" as const,
+  })),
+    ...filteredEvents.map(e => ({
+      id: "event-" + e.id,
+      latitude: e.latitude,
+      longitude: e.longitude,
+      title: e.title,
+      description: e.description || "Revvam event",
+      kind: "event" as const,
+      eventLocation: e.locationLabel || undefined,
+      eventStartsAt: e.startsAt,
+    })),
+  ];
 
   const distance = (lat: number, lng: number) => {
     if (!location) return null;
@@ -141,16 +160,34 @@ export default function MapPage() {
           <aside className="space-y-5">
             <section className="rounded-[1.5rem] border border-white/[.08] bg-[#090909] p-4 shadow-2xl">
               <div className="mb-4 flex items-center gap-2 text-sm font-semibold"><span className="text-red-400">◈</span> Map View</div>
-              <div className="grid grid-cols-3 rounded-2xl bg-white/[.025] p-1">
+              <div className="mb-3 grid grid-cols-3 rounded-2xl bg-white/[.025] p-1">
                 {(["live","mechanics","dealerships"] as const).map(item => (
                   <button key={item} type="button" onClick={() => setTab(item)} className={`rounded-xl px-2 py-3 text-xs font-semibold capitalize transition ${tab === item ? "bg-red-600 text-white shadow-lg" : "text-white/45 hover:text-white"}`}>{item}</button>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/[.06] bg-black/30 p-1">
+                {(["both", "emergencies", "events"] as const).map(item => (
+                  <button key={item} type="button" onClick={() => setContentMode(item)} className={`rounded-xl px-2 py-2.5 text-[10px] font-bold capitalize transition ${contentMode === item ? "bg-white/[.10] text-white" : "text-white/35 hover:text-white"}`}>
+                    {item === "both" ? "Both" : item === "emergencies" ? "Emergencies" : "Events"}
+                  </button>
                 ))}
               </div>
             </section>
 
             <section className="rounded-[1.5rem] border border-white/[.08] bg-[#090909] p-5">
               <div className="mb-5 flex items-center justify-between"><h2 className="text-sm font-bold">Filters</h2><button type="button" onClick={() => setSearch("")} className="text-xs text-white/35 hover:text-white">Reset</button></div>
-              <label className="mb-5 flex items-center justify-between gap-4 text-sm text-white/75"><span className="flex items-center gap-3"><span className="text-lg text-red-500">⚠</span> Live Driver Issues</span><span className="h-6 w-11 rounded-full bg-red-500 p-1"><span className="block h-4 w-4 translate-x-5 rounded-full bg-white" /></span></label>
+              <div className="mb-5 rounded-2xl border border-red-500/15 bg-red-500/[.04] p-3">
+                <div className="text-[9px] font-bold uppercase tracking-[.18em] text-white/30">What's happening in Revvam</div>
+                <p className="mt-1 text-xs leading-5 text-white/45">Switch between live roadside emergencies, upcoming events, or both on the map.</p>
+              </div>
+              <div className="space-y-2">
+                <button type="button" onClick={() => setContentMode(contentMode === "emergencies" ? "both" : "emergencies")} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-sm transition ${contentMode !== "events" ? "border-red-500/20 bg-red-500/[.06] text-white" : "border-white/[.06] bg-white/[.02] text-white/45"}`}>
+                  <span className="flex items-center gap-3"><span className="text-red-400">⚠</span> Emergencies</span><span className="rounded-full bg-red-500/15 px-2 py-1 text-[9px] font-bold text-red-300">{filteredEmergencies.length}</span>
+                </button>
+                <button type="button" onClick={() => setContentMode(contentMode === "events" ? "both" : "events")} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-sm transition ${contentMode !== "emergencies" ? "border-purple-400/20 bg-purple-400/[.05] text-white" : "border-white/[.06] bg-white/[.02] text-white/45"}`}>
+                  <span className="flex items-center gap-3"><span className="text-purple-300">▦</span> Events</span><span className="rounded-full bg-purple-400/10 px-2 py-1 text-[9px] font-bold text-purple-200">{filteredEvents.length}</span>
+                </button>
+              </div>
               {[
                 ["Mechanic Shops", "🔧"],
                 ["Dealerships", "▣"],
@@ -169,8 +206,13 @@ export default function MapPage() {
               <div className="absolute left-5 top-5 z-20 flex w-[285px] items-center gap-3 rounded-full border border-white/10 bg-black/75 px-4 py-3 backdrop-blur-xl">
                 <span className="text-white/60">⌕</span><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search location..." className="w-full bg-transparent text-sm outline-none placeholder:text-white/45" />
               </div>
-              <RevvamMap userLocation={location} userImage={profileImage} markers={markers} onOfferHelp={offerHelp} />
-              <div className="pointer-events-none absolute bottom-5 left-5 z-20 rounded-full border border-white/10 bg-black/80 px-4 py-2 text-xs font-semibold backdrop-blur-xl"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />Live issues <b>{filteredEmergencies.length}</b></div>
+              <RevvamMap
+                userLocation={location}
+                userImage={profileImage}
+                markers={markers.filter(m => contentMode === "both" || (contentMode === "emergencies" ? m.kind === "emergency" : m.kind === "event"))}
+                onOfferHelp={offerHelp}
+              />
+              <div className="pointer-events-none absolute bottom-5 left-5 z-20 rounded-full border border-white/10 bg-black/80 px-4 py-2 text-xs font-semibold backdrop-blur-xl"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />{contentMode === "events" ? "Events" : contentMode === "emergencies" ? "Live issues" : "Live in Revvam"} <b>{contentMode === "events" ? filteredEvents.length : contentMode === "emergencies" ? filteredEmergencies.length : filteredEmergencies.length + filteredEvents.length}</b></div>
             </div>
             <p className="mt-2 px-2 text-[10px] text-white/20">Live location is only exposed according to the emergency's privacy/acceptance rules.</p>
           </section>

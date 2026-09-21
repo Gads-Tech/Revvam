@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       type: "EMERGENCY_OFFER",
       title: "Someone offered to help",
       body: message ? `${user.name}: ${message}` : `${user.name} offered to help with your emergency.`,
-      href: `/emergency/nearby?emergency=${encodeURIComponent(emergencyId)}`,
+      href: `/emergency/nearby?emergency=${encodeURIComponent(emergencyId)}&offer=${encodeURIComponent(offer.id)}`,
     },
   });
 

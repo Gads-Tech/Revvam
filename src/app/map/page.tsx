@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import RevvamMap from "@/components/RevvamMap";
 import MobileNav from "@/components/MobileNav";
 import AppHeader from "@/components/AppHeader";
@@ -68,6 +69,12 @@ export default function MapPage() {
   const [tab, setTab] = useState<"live" | "mechanics" | "dealerships">("live");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const initialMode = searchParams.get("mode");
+  useEffect(() => {
+    if (initialMode === "events" || initialMode === "emergencies" || initialMode === "both") {
+      setContentMode(initialMode);
+    }
+  }, [initialMode]);
 
   async function load() {
     try {

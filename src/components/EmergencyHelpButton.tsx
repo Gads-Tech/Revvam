@@ -12,7 +12,7 @@ export default function EmergencyHelpButton({ initialCount = 0 }: { initialCount
 
     const check = async () => {
       try {
-        const response = await fetch("/api/emergencies?_=" + Date.now(), {
+        const response = await fetch("/api/emergencies/count?_=" + Date.now(), {
           credentials: "include",
           cache: "no-store",
           headers: {
@@ -22,8 +22,8 @@ export default function EmergencyHelpButton({ initialCount = 0 }: { initialCount
         });
 
         const data = await response.json().catch(() => null);
-        if (active && response.ok && data?.success && Array.isArray(data.emergencies)) {
-          setCount(data.emergencies.length);
+        if (active && response.ok && data?.success && typeof data.count === "number") {
+          setCount(Math.max(0, data.count));
         }
       } catch {
         // Keep the current count during temporary network failures.

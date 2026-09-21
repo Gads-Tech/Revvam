@@ -27,9 +27,7 @@ export async function GET() {
       select: { driverId: true },
     });
 
-    const count = active.reduce((total, emergency) => {
-      return total + (emergency.driverId === user.id ? 0 : 1);
-    }, 0);
+    const count = active.length;
 
     return NextResponse.json(
       { success: true, count, activeTotal: active.length },

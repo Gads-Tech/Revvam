@@ -1,5 +1,6 @@
 import Link from "next/link";
 import EmergencyHelpLive from "@/components/EmergencyHelpLive";
+import EmergencyHelpButton from "@/components/EmergencyHelpButton";
 import { redirect } from "next/navigation";
 import { CarIcon, MessageIcon, MoreIcon, SearchIcon, WarningIcon, LocationIcon, BellIcon } from "@/components/icons";
 
@@ -104,11 +105,7 @@ export default async function HomePage() {
 
             <section className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-4">
               <QuickLink href="/profile/cars/add" icon={<CarIcon className="h-4 w-4" />} label="Add car" />
-              <Link href="/emergency/nearby" className={`relative flex min-w-0 items-center justify-center gap-2 rounded-xl border px-2 py-2.5 text-[10px] font-bold transition sm:text-xs ${liveEmergencies.length > 0 ? "border-red-500/30 bg-red-500/10 text-red-100 hover:border-red-400/50 hover:bg-red-500/15" : "border-white/[0.08] bg-white/[0.025] text-white/50 hover:border-red-400/20 hover:bg-red-500/[0.06] hover:text-white"}`}>
-                <WarningIcon className={`h-4 w-4 ${liveEmergencies.length > 0 ? "text-red-300" : "text-red-300/80"}`} />
-                <span className="truncate">Emergency Help</span>
-                {liveEmergencies.length > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{liveEmergencies.length}</span>}
-              </Link>
+              <EmergencyHelpButton initialCount={liveEmergencies.length} />
               <QuickLink href="/map" icon={<LocationIcon className="h-4 w-4" />} label="Live map" />
               <QuickLink href="/profile" icon={<MoreIcon className="h-4 w-4" />} label="My profile" />
             </section>

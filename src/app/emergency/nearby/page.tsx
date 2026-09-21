@@ -189,20 +189,21 @@ export default function NearbyEmergencyPage() {
     }
   }
 
-  async function acceptOffer(emergencyId: string, offerId: string) {
+  async function respondToOffer(emergencyId: string, offerId: string, action: "accept_offer" | "decline_offer") {
     setOfferingId(offerId);
+    setError("");
     try {
       const response = await fetch("/api/emergencies/" + emergencyId, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ action: "accept_offer", offerId }),
+        body: JSON.stringify({ action, offerId }),
       });
       const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to accept this offer.");
+      if (!response.ok || !data?.success) throw new Error(data?.error || (action === "accept_offer" ? "Unable to accept this offer." : "Unable to decline this offer."));
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to accept this offer.");
+      setError(e instanceof Error ? e.message : (action === "accept_offer" ? "Unable to accept this offer." : "Unable to decline this offer."));
     } finally {
       setOfferingId(null);
     }
@@ -382,7 +383,7 @@ export default function NearbyEmergencyPage() {
                         {!isMine && ["OPEN", "OFFERS_RECEIVED"].includes(e.status) && <button type="button" onClick={() => offerHelp(e.id)} disabled={offeringId === e.id} className="rounded-xl bg-red-500/10 px-3 py-2 text-[9px] font-bold uppercase text-red-200 disabled:opacity-50">{offeringId === e.id ? "Sending..." : "Offer help"}</button>}
                         {isMine && <div className="flex gap-2"><button type="button" onClick={() => editEmergency(e)} className="rounded-xl bg-white/[.04] px-3 py-2 text-[9px] font-bold uppercase text-white/55">Edit</button><button type="button" onClick={() => deleteEmergency(e)} className="rounded-xl bg-red-500/[.06] px-3 py-2 text-[9px] font-bold uppercase text-red-300">Delete</button></div>}
                       </div>
-                      {isMine && e.offers.length > 0 && <div className="mt-3 space-y-2 border-t border-white/[.06] pt-3"><p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/25">People offering help</p>{e.offers.map(o => <div key={o.id} className="flex items-center justify-between rounded-xl bg-white/[.02] p-2.5"><span className="text-xs">{o.mechanic.name}</span>{o.status === "PENDING" ? <button type="button" onClick={() => acceptOffer(e.id,o.id)} disabled={offeringId===o.id} className="rounded-lg bg-red-500/10 px-3 py-1.5 text-[9px] font-bold text-red-200">{offeringId===o.id?"...":"Accept"}</button> : <span className="text-[9px] text-white/30">{o.status}</span>}</div>)}</div>}
+                      {isMine && e.offers.length > 0 && <div className="mt-3 space-y-2 border-t border-white/[.06] pt-3"><p className="text-[9px] font-bold uppercase tracking-[.16em] text-white/25">People offering help</p>{e.offers.map(o => <div key={o.id} className="rounded-xl bg-white/[.02] p-2.5"><div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold">{o.mechanic.name}</span>{o.status === "PENDING" ? <div className="flex gap-1.5"><button type="button" onClick={() => respondToOffer(e.id,o.id,"decline_offer")} disabled={offeringId===o.id} className="rounded-lg border border-white/[.08] px-2.5 py-1.5 text-[9px] font-bold text-white/45 disabled:opacity-40">Decline</button><button type="button" onClick={() => respondToOffer(e.id,o.id,"accept_offer")} disabled={offeringId===o.id} className="rounded-lg bg-red-500/10 px-2.5 py-1.5 text-[9px] font-bold text-red-200 disabled:opacity-40">{offeringId===o.id?"...":"Accept"}</button></div> : <span className="text-[9px] text-white/30">{o.status}</span>}</div>{o.message && <p className="mt-1.5 text-[10px] text-white/30">{o.message}</p>}</div>)}</div>}
                     </div>
                   </article>;
                 })}

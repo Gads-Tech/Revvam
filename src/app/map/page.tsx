@@ -25,6 +25,19 @@ type Emergency = {
   driver: { id: string; name: string; username: string; image: string | null };
 };
 
+type RevvamEvent = {
+  id: string;
+  title: string;
+  description: string | null;
+  latitude: number;
+  longitude: number;
+  locationLabel: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  image: string | null;
+  host: { id: string; name: string; username: string; image: string | null };
+};
+
 type Mechanic = {
   id: string;
   name: string;
@@ -48,6 +61,8 @@ const labels: Record<string, string> = {
 export default function MapPage() {
   const [emergencies, setEmergencies] = useState<Emergency[]>([]);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
+  const [events, setEvents] = useState<RevvamEvent[]>([]);
+  const [contentMode, setContentMode] = useState<"both" | "emergencies" | "events">("both");
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [tab, setTab] = useState<"live" | "mechanics" | "dealerships">("live");
@@ -58,11 +73,14 @@ export default function MapPage() {
     try {
       const [emergencyResponse, eventResponse, profileResponse] = await Promise.all([
         fetch("/api/emergencies", { credentials: "include", cache: "no-store" }),
+        fetch("/api/events", { credentials: "include", cache: "no-store" }),
         fetch("/api/profile", { credentials: "include", cache: "no-store" }),
       ]);
       const emergencyData = await emergencyResponse.json().catch(() => null);
+      const eventData = await eventResponse.json().catch(() => null);
       const profileData = await profileResponse.json().catch(() => null);
       if (emergencyData?.success) setEmergencies(emergencyData.emergencies || []);
+      if (eventData?.success) setEvents(eventData.events || []);
       if (profileData?.success) setProfileImage(profileData.user?.image || null);
     } finally {
       setLoading(false);

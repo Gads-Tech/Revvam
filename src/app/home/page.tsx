@@ -14,6 +14,7 @@ import MobileNav from "@/components/MobileNav";
 import AppHeader from "@/components/AppHeader";
 import LiveSocialActions from "@/components/LiveSocialActions";
 import PostCard from "@/components/PostCard";
+import OnlineMembers from "@/components/OnlineMembers";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -99,6 +100,8 @@ export default async function HomePage() {
                 <Link href="/profile/posts" className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-400/25 bg-red-600/10 px-4 py-2.5 text-xs font-bold text-red-100 transition hover:bg-red-600/20">+ Create post</Link>
               </div>
             </section>
+
+            <OnlineMembers />
 
             <section className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-4">
               <QuickLink href="/profile/cars/add" icon={<CarIcon className="h-4 w-4" />} label="Add car" />

@@ -29,6 +29,7 @@ export default function ProfileNotificationsPage() {
   function toggleSelected(id: string) { setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]); }
   async function emergencyOfferAction(item: Notification, action: "accept_offer" | "decline_offer") {
     const emergencyId = item.href?.match(/emergency=([^&]+)/)?.[1];
+    const offerId = item.href?.match(/offer=([^&]+)/)?.[1];
     if (!emergencyId) {
       setError("This emergency request could not be found.");
       return;
@@ -39,7 +40,7 @@ export default function ProfileNotificationsPage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, offerId: item.actor.id }),
+        body: JSON.stringify({ action, offerId }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to update the emergency offer.");
@@ -52,6 +53,26 @@ export default function ProfileNotificationsPage() {
     }
   }
 
+  async function sendEmergencyChatRequest(item: Notification) {
+    setBusy(item.id);
+    try {
+      const response = await fetch(`/api/users/${encodeURIComponent(item.actor.username)}/chat-request`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "Hi, I can help with the emergency we connected on Revvam." }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to send chat request.");
+      await markRead(item.id);
+      await load(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to send chat request.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   function renderNotification(item: Notification) {
     const actor = item.actor;
     const checked = selected.includes(item.id);
@@ -59,6 +80,7 @@ export default function ProfileNotificationsPage() {
     const follow = item.type === "FOLLOW";
     const request = item.type === "CHAT_REQUEST";
     const emergencyOffer = item.type === "EMERGENCY_OFFER";
+    const emergencyAccepted = item.type === "EMERGENCY_ACCEPTED";
     const card = `rounded-2xl border p-4 transition ${checked ? "border-red-400/30 bg-red-500/[0.08]" : item.isRead ? "border-white/[0.06] bg-black/20" : "border-red-400/15 bg-red-500/[0.035]"}`;
     const body = (
       <>
@@ -77,6 +99,28 @@ export default function ProfileNotificationsPage() {
         </span>
       </>
     );
+
+    if (emergencyAccepted) {
+      return (
+        <div key={item.id} className={card}>
+          <div className="flex items-start gap-3">
+            {selectMode && <input type="checkbox" checked={checked} onChange={() => toggleSelected(item.id)} className="mt-3 h-4 w-4 accent-red-500" />}
+            <Link href={`/users/${encodeURIComponent(actor.username)}`} className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/[0.1] bg-red-600/10 text-red-300">
+              {actor.image ? <img src={actor.image} alt="" className="h-full w-full object-cover" /> : actor.name.charAt(0).toUpperCase()}
+            </Link>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div><p className="font-semibold">{item.title}</p><p className="mt-1 text-sm text-white/35">{item.body}</p></div>
+                <span className="text-[10px] text-white/20">{timeLabel(item.createdAt)}</span>
+              </div>
+              <button type="button" disabled={busy === item.id} onClick={() => void sendEmergencyChatRequest(item)} className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-semibold text-red-200 disabled:opacity-40">
+                {busy === item.id ? "Sending..." : "Send chat request"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     if (emergencyOffer) {
       return (

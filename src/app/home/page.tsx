@@ -49,7 +49,7 @@ export default async function HomePage() {
         driver: { select: { username: true, image: true } },
       },
     }),
-    prisma.vehicle.count({ where: { ownerId: user.id } }),
+    prisma.vehicle.count({ where: { userId: user.id } }),
     prisma.post.count({ where: { authorId: user.id } }),
   ]);
 

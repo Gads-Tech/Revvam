@@ -71,6 +71,7 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const initialMode = searchParams.get("mode");
+  const emergencyToFocus = searchParams.get("emergency");
   useEffect(() => {
     if (initialMode === "events" || initialMode === "emergencies" || initialMode === "both") {
       setContentMode(initialMode);
@@ -156,6 +157,16 @@ export default function MapPage() {
     })),
   ];
 
+  const focusEmergency = useMemo(() => {
+    if (!emergencyToFocus) return null;
+    const emergency = emergencies.find(e => e.id === emergencyToFocus);
+    if (!emergency) return null;
+    return {
+      latitude: emergency.ghostMode ? emergency.latitude : (emergency.liveLatitude ?? emergency.latitude),
+      longitude: emergency.ghostMode ? emergency.longitude : (emergency.liveLongitude ?? emergency.longitude),
+    };
+  }, [emergencies, emergencyToFocus]);
+
   const distance = (lat: number, lng: number) => {
     if (!location) return null;
     const R = 6371;
@@ -236,6 +247,7 @@ export default function MapPage() {
                 userLocation={location}
                 userImage={profileImage}
                 markers={markers.filter(m => contentMode === "both" || (contentMode === "emergencies" ? m.kind === "emergency" : m.kind === "event"))}
+                focusLocation={focusEmergency}
                 onOfferHelp={offerHelp}
               />
               <div className="pointer-events-none absolute bottom-5 left-5 z-20 rounded-full border border-white/10 bg-black/80 px-4 py-2 text-xs font-semibold backdrop-blur-xl"><span className="mr-2 inline-block h-2 w-2 rounded-full bg-red-500" />{contentMode === "events" ? "Events" : contentMode === "emergencies" ? "Live issues" : "Live in Revvam"} <b>{contentMode === "events" ? filteredEvents.length : contentMode === "emergencies" ? filteredEmergencies.length : filteredEmergencies.length + filteredEvents.length}</b></div>

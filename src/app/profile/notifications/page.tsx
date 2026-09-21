@@ -28,8 +28,15 @@ export default function ProfileNotificationsPage() {
   async function chatAction(item: Notification, action: "accept" | "decline") { if (!item.chatRequestId) return; setBusy(item.chatRequestId); try { const response = await fetch(`/api/chat-requests/${encodeURIComponent(item.chatRequestId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action }) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to update chat request."); await markRead(item.id); if (action === "accept") window.location.href = `/messages/${encodeURIComponent(item.actor.username)}`; else await load(true); } catch (e) { setError(e instanceof Error ? e.message : "Unable to update chat request."); } finally { setBusy(null); } }
   function toggleSelected(id: string) { setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]); }
   async function emergencyOfferAction(item: Notification, action: "accept_offer" | "decline_offer") {
-    const emergencyId = item.href?.match(/emergency=([^&]+)/)?.[1];
-    const offerId = item.href?.match(/offer=([^&]+)/)?.[1];
+    let emergencyId = "";
+    let offerId = "";
+    if (item.href) {
+      try {
+        const url = new URL(item.href, window.location.origin);
+        emergencyId = url.searchParams.get("emergency") || "";
+        offerId = url.searchParams.get("offer") || "";
+      } catch {}
+    }
     if (!emergencyId) {
       setError("This emergency request could not be found.");
       return;

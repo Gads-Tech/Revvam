@@ -22,19 +22,34 @@ export async function GET() {
       where: { members: { some: { userId: user.id } } },
       orderBy: { updatedAt: "desc" },
       include: {
-        members: { include: { user: { select: { id: true, name: true, username: true, image: true } } } },
+        members: { include: { user: { select: { id: true, name: true, username: true, image: true, lastSeenAt: true, showOnlineStatus: true, showLastSeen: true } } } },
         messages: { orderBy: { createdAt: "desc" }, take: 1, select: { content: true, createdAt: true, senderId: true, readAt: true } },
       },
     });
 
     const mapped = await Promise.all(conversations.map(async (conversation) => {
       const otherUser = conversation.members.find((member) => member.userId !== user.id)?.user ?? null;
+      const otherOnline = Boolean(otherUser?.lastSeenAt && otherUser.lastSeenAt.getTime() >= Date.now() - 90_000);
+      const publicOtherUser = otherUser
+        ? {
+            id: otherUser.id,
+            name: otherUser.name,
+            username: otherUser.username,
+            image: otherUser.image,
+            presence: {
+              online: otherUser.showOnlineStatus ? otherOnline : null,
+              lastSeenAt: otherUser.showLastSeen && (!otherOnline || otherUser.showOnlineStatus)
+                ? otherUser.lastSeenAt?.toISOString() ?? null
+                : null,
+            },
+          }
+        : null;
       const lastMessage = conversation.messages[0] ?? null;
       const visible = otherUser ? await receiptVisible(otherUser.id, user.id) : false;
       return {
         id: conversation.id,
         updatedAt: conversation.updatedAt,
-        otherUser,
+        otherUser: publicOtherUser,
         lastMessage: lastMessage ? {
           content: lastMessage.content,
           createdAt: lastMessage.createdAt,

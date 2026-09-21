@@ -189,7 +189,7 @@ export default function MobileNav() {
                 <img src="/logo_mark.svg" alt="Revvam" className="h-8 w-8 object-contain" />
               </span>
             </Link>
-            <MobileNavItem icon={<BellIcon className="h-4 w-4" />} label="Alerts" href="/profile/notifications" active={pathname?.startsWith("/profile/notifications")} badge={emergencyCount} />
+            <MobileNavItem icon={<BellIcon className="h-4 w-4" />} label="Alerts" href="/profile/notifications" active={pathname?.startsWith("/profile/notifications")} badge={notificationCount + emergencyCount} />
             <MobileNavItem icon={<MessageIcon className="h-4 w-4" />} label="Messages" href="/messages" active={pathname?.startsWith("/messages")} badge={messageCount} />
           </nav>
         </div>

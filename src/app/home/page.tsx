@@ -108,7 +108,7 @@ export default async function HomePage() {
 
             <section className="mb-6 grid grid-cols-3 gap-2 sm:grid-cols-4">
               <QuickLink href="/profile/cars/add" icon={<CarIcon className="h-4 w-4" />} label="Add car" />
-              <EmergencyHelpButton initialCount={liveEmergencies.length} />
+              <EmergencyHelpButton />
               <QuickLink href="/map" icon={<LocationIcon className="h-4 w-4" />} label="Live map" />
               <QuickLink href="/profile" icon={<MoreIcon className="h-4 w-4" />} label="My profile" />
             </section>

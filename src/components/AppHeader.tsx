@@ -18,7 +18,6 @@ const links = [
   { href: "/profile/mechanic", label: "Mechanics" },
   { href: "/map", label: "Dealerships" },
   { href: "/map", label: "Events" },
-  { href: "/messages", label: "Chat" },
 ];
 
 export default function AppHeader() {

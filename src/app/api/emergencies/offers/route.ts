@@ -34,5 +34,16 @@ export async function POST(request: Request) {
     await prisma.emergencyRequest.update({ where: { id: emergencyId }, data: { status: "OFFERS_RECEIVED" } });
   }
 
+  await prisma.notification.create({
+    data: {
+      userId: emergency.driverId,
+      actorId: user.id,
+      type: "EMERGENCY_OFFER",
+      title: "Someone offered to help",
+      body: message ? `${user.name}: ${message}` : `${user.name} offered to help with your emergency.`,
+      href: `/emergency/nearby?emergency=${encodeURIComponent(emergencyId)}`,
+    },
+  });
+
   return NextResponse.json({ success: true, offer }, { status: 201, headers: noStore });
 }

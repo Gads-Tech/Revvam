@@ -11,16 +11,31 @@ export default function LiveSocialActions({ compact = false }: Props) {
 
   async function refresh(signal?: AbortSignal) {
     try {
-      const response = await fetch(`/api/social/unread?_=${Date.now()}`, {
-        credentials: "include",
-        cache: "no-store",
-        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
-        signal,
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.success || signal?.aborted) return;
-      setNotifications(Number(data.unreadNotifications) || 0);
-      setMessages(Number(data.unreadMessages) || 0);
+      const [socialResponse, notificationsResponse] = await Promise.all([
+        fetch(`/api/social/unread?_=${Date.now()}`, {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+          signal,
+        }),
+        fetch(`/api/notifications?_=${Date.now()}`, {
+          credentials: "include",
+          cache: "no-store",
+          headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+          signal,
+        }),
+      ]);
+      const social = await socialResponse.json().catch(() => null);
+      const notificationData = await notificationsResponse.json().catch(() => null);
+      if (signal?.aborted) return;
+      if (notificationData?.success) {
+        setNotifications(Number(notificationData.unreadCount) || 0);
+      } else if (social?.success) {
+        setNotifications(Number(social.unreadNotifications) || 0);
+      }
+      if (socialResponse.ok && social?.success) {
+        setMessages(Number(social.unreadMessages) || 0);
+      }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       // Keep the last known counts while offline.

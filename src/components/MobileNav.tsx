@@ -190,7 +190,7 @@ export default function MobileNav() {
               </span>
             </Link>
             <MobileNavItem icon={<BellIcon className="h-4 w-4" />} label="Alerts" href="/profile/notifications" active={pathname?.startsWith("/profile/notifications")} badge={emergencyCount} />
-            <MobileNavItem icon={<MessageIcon className="h-4 w-4" />} label="Messages" href="/messages" active={pathname?.startsWith("/messages")} />
+            <MobileNavItem icon={<MessageIcon className="h-4 w-4" />} label="Messages" href="/messages" active={pathname?.startsWith("/messages")} badge={messageCount} />
           </nav>
         </div>
       </div>

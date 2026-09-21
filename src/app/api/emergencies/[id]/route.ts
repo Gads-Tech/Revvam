@@ -120,24 +120,65 @@ export async function PATCH(request: Request, { params }: Context) {
     return NextResponse.json({ success: true, emergency: updated }, { headers: noStore });
   }
 
-  if (action === "accept_offer") {
-    if (emergency.driverId !== user.id && user.role !== "ADMIN") return NextResponse.json({ success: false, error: "Only the driver can accept an offer." }, { status: 403, headers: noStore });
+  if (action === "accept_offer" || action === "decline_offer") {
+    if (emergency.driverId !== user.id && user.role !== "ADMIN") return NextResponse.json({ success: false, error: "Only the driver can respond to an offer." }, { status: 403, headers: noStore });
     const offerId = typeof body?.offerId === "string" ? body.offerId : "";
     const offer = emergency.offers.find((item) => item.id === offerId);
     if (!offer || offer.status !== "PENDING") return NextResponse.json({ success: false, error: "That offer is no longer available." }, { status: 409, headers: noStore });
 
+    if (action === "decline_offer") {
+      const updated = await prisma.emergencyOffer.update({ where: { id: offerId }, data: { status: "DECLINED" } });
+      await prisma.notification.create({
+        data: {
+          userId: offer.mechanicId,
+          actorId: user.id,
+          type: "EMERGENCY_DECLINED",
+          title: "Your help offer was declined",
+          body: "The requester declined your offer to help.",
+          href: "/profile/notifications",
+        },
+      });
+      return NextResponse.json({ success: true, offer: updated }, { headers: noStore });
+    }
+
     const result = await prisma.$transaction(async (tx) => {
+      const otherPending = emergency.offers.filter((item) => item.id !== offerId && item.status === "PENDING");
       await tx.emergencyOffer.updateMany({ where: { emergencyId: id, id: { not: offerId }, status: "PENDING" }, data: { status: "DECLINED" } });
       await tx.emergencyOffer.update({ where: { id: offerId }, data: { status: "ACCEPTED" } });
-      const directKey = [user.id, offer.mechanicId].sort().join(":");
-      const conversation = await tx.conversation.upsert({ where: { directKey }, create: { directKey }, update: {} });
-      await tx.conversationMember.createMany({ data: [{ conversationId: conversation.id, userId: user.id }, { conversationId: conversation.id, userId: offer.mechanicId }], skipDuplicates: true });
-      await tx.notification.create({ data: { userId: offer.mechanicId, actorId: user.id, type: "EMERGENCY_ACCEPTED", title: "Your help was accepted", body: "Your offer to help has been accepted. You can now chat with the requester.", href: "/messages/" + encodeURIComponent(user.username) } });
-      const emergency = await tx.emergencyRequest.update({ where: { id }, data: { acceptedOfferId: offerId, status: "ACCEPTED", acceptedAt: new Date() } });
-      return { emergency, conversationId: conversation.id };
+
+      for (const declined of otherPending) {
+        await tx.notification.create({
+          data: {
+            userId: declined.mechanicId,
+            actorId: user.id,
+            type: "EMERGENCY_DECLINED",
+            title: "Your help offer was declined",
+            body: "Another helper was selected for this emergency.",
+            href: "/profile/notifications",
+          },
+        });
+      }
+
+      await tx.notification.create({
+        data: {
+          userId: offer.mechanicId,
+          actorId: user.id,
+          type: "EMERGENCY_ACCEPTED",
+          title: "Your help offer was accepted",
+          body: "Your offer was accepted. You can now send the requester a chat request.",
+          href: "/users/" + encodeURIComponent(user.username),
+        },
+      });
+
+      const updatedEmergency = await tx.emergencyRequest.update({
+        where: { id },
+        data: { acceptedOfferId: offerId, status: "ACCEPTED", acceptedAt: new Date() },
+      });
+
+      return { emergency: updatedEmergency };
     });
 
-    return NextResponse.json({ success: true, emergency: result.emergency, conversationId: result.conversationId }, { headers: noStore });
+    return NextResponse.json({ success: true, emergency: result.emergency }, { headers: noStore });
   }
 
   if (action === "status") {

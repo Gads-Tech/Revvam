@@ -10,7 +10,6 @@ import { CarIcon, MessageIcon, MoreIcon, SearchIcon, WarningIcon, LocationIcon, 
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import GlassCard from "@/components/GlassCard";
-import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import AppHeader from "@/components/AppHeader";
 import LiveSocialActions from "@/components/LiveSocialActions";
@@ -65,11 +64,6 @@ export default async function HomePage() {
 
       <div className="relative z-10 mx-auto max-w-[1480px] px-4 pb-32 pt-5 sm:px-6 md:pb-12 md:pt-7 xl:px-8">
         <EmergencyHelpLive initialCount={liveEmergencies.length} enabled={emergencyHelpEnabled} />
-        <div className="mb-5 flex items-center justify-between md:hidden">
-          <Logo href="/home" className="h-9 w-auto scale-[1.7] transform-gpu" />
-          <div className="flex items-center gap-2"><Link href="/map" className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03]"><LocationIcon className="h-4 w-4 text-red-300" /></Link><Link href="/profile" className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/10">{user.image ? <img src={user.image} alt="" className="h-full w-full object-cover" /> : user.name.charAt(0)}</Link></div>
-        </div>
-
         <div className="grid gap-5 xl:grid-cols-[245px_minmax(0,1fr)_285px]">
           <aside className="hidden xl:block">
             <div className="sticky top-24 space-y-4">

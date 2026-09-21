@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import EmergencyGlobalAlert from "@/components/EmergencyGlobalAlert";
+import PresenceTracker from "@/components/PresenceTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} min-h-full flex flex-col`}><EmergencyGlobalAlert />{children}</body>
+      <body className={`${geistSans.variable} ${geistMono.variable} min-h-full flex flex-col`}><PresenceTracker /><EmergencyGlobalAlert />{children}</body>
     </html>
   );
 }

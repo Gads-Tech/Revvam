@@ -15,6 +15,8 @@ type Emergency = {
   photo: string | null;
   latitude: number;
   longitude: number;
+  liveLatitude?: number | null;
+  liveLongitude?: number | null;
   radiusMeters: number;
   ghostMode: boolean;
   exactLocation: boolean;

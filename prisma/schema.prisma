@@ -21,6 +21,9 @@ model User {
   onboardingType          OnboardingType?
   location                String?
   readReceiptsEnabled     Boolean                 @default(true)
+  lastSeenAt              DateTime?
+  showOnlineStatus        Boolean                 @default(true)
+  showLastSeen            Boolean                 @default(true)
   chatRequestsReceived    ChatRequest[]           @relation("ChatRequestRecipient")
   chatRequestsSent        ChatRequest[]           @relation("ChatRequestSender")
   conversationMemberships ConversationMember[]

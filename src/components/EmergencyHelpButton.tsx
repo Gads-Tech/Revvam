@@ -68,11 +68,11 @@ export default function EmergencyHelpButton({ initialCount = 0 }: { initialCount
       </span>
 
       <span className="truncate">
-        {hasEmergency ? "Emergency Help" : "Emergency"}
+        {hasEmergency ? "Emergency Help" : "Emergency help"}
       </span>
 
       {hasEmergency && (
-        <span className="hidden rounded-full bg-red-500 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white sm:inline-flex">
+        <span className="rounded-full bg-red-500 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-white shadow-[0_0_16px_rgba(239,68,68,.35)]">
           {count} Live
         </span>
       )}

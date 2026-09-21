@@ -13,7 +13,7 @@ export async function POST(request:Request,{params}:{params:Promise<{id:string}>
  const offer=await prisma.$transaction(async tx=>{
    const created=await tx.emergencyOffer.create({data:{emergencyId:id,mechanicId:user.id,message}});
    await tx.emergencyRequest.update({where:{id},data:{status:"OFFERS_RECEIVED"}});
-   await tx.notification.create({data:{userId:emergency.driverId,actorId:user.id,type:"EMERGENCY_OFFER",title:"Someone offered to help",body:user.name+" offered to help with your emergency.",href:"/emergency/nearby"}});
+   await tx.notification.create({data:{userId:emergency.driverId,actorId:user.id,type:"EMERGENCY_OFFER",title:"Someone offered to help",body:user.name+" offered to help with your emergency.",href:`/emergency/nearby?emergency=${encodeURIComponent(id)}&offer=${encodeURIComponent(created.id)}`}});
    return created;
  });
  return NextResponse.json({success:true,offer},{status:201});

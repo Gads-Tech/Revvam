@@ -37,18 +37,24 @@ export default function ProfileNotificationsPage() {
         offerId = url.searchParams.get("offer") || "";
       } catch {}
     }
-    if (!emergencyId) {
-      setError("This emergency request could not be found.");
-      return;
-    }
     setBusy(item.id);
     try {
-      const response = await fetch(`/api/emergencies/${encodeURIComponent(emergencyId)}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, offerId }),
-      });
+      // Resolve the offer server-side from the notification as well. This
+      // supports both new notifications and older notifications that were
+      // created before emergency/offer IDs were included in href.
+      const response = emergencyId && offerId
+        ? await fetch(`/api/emergencies/${encodeURIComponent(emergencyId)}`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action, offerId }),
+          })
+        : await fetch("/api/notifications/emergency-offer", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notificationId: item.id, action }),
+          });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data?.success) throw new Error(data?.error || "Unable to update the emergency offer.");
       await markRead(item.id);

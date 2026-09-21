@@ -31,14 +31,22 @@ export default function LiveSocialActions({ compact = false }: Props) {
     const controller = new AbortController();
     refresh(controller.signal);
 
-    const timer = window.setInterval(() => refresh(controller.signal), 3000);
+    const timer = window.setInterval(() => refresh(controller.signal), 2000);
     const onFocus = () => refresh(controller.signal);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh(controller.signal);
+    };
+    const onSocialUnread = () => void refresh(controller.signal);
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("revvam:social-unread", onSocialUnread);
 
     return () => {
       controller.abort();
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("revvam:social-unread", onSocialUnread);
     };
   }, []);
 

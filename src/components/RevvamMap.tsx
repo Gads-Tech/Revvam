@@ -162,7 +162,7 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
     };
   }, []);
 
-  const focusLocation = () => {
+  const focusUserLocation = () => {
     if (!mounted || !navigator.geolocation || locating) return;
     setLocating(true);
 
@@ -306,7 +306,7 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
     <div ref={containerRef} className="relative h-[320px] w-full overflow-hidden rounded-[1.7rem] border border-white/[0.10] bg-[#05070b] shadow-[0_24px_70px_rgba(0,0,0,.45)] sm:h-[400px]">
       <button
         type="button"
-        onClick={focusLocation}
+        onClick={focusUserLocation}
         disabled={locating}
         aria-label="Focus on my location"
         title="Focus on my location"

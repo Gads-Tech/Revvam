@@ -17,6 +17,9 @@ type Marker = {
   radiusMeters?: number;
   exactLocation?: boolean;
   ghostMode?: boolean;
+  kind?: "emergency" | "event";
+  eventLocation?: string;
+  eventStartsAt?: string;
 };
 
 type Props = {
@@ -228,11 +231,16 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
     }
 
     markers.forEach((m) => {
+      const isEvent = m.kind === "event";
       const el = document.createElement("div");
-      el.className = "revvam-emergency-marker";
-      el.style.cssText = "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ef4444;border:3px solid #fff;color:#fff;font-weight:900;font-size:22px;box-shadow:0 0 0 4px rgba(239,68,68,.16),0 0 24px rgba(239,68,68,.58);box-sizing:border-box;";
-      el.textContent = "!";
-      const popupText = "<div style=\"min-width:190px\"><strong>⚠ " + m.title + "</strong><br/><span>" + (m.description ?? "") + "</span><br/><small>" + (m.exactLocation ? "Exact live location" : "Approximate location") + " · " + (m.radiusMeters ?? 500) + "m radius</small><br/><button type=\"button\" data-revvam-offer=\"" + m.id + "\" style=\"margin-top:8px;width:100%;border:0;border-radius:10px;background:#ef4444;color:white;padding:8px;font-weight:700;cursor:pointer\">Offer to help</button></div>";
+      el.className = isEvent ? "revvam-event-marker" : "revvam-emergency-marker";
+      el.style.cssText = isEvent
+        ? "width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:#7c3aed;border:3px solid #fff;color:#fff;font-weight:900;font-size:20px;box-shadow:0 0 0 4px rgba(124,58,237,.15),0 0 24px rgba(124,58,237,.48);box-sizing:border-box;"
+        : "width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#ef4444;border:3px solid #fff;color:#fff;font-weight:900;font-size:22px;box-shadow:0 0 0 4px rgba(239,68,68,.16),0 0 24px rgba(239,68,68,.58);box-sizing:border-box;";
+      el.textContent = isEvent ? "✦" : "!";
+      const popupText = isEvent
+        ? "<div style=\"min-width:200px\"><strong>✦ " + m.title + "</strong><br/><span>" + (m.description ?? "Revvam event") + "</span><br/><small>" + (m.eventLocation ?? "Event location") + "</small><br/><small>" + (m.eventStartsAt ? new Date(m.eventStartsAt).toLocaleString() : "") + "</small></div>"
+        : "<div style=\"min-width:190px\"><strong>⚠ " + m.title + "</strong><br/><span>" + (m.description ?? "") + "</span><br/><small>" + (m.exactLocation ? "Exact live location" : "Approximate location") + " · " + (m.radiusMeters ?? 500) + "m radius</small><br/><button type=\"button\" data-revvam-offer=\"" + m.id + "\" style=\"margin-top:8px;width:100%;border:0;border-radius:10px;background:#ef4444;color:white;padding:8px;font-weight:700;cursor:pointer\">Offer to help</button></div>";
       const popup = new window.maplibregl.Popup({ offset: 22 }).setHTML(popupText);
       popup.on("open", () => {
         const node = popup.getElement()?.querySelector("[data-revvam-offer]");
@@ -244,7 +252,7 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
         .addTo(map);
       markersRef.current.push(marker);
 
-      if (m.radiusMeters) {
+      if (!isEvent && m.radiusMeters) {
         const sourceId = "emergency-radius-" + m.id;
         if (map.getSource(sourceId)) {
           try { if (map.getLayer(sourceId)) map.removeLayer(sourceId); } catch {}

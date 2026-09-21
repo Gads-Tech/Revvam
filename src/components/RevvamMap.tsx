@@ -27,9 +27,10 @@ type Props = {
   userImage: string | null;
   markers: Marker[];
   onOfferHelp?: (emergencyId: string) => void;
+  focusLocation?: { latitude: number; longitude: number } | null;
 };
 
-export default function RevvamMap({ userLocation, userImage, markers, onOfferHelp }: Props) {
+export default function RevvamMap({ userLocation, userImage, markers, onOfferHelp, focusLocation }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const [locating, setLocating] = useState(false);
@@ -182,6 +183,22 @@ export default function RevvamMap({ userLocation, userImage, markers, onOfferHel
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 },
     );
   };
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusLocation) return;
+    const focus = () => {
+      map.flyTo({
+        center: [focusLocation.longitude, focusLocation.latitude],
+        zoom: 17,
+        pitch: 55,
+        duration: 1400,
+        essential: true,
+      });
+    };
+    if (map.isStyleLoaded()) focus();
+    else map.once("load", focus);
+  }, [focusLocation]);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

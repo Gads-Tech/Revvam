@@ -27,7 +27,7 @@ export default function EmergencyGlobalAlert() {
 
     const check = async () => {
       try {
-        const response = await fetch("/api/emergencies/help?_=" + Date.now(), {
+        const response = await fetch("/api/emergencies?_=" + Date.now(), {
           method: "GET",
           credentials: "include",
           cache: "no-store",
@@ -38,11 +38,23 @@ export default function EmergencyGlobalAlert() {
         });
 
         const json = await response.json().catch(() => null);
-        if (!active || !response.ok || !json?.success) return;
+        if (!active || !response.ok || !json?.success || !Array.isArray(json.emergencies)) return;
 
+        const emergencies = json.emergencies;
+        const latest = emergencies[0] ?? null;
         const next: AlertData = {
-          count: Number(json.count) || 0,
-          latest: json.latest ?? null,
+          count: emergencies.length,
+          latest: latest
+            ? {
+                id: latest.id,
+                createdAt: latest.createdAt,
+                type: latest.type,
+                description: latest.description,
+                locationLabel: latest.locationLabel,
+                ghostMode: latest.ghostMode,
+                radiusMeters: latest.radiusMeters,
+              }
+            : null,
         };
 
         if (next.latest?.id && next.latest.id !== lastLatestId.current) {

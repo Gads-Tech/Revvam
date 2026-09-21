@@ -40,7 +40,7 @@ export async function GET(request: Request, context: RouteContext) {
       include: {
         members: {
           where: { userId: { not: user.id } },
-          include: { user: { select: { id: true, name: true, username: true, image: true } } },
+          include: { user: { select: { id: true, name: true, username: true, image: true, lastSeenAt: true, showOnlineStatus: true, showLastSeen: true } } },
         },
       },
     });
@@ -59,6 +59,21 @@ export async function GET(request: Request, context: RouteContext) {
     ]);
 
     const otherUser = conversation?.members[0]?.user ?? null;
+    const otherOnline = Boolean(otherUser?.lastSeenAt && otherUser.lastSeenAt.getTime() >= Date.now() - 90_000);
+    const publicOtherUser = otherUser
+      ? {
+          id: otherUser.id,
+          name: otherUser.name,
+          username: otherUser.username,
+          image: otherUser.image,
+          presence: {
+            online: otherUser.showOnlineStatus ? otherOnline : null,
+            lastSeenAt: otherUser.showLastSeen && (!otherOnline || otherUser.showOnlineStatus)
+              ? otherUser.lastSeenAt?.toISOString() ?? null
+              : null,
+          },
+        }
+      : null;
     const canShowReceipt = otherUser ? await receiptEnabled(otherUser.id, user.id) : false;
 
     if (markRead) {
@@ -74,7 +89,7 @@ export async function GET(request: Request, context: RouteContext) {
       success: true,
       currentUserId: user.id,
       messages: chronologicalMessages.map((message) => ({ ...message, opened: message.senderId === user.id ? Boolean(message.readAt && canShowReceipt) : false })),
-      otherUser,
+      otherUser: publicOtherUser,
       readReceiptsEnabledForOtherUser: canShowReceipt,
       unreadBeforeOpen: markRead ? unreadBeforeOpen : 0,
       unreadCount: markRead ? 0 : unreadBeforeOpen,

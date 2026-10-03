@@ -35,6 +35,11 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [loadingFriends, setLoadingFriends] = useState(false);
   const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [shareError, setShareError] = useState("");
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(true);
+  const [videoVolume, setVideoVolume] = useState(1);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
   useEffect(() => {
@@ -42,13 +47,20 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     if (!video || !post.video) return;
     const preferenceKey = "revvam:video-muted";
     const savedMuted = window.localStorage.getItem(preferenceKey);
-    video.muted = savedMuted === null ? true : savedMuted !== "false";
+    const initialMuted = savedMuted === null ? true : savedMuted !== "false";
+    video.muted = initialMuted;
+    setVideoMuted(initialMuted);
+    video.volume = 1;
     video.loop = true;
     video.playsInline = true;
+    video.preload = "metadata";
 
     const syncPreference = () => {
+      setVideoMuted(video.muted);
       window.localStorage.setItem(preferenceKey, String(video.muted));
-      window.dispatchEvent(new CustomEvent("revvam:video-muted-change", { detail: { muted: video.muted, sourcePostId: post.id } }));
+      window.dispatchEvent(new CustomEvent("revvam:video-muted-change", {
+        detail: { muted: video.muted, sourcePostId: post.id }
+      }));
     };
     const applyPreference = (event?: Event) => {
       const custom = event as CustomEvent<{ muted?: boolean; sourcePostId?: string }> | undefined;
@@ -57,35 +69,121 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         ? custom.detail.muted
         : window.localStorage.getItem(preferenceKey) !== "false";
       video.muted = muted;
+      setVideoMuted(muted);
     };
+    const stopIfAnotherVideoStarts = (event: Event) => {
+      const custom = event as CustomEvent<{ postId?: string }>;
+      if (custom.detail?.postId !== post.id) {
+        video.pause();
+        setVideoPlaying(false);
+      }
+    };
+    const onTimeUpdate = () => setVideoProgress(video.duration ? video.currentTime / video.duration : 0);
+    const onLoadedMetadata = () => setVideoDuration(Number.isFinite(video.duration) ? video.duration : 0);
+    const onPlay = () => {
+      setVideoPlaying(true);
+      window.dispatchEvent(new CustomEvent("revvam:video-play", { detail: { postId: post.id } }));
+    };
+    const onPause = () => setVideoPlaying(false);
 
     video.addEventListener("volumechange", syncPreference);
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
     window.addEventListener("storage", applyPreference);
     window.addEventListener("revvam:video-muted-change", applyPreference);
+    window.addEventListener("revvam:video-play", stopIfAnotherVideoStarts);
 
+    const isMobile = window.matchMedia("(max-width: 639px)").matches;
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
-        // Browsers may block autoplay with sound. We still honor the user's
-        // saved preference and let the browser play muted if necessary.
+      if (entry.isIntersecting && entry.intersectionRatio >= (isMobile ? 0.72 : 0.55)) {
         void video.play().catch(() => {
           if (!video.muted) {
             video.muted = true;
+            setVideoMuted(true);
             void video.play().catch(() => {});
           }
         });
-      } else if (!entry.isIntersecting || entry.intersectionRatio < 0.2) {
+      } else {
         video.pause();
       }
-    }, { threshold: [0, 0.2, 0.55, 1] });
+    }, { threshold: [0, 0.2, 0.55, 0.72, 0.9, 1] });
     observer.observe(video);
 
     return () => {
+      video.pause();
       video.removeEventListener("volumechange", syncPreference);
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
       window.removeEventListener("storage", applyPreference);
       window.removeEventListener("revvam:video-muted-change", applyPreference);
+      window.removeEventListener("revvam:video-play", stopIfAnotherVideoStarts);
       observer.disconnect();
     };
   }, [post.video, post.id]);
+
+  function toggleVideoPlayback() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) void video.play().catch(() => {});
+    else video.pause();
+  }
+
+  function toggleVideoMute() {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setVideoMuted(video.muted);
+    window.localStorage.setItem("revvam:video-muted", String(video.muted));
+    window.dispatchEvent(new CustomEvent("revvam:video-muted-change", {
+      detail: { muted: video.muted, sourcePostId: post.id }
+    }));
+  }
+
+  function changeVideoVolume(value: number) {
+    const video = videoRef.current;
+    if (!video) return;
+    const next = Math.max(0, Math.min(1, value));
+    video.volume = next;
+    setVideoVolume(next);
+    if (next > 0 && video.muted) {
+      video.muted = false;
+      setVideoMuted(false);
+      window.localStorage.setItem("revvam:video-muted", "false");
+      window.dispatchEvent(new CustomEvent("revvam:video-muted-change", {
+        detail: { muted: false, sourcePostId: post.id }
+      }));
+    } else if (next === 0 && !video.muted) {
+      video.muted = true;
+      setVideoMuted(true);
+      window.localStorage.setItem("revvam:video-muted", "true");
+    }
+  }
+
+  function seekVideo(value: number) {
+    const video = videoRef.current;
+    if (!video || !video.duration) return;
+    video.currentTime = value * video.duration;
+    setVideoProgress(value);
+  }
+
+  function toggleFullscreen() {
+    const video = videoRef.current;
+    if (!video) return;
+    const container = video.parentElement;
+    if (!document.fullscreenElement) void container?.requestFullscreen?.();
+    else void document.exitFullscreen?.();
+  }
+
+  function formatVideoTime(value: number) {
+    if (!Number.isFinite(value)) return "0:00";
+    const minutes = Math.floor(value / 60);
+    const seconds = Math.floor(value % 60).toString().padStart(2, "0");
+    return `${minutes}:${seconds}`;
+  }
 
   useEffect(() => { const onOtherPostOpened = (event: Event) => { const custom = event as CustomEvent<{ postId: string }>; if (custom.detail?.postId !== post.id) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }; window.addEventListener("revvam:comments-open", onOtherPostOpened); return () => window.removeEventListener("revvam:comments-open", onOtherPostOpened); }, [post.id]);
   useEffect(() => { if (!showComments) return; const observer = new IntersectionObserver(([entry]) => { if (!entry.isIntersecting) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }, { threshold: 0.05 }); if (articleRef.current) observer.observe(articleRef.current); return () => observer.disconnect(); }, [showComments]);
@@ -148,7 +246,51 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     <article ref={articleRef} className={`overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.025] transition hover:border-white/[0.12] ${showComments ? "max-[639px]:fixed max-[639px]:inset-x-2 max-[639px]:bottom-2 max-[639px]:top-2 max-[639px]:z-50 max-[639px]:flex max-[639px]:flex-col max-[639px]:rounded-2xl max-[639px]:shadow-[0_20px_80px_rgba(0,0,0,0.75)] min-[640px]:grid min-[640px]:grid-cols-[minmax(0,0.5fr)_minmax(0,0.5fr)] md:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]" : ""}` }>
     <div className="min-w-0 max-[639px]:min-h-0 max-[639px]:overflow-y-auto">
       <div className="p-5 sm:p-6"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{post.content}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
-      {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div className="overflow-hidden border-t border-white/[0.06] bg-black max-[639px]:max-h-[34vh]"><video ref={videoRef} src={post.video} controls muted playsInline loop preload="metadata" className="max-h-[620px] max-[639px]:max-h-[34vh] w-full object-contain" /></div>}
+      {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[52vh]">
+        <video
+          ref={videoRef}
+          src={post.video}
+          playsInline
+          loop
+          preload="metadata"
+          onClick={toggleVideoPlayback}
+          className="block max-h-[620px] max-[639px]:max-h-[52vh] w-full cursor-pointer object-contain"
+          aria-label="Revvam car video"
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16">
+          <div className="pointer-events-auto px-3 pb-3 sm:px-4 sm:pb-4">
+            <div className="mb-2 flex items-center gap-2">
+              <input
+                aria-label="Video progress"
+                type="range"
+                min="0"
+                max="1"
+                step="0.001"
+                value={videoProgress}
+                onChange={(event) => seekVideo(Number(event.target.value))}
+                className="revvam-video-range h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/15"
+                style={{ background: `linear-gradient(to right, #ef4444 ${videoProgress * 100}%, rgba(255,255,255,.12) ${videoProgress * 100}%)` }}
+              />
+              <span className="w-20 text-right font-mono text-[9px] text-white/45">{formatVideoTime(videoRef.current?.currentTime ?? 0)} / {formatVideoTime(videoDuration)}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-2xl border border-red-400/10 bg-black/75 px-2.5 py-2 shadow-[0_8px_30px_rgba(0,0,0,.45)] backdrop-blur-xl">
+              <button type="button" onClick={toggleVideoPlayback} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-600/15 text-red-200 transition hover:bg-red-600/25" aria-label={videoPlaying ? "Pause video" : "Play video"}>
+                {videoPlaying ? <span className="text-xs font-black">Ⅱ</span> : <span className="ml-0.5 text-xs font-black">▶</span>}
+              </button>
+              <div className="hidden items-center gap-1.5 sm:flex">
+                <span className="text-[8px] font-black uppercase tracking-[0.16em] text-red-300/70">REV</span>
+                <span className="h-3 w-px bg-white/10" />
+              </div>
+              <button type="button" onClick={toggleVideoMute} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/[0.06] hover:text-white" aria-label={videoMuted ? "Unmute video" : "Mute video"}>
+                {videoMuted ? "🔇" : "🔊"}
+              </button>
+              <input aria-label="Video volume" type="range" min="0" max="1" step="0.05" value={videoMuted ? 0 : videoVolume} onChange={(event) => changeVideoVolume(Number(event.target.value))} className="revvam-video-range hidden h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/15 sm:block" />
+              <span className="ml-auto font-mono text-[8px] uppercase tracking-[0.16em] text-white/25">DRIVE • MEDIA</span>
+              <button type="button" onClick={toggleFullscreen} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/50 transition hover:bg-white/[0.06] hover:text-white" aria-label="Fullscreen video">⛶</button>
+            </div>
+          </div>
+        </div>
+      </div>}
       <div className="flex items-center gap-1 border-t border-white/[0.06] px-4 py-2 sm:px-5"><button type="button" onClick={toggleLike} disabled={busy} className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition ${liked ? "text-red-300" : "text-white/35 hover:bg-white/[0.04] hover:text-white"}`}><LikeIcon className="h-4 w-4" filled={liked} />{counts.likes || "Like"}</button><button type="button" onClick={toggleComments} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><CommentIcon className="h-4 w-4" />{counts.comments || "Comment"}</button><button type="button" onClick={openShare} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><ShareIcon className="h-4 w-4" />{counts.shares || "Share"}</button></div>{notice && <p className="border-t border-white/[0.06] px-5 py-2 text-[10px] text-red-300">{notice}</p>}
     </div>
     {showComments && <div className="flex min-w-0 min-h-0 max-h-[58svh] max-[639px]:absolute max-[639px]:inset-x-0 max-[639px]:bottom-0 max-[639px]:pb-[env(safe-area-inset-bottom)] max-[639px]:rounded-t-2xl max-[639px]:bg-black/90 max-[639px]:backdrop-blur-xl max-[639px]:backdrop-blur-xl max-[639px]:shadow-[0_-20px_50px_rgba(0,0,0,0.55)] md:max-h-[85svh] flex-col border-t border-white/[0.06] px-4 pb-4 pt-3 sm:px-5 md:border-l md:border-t-0"><div className="flex items-center justify-between gap-3 pb-2"><div><p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Conversation</p><p className="text-xs font-semibold text-white/60">{counts.comments} comment{counts.comments === 1 ? "" : "s"}</p></div><button type="button" onClick={() => { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); }} className="flex h-8 w-12 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.02]" aria-label="Collapse comments"><CloseIcon className="h-4 w-4" /></button></div>

@@ -36,6 +36,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [sendingTo, setSendingTo] = useState<string | null>(null);
   const [shareError, setShareError] = useState("");
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoIsFocused, setVideoIsFocused] = useState(false);
   const [videoMuted, setVideoMuted] = useState(true);
   const [videoVolume, setVideoVolume] = useState(1);
   const [videoProgress, setVideoProgress] = useState(0);
@@ -100,8 +101,9 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      const threshold = isMobile ? 0.6 : 0.5;
+      const threshold = isMobile ? 0.5 : 0.5;
       if (entry.isIntersecting && entry.intersectionRatio >= threshold) {
+        setVideoIsFocused(true);
         void video.play().catch(() => {
           if (!video.muted) {
             video.muted = true;
@@ -110,9 +112,10 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           }
         });
       } else {
+        setVideoIsFocused(false);
         video.pause();
       }
-    }, { threshold: [0, 0.2, 0.4, 0.5, 0.6, 0.75, 0.9, 1] });
+    }, { threshold: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1] });
     observer.observe(video);
 
     return () => {
@@ -266,11 +269,13 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       >
         <video
           ref={videoRef}
+          onPlay={() => setVideoPlaying(true)}
+          onPause={() => setVideoPlaying(false)}
           src={post.video}
           playsInline
           loop
           preload="metadata"
-          onClick={toggleVideoPlayback}
+          onClick={() => { armVideoControlsHide(); setVideoIsFocused(true); }}
           className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:max-h-none [&:fullscreen]:h-full [&:fullscreen]:w-full [&:fullscreen]:object-contain"
           aria-label="Revvam car video"
         />

@@ -24,3 +24,30 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
   .revvam-chat-scroll { position: static !important; -webkit-overflow-scrolling: auto; }
   .revvam-chat-scroll > button[aria-label^="Jump to "] { right: max(1rem,env(safe-area-inset-right)) !important; bottom: max(5.75rem,calc(5.75rem + env(safe-area-inset-bottom))) !important; }
 }
+
+.revvam-video-seek { -webkit-appearance: none; appearance: none; background: transparent; }
+.revvam-video-seek::-webkit-slider-runnable-track { height: 4px; background: transparent; border: 0; }
+.revvam-video-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 108px;
+  height: 44px;
+  margin-top: -20px;
+  border: 0;
+  border-radius: 0;
+  background: transparent url("/revvam-video-car.svg") center / contain no-repeat;
+  cursor: grab;
+  filter: drop-shadow(0 5px 9px rgba(14,165,233,.42));
+}
+.revvam-video-seek:active::-webkit-slider-thumb { cursor: grabbing; }
+.revvam-video-seek::-moz-range-track { height: 4px; background: transparent; border: 0; }
+.revvam-video-seek::-moz-range-thumb {
+  width: 108px;
+  height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: transparent url("/revvam-video-car.svg") center / contain no-repeat;
+  cursor: grab;
+  filter: drop-shadow(0 5px 9px rgba(14,165,233,.42));
+}
+.revvam-video-seek:active::-moz-range-thumb { cursor: grabbing; }

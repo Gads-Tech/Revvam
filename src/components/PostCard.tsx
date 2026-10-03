@@ -40,19 +40,52 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !post.video) return;
-    video.muted = true;
+    const preferenceKey = "revvam:video-muted";
+    const savedMuted = window.localStorage.getItem(preferenceKey);
+    video.muted = savedMuted === null ? true : savedMuted !== "false";
     video.loop = true;
     video.playsInline = true;
+
+    const syncPreference = () => {
+      window.localStorage.setItem(preferenceKey, String(video.muted));
+      window.dispatchEvent(new CustomEvent("revvam:video-muted-change", { detail: { muted: video.muted, sourcePostId: post.id } }));
+    };
+    const applyPreference = (event?: Event) => {
+      const custom = event as CustomEvent<{ muted?: boolean; sourcePostId?: string }> | undefined;
+      if (custom?.detail?.sourcePostId === post.id) return;
+      const muted = typeof custom?.detail?.muted === "boolean"
+        ? custom.detail.muted
+        : window.localStorage.getItem(preferenceKey) !== "false";
+      video.muted = muted;
+    };
+
+    video.addEventListener("volumechange", syncPreference);
+    window.addEventListener("storage", applyPreference);
+    window.addEventListener("revvam:video-muted-change", applyPreference);
+
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
-        void video.play().catch(() => {});
+        // Browsers may block autoplay with sound. We still honor the user's
+        // saved preference and let the browser play muted if necessary.
+        void video.play().catch(() => {
+          if (!video.muted) {
+            video.muted = true;
+            void video.play().catch(() => {});
+          }
+        });
       } else if (!entry.isIntersecting || entry.intersectionRatio < 0.2) {
         video.pause();
       }
     }, { threshold: [0, 0.2, 0.55, 1] });
     observer.observe(video);
-    return () => observer.disconnect();
-  }, [post.video]);
+
+    return () => {
+      video.removeEventListener("volumechange", syncPreference);
+      window.removeEventListener("storage", applyPreference);
+      window.removeEventListener("revvam:video-muted-change", applyPreference);
+      observer.disconnect();
+    };
+  }, [post.video, post.id]);
 
   useEffect(() => { const onOtherPostOpened = (event: Event) => { const custom = event as CustomEvent<{ postId: string }>; if (custom.detail?.postId !== post.id) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }; window.addEventListener("revvam:comments-open", onOtherPostOpened); return () => window.removeEventListener("revvam:comments-open", onOtherPostOpened); }, [post.id]);
   useEffect(() => { if (!showComments) return; const observer = new IntersectionObserver(([entry]) => { if (!entry.isIntersecting) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }, { threshold: 0.05 }); if (articleRef.current) observer.observe(articleRef.current); return () => observer.disconnect(); }, [showComments]);

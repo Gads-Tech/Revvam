@@ -40,6 +40,8 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [videoVolume, setVideoVolume] = useState(1);
   const [videoProgress, setVideoProgress] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
+  const [videoControlsVisible, setVideoControlsVisible] = useState(true);
+  const videoControlsTimerRef = useRef<number | null>(null);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
   useEffect(() => {
@@ -125,11 +127,18 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     };
   }, [post.video, post.id]);
 
+  function armVideoControlsHide() {
+    setVideoControlsVisible(true);
+    if (videoControlsTimerRef.current !== null) window.clearTimeout(videoControlsTimerRef.current);
+    videoControlsTimerRef.current = window.setTimeout(() => setVideoControlsVisible(false), 3000);
+  }
+
   function toggleVideoPlayback() {
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) void video.play().catch(() => {});
     else video.pause();
+    armVideoControlsHide();
   }
 
   function toggleVideoMute() {
@@ -187,6 +196,8 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
   useEffect(() => { const onOtherPostOpened = (event: Event) => { const custom = event as CustomEvent<{ postId: string }>; if (custom.detail?.postId !== post.id) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }; window.addEventListener("revvam:comments-open", onOtherPostOpened); return () => window.removeEventListener("revvam:comments-open", onOtherPostOpened); }, [post.id]);
   useEffect(() => { if (!showComments) return; const observer = new IntersectionObserver(([entry]) => { if (!entry.isIntersecting) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }, { threshold: 0.05 }); if (articleRef.current) observer.observe(articleRef.current); return () => observer.disconnect(); }, [showComments]);
+  useEffect(() => () => { if (videoControlsTimerRef.current !== null) window.clearTimeout(videoControlsTimerRef.current); }, []);
+
   useEffect(() => { if (showComments) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); }, [showComments, post.id]);
   useEffect(() => { const params = new URLSearchParams(window.location.search); const queryTarget = params.get("comment"); const hash = window.location.hash; const hashTarget = hash.startsWith("#comment-") ? decodeURIComponent(hash.slice("#comment-".length)) : null; const targetId = queryTarget || hashTarget; if (!targetId) return; setDeepLinkCommentId(targetId); setShowComments(true); window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); void loadComments(); }, [post.id]);
   useEffect(() => { if (!showComments || !deepLinkCommentId || !comments.length) return; const target = comments.find((item) => item.id === deepLinkCommentId); if (!target) return; const ancestors: string[] = []; let cursor = target; while (cursor.parentId) { ancestors.push(cursor.parentId); const parent = comments.find((item) => item.id === cursor.parentId); if (!parent) break; cursor = parent; } if (ancestors.length) setExpandedReplies((current) => { const next = { ...current }; for (const id of ancestors) next[id] = true; return next; }); const timer = window.setTimeout(() => { document.getElementById(`comment-${deepLinkCommentId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }); setDeepLinkCommentId(null); }, ancestors.length ? 400 : 180); return () => window.clearTimeout(timer); }, [comments, showComments, deepLinkCommentId]);
@@ -246,7 +257,11 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     <article ref={articleRef} className={`overflow-hidden rounded-3xl border border-white/[0.07] bg-white/[0.025] transition hover:border-white/[0.12] ${showComments ? "max-[639px]:fixed max-[639px]:inset-x-2 max-[639px]:bottom-2 max-[639px]:top-2 max-[639px]:z-50 max-[639px]:flex max-[639px]:flex-col max-[639px]:rounded-2xl max-[639px]:shadow-[0_20px_80px_rgba(0,0,0,0.75)] min-[640px]:grid min-[640px]:grid-cols-[minmax(0,0.5fr)_minmax(0,0.5fr)] md:grid-cols-[minmax(0,1.3fr)_minmax(300px,0.7fr)]" : ""}` }>
     <div className="min-w-0 max-[639px]:min-h-0 max-[639px]:overflow-y-auto">
       <div className="p-5 sm:p-6"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{post.content}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
-      {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[52vh]">
+      {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div
+        className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[52vh]"
+        onPointerDown={() => armVideoControlsHide()}
+        onMouseMove={() => videoControlsVisible && armVideoControlsHide()}
+      >
         <video
           ref={videoRef}
           src={post.video}
@@ -257,36 +272,50 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           className="block max-h-[620px] max-[639px]:max-h-[52vh] w-full cursor-pointer object-contain"
           aria-label="Revvam car video"
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16">
+        <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16 transition-opacity duration-300 ${videoControlsVisible ? "opacity-100" : "opacity-0"}`}>
           <div className="pointer-events-auto px-3 pb-3 sm:px-4 sm:pb-4">
             <div className="mb-2 flex items-center gap-2">
-              <input
-                aria-label="Video progress"
-                type="range"
-                min="0"
-                max="1"
-                step="0.001"
-                value={videoProgress}
-                onChange={(event) => seekVideo(Number(event.target.value))}
-                className="revvam-video-range h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-white/15"
-                style={{ background: `linear-gradient(to right, #ef4444 ${videoProgress * 100}%, rgba(255,255,255,.12) ${videoProgress * 100}%)` }}
-              />
+              <div className="relative h-9 min-w-0 flex-1">
+                <input
+                  aria-label="Video progress"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.001"
+                  value={videoProgress}
+                  onChange={(event) => { seekVideo(Number(event.target.value)); armVideoControlsHide(); }}
+                  className="absolute inset-x-0 top-1/2 z-10 h-1.5 -translate-y-1/2 cursor-pointer appearance-none bg-transparent revvam-video-range"
+                />
+                <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 overflow-hidden rounded-full bg-white/10">
+                  <div className="relative h-full rounded-full bg-red-500 transition-[width] duration-100" style={{ width: `${videoProgress * 100}%` }}>
+                    <svg aria-hidden="true" viewBox="0 0 120 48" className="absolute right-0 top-1/2 h-10 w-[92px] -translate-y-1/2 translate-x-1/2 overflow-visible">
+                      <g className={videoPlaying ? "animate-[revvam-wheel-spin_.55s_linear_infinite]" : ""} style={{ transformBox: "fill-box", transformOrigin: "center" }}>
+                        <circle cx="31" cy="36" r="8" fill="#090909" stroke="#ef4444" strokeWidth="2" />
+                        <circle cx="89" cy="36" r="8" fill="#090909" stroke="#ef4444" strokeWidth="2" />
+                        <circle cx="31" cy="36" r="3" fill="#ef4444" />
+                        <circle cx="89" cy="36" r="3" fill="#ef4444" />
+                        <path d="M20 34 L28 18 L45 12 L72 12 L88 22 L99 34 Z" fill="#ef4444" opacity=".95" />
+                        <path d="M37 18 L45 14 L70 14 L78 22 L39 22 Z" fill="#050505" opacity=".95" />
+                        <path d="M22 34 H98" stroke="#fff" strokeOpacity=".25" strokeWidth="2" />
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+              </div>
               <span className="w-20 text-right font-mono text-[9px] text-white/45">{formatVideoTime(videoRef.current?.currentTime ?? 0)} / {formatVideoTime(videoDuration)}</span>
             </div>
             <div className="flex items-center gap-2 rounded-2xl border border-red-400/10 bg-black/75 px-2.5 py-2 shadow-[0_8px_30px_rgba(0,0,0,.45)] backdrop-blur-xl">
               <button type="button" onClick={toggleVideoPlayback} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-600/15 text-red-200 transition hover:bg-red-600/25" aria-label={videoPlaying ? "Pause video" : "Play video"}>
                 {videoPlaying ? <span className="text-xs font-black">Ⅱ</span> : <span className="ml-0.5 text-xs font-black">▶</span>}
               </button>
-              <div className="hidden items-center gap-1.5 sm:flex">
-                <span className="text-[8px] font-black uppercase tracking-[0.16em] text-red-300/70">REV</span>
-                <span className="h-3 w-px bg-white/10" />
-              </div>
-              <button type="button" onClick={toggleVideoMute} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/[0.06] hover:text-white" aria-label={videoMuted ? "Unmute video" : "Mute video"}>
+              <span className="hidden text-[8px] font-black uppercase tracking-[0.16em] text-red-300/70 sm:inline">REVVAM</span>
+              <span className="hidden h-3 w-px bg-white/10 sm:inline" />
+              <button type="button" onClick={() => { toggleVideoMute(); armVideoControlsHide(); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/[0.06] hover:text-white" aria-label={videoMuted ? "Unmute video" : "Mute video"}>
                 {videoMuted ? "🔇" : "🔊"}
               </button>
               <input aria-label="Video volume" type="range" min="0" max="1" step="0.05" value={videoMuted ? 0 : videoVolume} onChange={(event) => changeVideoVolume(Number(event.target.value))} className="revvam-video-range hidden h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/15 sm:block" />
               <span className="ml-auto font-mono text-[8px] uppercase tracking-[0.16em] text-white/25">DRIVE • MEDIA</span>
-              <button type="button" onClick={toggleFullscreen} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/50 transition hover:bg-white/[0.06] hover:text-white" aria-label="Fullscreen video">⛶</button>
+              <button type="button" onClick={() => { toggleFullscreen(); armVideoControlsHide(); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/50 transition hover:bg-white/[0.06] hover:text-white" aria-label="Fullscreen video">⛶</button>
             </div>
           </div>
         </div>
@@ -311,6 +340,7 @@ function CommentThread({ item, comments, currentUserId, expandedReplies, menuCom
 }
 
 function CommentItem({ id, item, currentUserId, menuOpen, deleting, onReply, onDelete, onMenu, onPointer, compact = false }: { id: string; item: Comment; currentUserId: string | null; menuOpen: boolean; deleting: boolean; onReply: (item: Comment) => void; onDelete: (item: Comment) => void; onMenu: () => void; onPointer: (item: Comment) => void; compact?: boolean }) { const mine = Boolean(currentUserId && item.author.id === currentUserId); return <div id={id} className="relative" onContextMenu={(event) => { event.preventDefault(); if (mine) onMenu(); }} onPointerDown={() => onPointer(item)}><div className={`rounded-2xl bg-white/[0.025] p-3 ${compact ? "py-2.5" : ""}`}><div className="flex items-center gap-2"><Link href={`/users/${encodeURIComponent(item.author.username)}`} onClick={(event) => event.stopPropagation()} className="shrink-0">{item.author.image ? <img src={item.author.image} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-red-600/15 text-[9px] font-bold text-red-300">{item.author.name.charAt(0).toUpperCase()}</div>}</Link><Link href={`/users/${encodeURIComponent(item.author.username)}`} className="min-w-0 truncate text-xs font-semibold text-white/85 transition hover:text-red-300">@{item.author.username}</Link><span className="ml-auto shrink-0 text-[9px] text-white/20">{formatDate(item.createdAt)}</span></div><p className="mt-2 pl-9 whitespace-pre-wrap text-xs leading-5 text-white/55">{renderMentions(item.content)}</p><div className="mt-2 flex items-center gap-3 pl-9"><button type="button" onClick={() => onReply(item)} className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-white/30 hover:text-red-300"><MessageIcon className="h-3 w-3" />Reply</button>{mine && <button type="button" onClick={onMenu} className="hidden items-center text-white/30 hover:text-white sm:inline-flex" aria-label="Comment options"><MoreIcon className="h-3.5 w-3.5" /></button>}</div></div>{menuOpen && <div className="absolute right-2 top-9 z-30 w-28 overflow-hidden rounded-xl border border-white/[0.10] bg-[#0a0a0a] p-1 shadow-2xl"><button type="button" onClick={() => onReply(item)} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-white/70 hover:bg-white/[0.06]"><MessageIcon className="h-3 w-3" />Reply</button>{mine && <button type="button" disabled={deleting} onClick={() => onDelete(item)} className="flex w-full rounded-lg px-3 py-2 text-left text-[10px] font-semibold text-red-300 hover:bg-red-500/[0.08]"><span className="flex items-center gap-2"><CloseIcon className="h-3 w-3" />{deleting ? "Deleting…" : "Delete"}</span></button>}</div>}</div>; }
+// The progress car is intentionally inline SVG so the media control stays self-contained and needs no image asset.
 function renderMentions(content: string) { return content.split(/(@[A-Za-z0-9_.-]+)/g).map((part, index) => part.startsWith("@") ? <span key={index} className="text-red-300">{part}</span> : <span key={index}>{part}</span>); }
 function ShareUser({ friend, sendingTo, onSend }: { friend: Friend; sendingTo: string | null; onSend: (friend: Friend) => void }) { return <button type="button" onClick={() => onSend(friend)} disabled={Boolean(sendingTo)} className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 text-left transition hover:border-red-400/20 hover:bg-red-500/[0.05] disabled:opacity-50"><span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-600/10 text-xs font-bold text-red-300">{friend.image ? <img src={friend.image} alt="" className="h-full w-full object-cover" /> : friend.name.charAt(0).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-white/85">{friend.name}</span><span className="block truncate text-[10px] text-white/25">@{friend.username}</span></span><span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-red-300">{sendingTo === friend.username ? "Sending…" : <><SendIcon className="h-3.5 w-3.5" />Send</>}</span></button>; }
 function formatDate(value: string) { const date = new Date(value); const diff = Math.max(0, Date.now() - date.getTime()); if (diff < 60_000) return "just now"; if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`; if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h`; return date.toLocaleDateString(undefined, { month: "short", day: "numeric" }); }

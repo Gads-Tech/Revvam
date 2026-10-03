@@ -41,7 +41,6 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [videoProgress, setVideoProgress] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoControlsVisible, setVideoControlsVisible] = useState(true);
-  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
   const videoControlsTimerRef = useRef<number | null>(null);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
@@ -98,11 +97,6 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     window.addEventListener("revvam:video-muted-change", applyPreference);
     window.addEventListener("revvam:video-play", stopIfAnotherVideoStarts);
 
-    const onMetadataForAspect = () => {
-      if (video.videoWidth && video.videoHeight) setVideoAspectRatio(video.videoWidth / video.videoHeight);
-    };
-    video.addEventListener("loadedmetadata", onMetadataForAspect);
-
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
@@ -126,7 +120,6 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       video.removeEventListener("volumechange", syncPreference);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
-      video.removeEventListener("loadedmetadata", onMetadataForAspect);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
       window.removeEventListener("storage", applyPreference);

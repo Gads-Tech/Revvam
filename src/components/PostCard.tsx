@@ -41,6 +41,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [videoProgress, setVideoProgress] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoControlsVisible, setVideoControlsVisible] = useState(true);
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null);
   const videoControlsTimerRef = useRef<number | null>(null);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
@@ -97,9 +98,16 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     window.addEventListener("revvam:video-muted-change", applyPreference);
     window.addEventListener("revvam:video-play", stopIfAnotherVideoStarts);
 
+    const onMetadataForAspect = () => {
+      if (video.videoWidth && video.videoHeight) setVideoAspectRatio(video.videoWidth / video.videoHeight);
+    };
+    video.addEventListener("loadedmetadata", onMetadataForAspect);
+
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && entry.intersectionRatio >= (isMobile ? 0.72 : 0.55)) {
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      const threshold = isMobile ? 0.6 : 0.5;
+      if (entry.isIntersecting && entry.intersectionRatio >= threshold) {
         void video.play().catch(() => {
           if (!video.muted) {
             video.muted = true;
@@ -110,7 +118,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       } else {
         video.pause();
       }
-    }, { threshold: [0, 0.2, 0.55, 0.72, 0.9, 1] });
+    }, { threshold: [0, 0.2, 0.4, 0.5, 0.6, 0.75, 0.9, 1] });
     observer.observe(video);
 
     return () => {
@@ -118,6 +126,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       video.removeEventListener("volumechange", syncPreference);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      video.removeEventListener("loadedmetadata", onMetadataForAspect);
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
       window.removeEventListener("storage", applyPreference);
@@ -258,7 +267,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     <div className="min-w-0 max-[639px]:min-h-0 max-[639px]:overflow-y-auto">
       <div className="p-5 sm:p-6"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{post.content}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
       {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div
-        className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[52vh]"
+        className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[72vh] [&:fullscreen]:flex [&:fullscreen]:h-[100dvh] [&:fullscreen]:w-screen [&:fullscreen]:items-center [&:fullscreen]:justify-center [&:fullscreen]:border-0 [&:fullscreen]:bg-black"
         onPointerDown={() => armVideoControlsHide()}
         onMouseMove={() => videoControlsVisible && armVideoControlsHide()}
       >
@@ -269,13 +278,13 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           loop
           preload="metadata"
           onClick={toggleVideoPlayback}
-          className="block max-h-[620px] max-[639px]:max-h-[52vh] w-full cursor-pointer object-contain"
+          className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:max-h-none [&:fullscreen]:h-full [&:fullscreen]:w-full [&:fullscreen]:object-contain"
           aria-label="Revvam car video"
         />
         <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16 transition-opacity duration-300 ${videoControlsVisible ? "opacity-100" : "opacity-0"}`}>
           <div className="pointer-events-auto px-3 pb-3 sm:px-4 sm:pb-4">
             <div className="mb-2 flex items-center gap-2">
-              <div className="relative h-9 min-w-0 flex-1">
+              <div className="relative h-11 min-w-0 flex-1">
                 <input
                   aria-label="Video progress"
                   type="range"
@@ -288,19 +297,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
                 />
                 <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 overflow-hidden rounded-full bg-white/10">
                   <div className="relative h-full rounded-full bg-red-500 transition-[width] duration-100" style={{ width: `${videoProgress * 100}%` }}>
-                    <svg aria-hidden="true" viewBox="0 0 120 48" className="absolute right-0 top-1/2 h-10 w-[92px] -translate-y-1/2 translate-x-1/2 overflow-visible">
-                      <circle cx="31" cy="36" r="8" fill="#090909" stroke="#ef4444" strokeWidth="2" />
-                      <circle cx="89" cy="36" r="8" fill="#090909" stroke="#ef4444" strokeWidth="2" />
-                      <circle cx="31" cy="36" r="3" fill="#ef4444">
-                        {videoPlaying && <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 31 36" to="360 31 36" dur=".55s" repeatCount="indefinite" />}
-                      </circle>
-                      <circle cx="89" cy="36" r="3" fill="#ef4444">
-                        {videoPlaying && <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 89 36" to="360 89 36" dur=".55s" repeatCount="indefinite" />}
-                      </circle>
-                      <path d="M20 34 L28 18 L45 12 L72 12 L88 22 L99 34 Z" fill="#ef4444" opacity=".95" />
-                      <path d="M37 18 L45 14 L70 14 L78 22 L39 22 Z" fill="#050505" opacity=".95" />
-                      <path d="M22 34 H98" stroke="#fff" strokeOpacity=".25" strokeWidth="2" />
-                    </svg>
+                    <img src="/revvam-video-car.svg" alt="" aria-hidden="true" className={"absolute right-0 top-1/2 h-12 w-[120px] -translate-y-1/2 translate-x-[38%] object-contain transition-opacity " + (videoPlaying ? "opacity-100" : "opacity-85")} />
                   </div>
                 </div>
               </div>

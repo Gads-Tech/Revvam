@@ -283,6 +283,9 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           <div className="pointer-events-auto px-3 pb-3 sm:px-4 sm:pb-4">
             <div className="mb-2 flex items-center gap-2">
               <div className="relative h-11 min-w-0 flex-1">
+                <div className="absolute inset-x-8 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-sky-500 transition-[width] duration-100" style={{ width: `${videoProgress * 100}%` }} />
+                </div>
                 <input
                   aria-label="Video progress"
                   type="range"
@@ -291,13 +294,9 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
                   step="0.001"
                   value={videoProgress}
                   onChange={(event) => { seekVideo(Number(event.target.value)); armVideoControlsHide(); }}
-                  className="absolute inset-x-0 top-1/2 z-10 h-1.5 -translate-y-1/2 cursor-pointer appearance-none bg-transparent revvam-video-range"
+                  onPointerDown={() => armVideoControlsHide()}
+                  className="absolute inset-x-8 top-1/2 z-20 h-11 -translate-y-1/2 cursor-grab appearance-none bg-transparent revvam-video-seek"
                 />
-                <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 overflow-hidden rounded-full bg-white/10">
-                  <div className="relative h-full rounded-full bg-red-500 transition-[width] duration-100" style={{ width: `${videoProgress * 100}%` }}>
-                    <img src="/revvam-video-car.svg" alt="" aria-hidden="true" className={"absolute right-0 top-1/2 h-12 w-[120px] -translate-y-1/2 translate-x-[38%] object-contain transition-opacity " + (videoPlaying ? "opacity-100" : "opacity-85")} />
-                  </div>
-                </div>
               </div>
               <span className="w-20 text-right font-mono text-[9px] text-white/45">{formatVideoTime(videoRef.current?.currentTime ?? 0)} / {formatVideoTime(videoDuration)}</span>
             </div>

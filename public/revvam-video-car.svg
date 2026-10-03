@@ -1,33 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 96" role="img" aria-labelledby="title desc">
-  <title id="title">Revvam moving car</title>
-  <desc id="desc">A stylized red Revvam sports car with spinning wheels.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 128" role="img" aria-labelledby="title desc">
+  <title id="title">Revvam racing car</title>
+  <desc id="desc">A futuristic blue Revvam sports car with spinning wheels.</desc>
   <defs>
     <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ff4d5a"/>
-      <stop offset=".55" stop-color="#e11d2e"/>
-      <stop offset="1" stop-color="#9f0712"/>
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset=".28" stop-color="#0ea5e9"/>
+      <stop offset=".7" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#172554"/>
     </linearGradient>
     <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#dff8ff" stop-opacity=".7"/>
-      <stop offset="1" stop-color="#111827" stop-opacity=".9"/>
+      <stop offset="0" stop-color="#dff8ff" stop-opacity=".82"/>
+      <stop offset=".5" stop-color="#172033" stop-opacity=".96"/>
+      <stop offset="1" stop-color="#020617" stop-opacity=".98"/>
     </linearGradient>
-    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e0f2fe"/>
+      <stop offset=".5" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
+  <g opacity=".72" filter="url(#glow)">
+    <path d="M24 62H2M45 51H13M60 42H30" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+  </g>
   <g filter="url(#glow)">
-    <path d="M25 61c7-5 14-13 21-25 3-5 8-8 14-9l56-6c8-1 15 2 21 8l19 20 35 5c8 1 14 6 17 14l2 7H20l1-7c1-3 2-5 4-7Z" fill="url(#body)" stroke="#ff6570" stroke-width="2"/>
-    <path d="M67 28 117 22c7-1 13 1 18 7l14 16H54l13-17Z" fill="url(#glass)" stroke="#ff8c94" stroke-opacity=".5"/>
-    <path d="M116 23v22M151 45H54" stroke="#ffb3b8" stroke-opacity=".35" stroke-width="2"/>
-    <path d="M20 68h190" stroke="#ff6570" stroke-width="2" stroke-linecap="round"/>
-    <path d="M29 54h18M194 57h12" stroke="#fff" stroke-opacity=".35" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="67" cy="72" r="16" fill="#050505" stroke="#ef4444" stroke-width="3"/>
-    <circle cx="67" cy="72" r="8" fill="#111" stroke="#f87171" stroke-width="2"/>
-    <circle cx="173" cy="72" r="16" fill="#050505" stroke="#ef4444" stroke-width="3"/>
-    <circle cx="173" cy="72" r="8" fill="#111" stroke="#f87171" stroke-width="2"/>
-    <path d="M67 64v16M59 72h16M173 64v16M165 72h16" stroke="#f87171" stroke-width="2" stroke-linecap="round">
-      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 67 72" to="360 67 72" dur=".55s" repeatCount="indefinite"/>
-    </path>
-    <path d="M173 64v16M165 72h16" stroke="#f87171" stroke-width="2" stroke-linecap="round">
-      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 173 72" to="360 173 72" dur=".55s" repeatCount="indefinite"/>
-    </path>
+    <path d="M34 78c4-10 14-18 24-23l25-30c4-5 10-8 17-9l72-5c12-1 23 3 31 12l18 20 48 8c10 2 18 8 22 17l5 15H27l3-5c1-1 2-1 4 0Z"
+      fill="url(#body)" stroke="#60a5fa" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M91 43 113 21c3-3 8-5 14-5l45-3c10-1 19 2 26 10l16 20H91Z"
+      fill="url(#glass)" stroke="#bae6fd" stroke-opacity=".65" stroke-width="2"/>
+    <path d="M144 15 141 43M171 13l4 30M93 43h121" stroke="#93c5fd" stroke-opacity=".35" stroke-width="2"/>
+    <path d="M42 66h30M235 64h28" stroke="#e0f2fe" stroke-opacity=".55" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M32 76h253" stroke="#38bdf8" stroke-opacity=".75" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M105 59h82" stroke="#0f172a" stroke-opacity=".75" stroke-width="10" stroke-linecap="round"/>
+    <text x="122" y="63" fill="#e0f2fe" font-family="Arial,Helvetica,sans-serif" font-size="12" font-weight="800" letter-spacing="2">REVVAM</text>
+    <path d="M252 50 273 54 280 63 249 60Z" fill="#0b1220" opacity=".85"/>
+    <g>
+      <circle cx="92" cy="80" r="23" fill="#020617" stroke="#60a5fa" stroke-width="4"/>
+      <circle cx="92" cy="80" r="14" fill="#0b1220" stroke="url(#rim)" stroke-width="4"/>
+      <circle cx="92" cy="80" r="5" fill="#dbeafe"/>
+      <path d="M92 66v28M78 80h28M82 70l20 20M102 70 82 90" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/>
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 92 80" to="360 92 80" dur=".45s" repeatCount="indefinite"/>
+    </g>
+    <g>
+      <circle cx="224" cy="80" r="23" fill="#020617" stroke="#60a5fa" stroke-width="4"/>
+      <circle cx="224" cy="80" r="14" fill="#0b1220" stroke="url(#rim)" stroke-width="4"/>
+      <circle cx="224" cy="80" r="5" fill="#dbeafe"/>
+      <path d="M224 66v28M210 80h28M214 70l20 20M234 70l-20 20" stroke="#7dd3fc" stroke-width="2" stroke-linecap="round"/>
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 224 80" to="360 224 80" dur=".45s" repeatCount="indefinite"/>
+    </g>
   </g>
 </svg>

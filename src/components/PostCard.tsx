@@ -92,7 +92,21 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       setVideoPlaying(true);
       window.dispatchEvent(new CustomEvent("revvam:video-play", { detail: { postId: post.id } }));
     };
-    const onPause = () => setVideoPlaying(false);
+    const onPause = () => {
+      // Browsers can emit a synthetic pause while moving the element into or
+      // out of fullscreen. Do not let that transition become a real pause.
+      if (
+        videoWasPlayingBeforeFullscreenRef.current &&
+        (videoFullscreenTransitionRef.current || videoIsFullscreenRef.current)
+      ) {
+        setVideoPlaying(true);
+        window.requestAnimationFrame(() => {
+          if (video.paused && !video.ended) void video.play().catch(() => {});
+        });
+        return;
+      }
+      setVideoPlaying(false);
+    };
 
     video.addEventListener("volumechange", syncPreference);
     video.addEventListener("timeupdate", onTimeUpdate);
@@ -105,15 +119,22 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
     const resumeAfterFullscreen = () => {
-      // Fullscreen transitions can emit a pause event on some browsers.
-      // The pause is a browser transition, not a user request to stop playback.
-      if (videoWasPlayingBeforeFullscreenRef.current && video.paused) {
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            if (video.paused) void video.play().catch(() => {});
-          });
-        });
-      }
+      // Fullscreen transitions can emit one or more synthetic pause events.
+      // Keep retrying for a short transition window so the browser cannot
+      // leave a previously-playing video paused after fullscreen opens/closes.
+      if (!videoWasPlayingBeforeFullscreenRef.current || video.ended) return;
+
+      let attempts = 0;
+      const retry = () => {
+        if (!videoWasPlayingBeforeFullscreenRef.current || video.ended || attempts >= 8) return;
+        attempts += 1;
+        if (video.paused) void video.play().catch(() => {});
+        if (video.paused) window.setTimeout(retry, 60);
+      };
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(retry);
+      });
     };
 
     const onFullscreenChange = () => {
@@ -259,6 +280,18 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       return;
     }
 
+    const resumeAfterFullscreenFallback = (target: HTMLVideoElement, shouldPlay: boolean) => {
+      if (!shouldPlay || target.ended) return;
+      let attempts = 0;
+      const retry = () => {
+        if (!shouldPlay || target.ended || attempts >= 8) return;
+        attempts += 1;
+        if (target.paused) void target.play().catch(() => {});
+        if (target.paused) window.setTimeout(retry, 60);
+      };
+      window.requestAnimationFrame(retry);
+    };
+
     // Capture playback state BEFORE asking the browser for fullscreen.
     // Some browsers pause the element during the transition. Keep the
     // intersection observer from treating that transition as an instruction
@@ -271,8 +304,10 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     if (container?.requestFullscreen) {
       void container.requestFullscreen().then(() => {
-        videoFullscreenTransitionRef.current = false;
-        if (wasPlaying && video.paused) void video.play().catch(() => {});
+        // Keep the transition guard active until the fullscreenchange event.
+        // This prevents IntersectionObserver/pause events during the browser
+        // animation from changing the user's playback choice.
+        resumeAfterFullscreenFallback(video, wasPlaying);
       }).catch(() => {
         videoFullscreenTransitionRef.current = false;
         videoIsFullscreenRef.current = false;

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     });
     const blockedIds = blocked.map((b) => b.blockerId === user.id ? b.blockedId : b.blockerId);
 
-    const [users, vehicles, events, posts, following, myVehicles] = await Promise.all([
+    const [users, vehicles, events, searchPosts, posts, following, myVehicles] = await Promise.all([
       q ? prisma.user.findMany({
         where: { id: { notIn: [user.id, ...blockedIds] }, OR: [
           { name: { contains: q, mode: "insensitive" } },
@@ -33,6 +33,14 @@ export async function GET(request: NextRequest) {
         take: 8,
         orderBy: { createdAt: "desc" },
         select: { id: true, make: true, model: true, year: true, image: true, listingStatus: true, listingPrice: true, listingCurrency: true, listingLocation: true, user: { select: { username: true, name: true, image: true } } },
+      }) : [],
+      q ? prisma.post.findMany({
+        where: { authorId: { notIn: [user.id, ...blockedIds] }, OR: [
+          { content: { contains: q, mode: "insensitive" } },
+        ]},
+        take: 8,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, content: true, image: true, video: true, createdAt: true, author: { select: { name: true, username: true, image: true } } },
       }) : [],
       q ? prisma.event.findMany({
         where: { OR: [
@@ -88,7 +96,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       query: q,
-      search: { users, vehicles: vehicles.map(serializeVehicle), events },
+      search: { users, vehicles: vehicles.map(serializeVehicle), posts: searchPosts.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() })), events },
       personalized: personalized.map(({ score, ...post }) => post),
       marketplace: marketplace.map(serializeVehicle),
       myVehicles: myVehicles.map(serializeVehicle),

@@ -51,3 +51,7 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
   filter: drop-shadow(0 3px 6px rgba(14,165,233,.42));
 }
 .revvam-video-seek:active::-moz-range-thumb { cursor: grabbing; }
+@media (max-width: 639px) {
+  .revvam-video-seek::-webkit-slider-thumb { width: 42px; height: 20px; margin-top: -8px; }
+  .revvam-video-seek::-moz-range-thumb { width: 42px; height: 20px; }
+}

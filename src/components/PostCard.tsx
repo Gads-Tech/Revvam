@@ -103,29 +103,52 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     window.addEventListener("revvam:video-play", stopIfAnotherVideoStarts);
 
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
+    const resumeAfterFullscreen = () => {
+      // Fullscreen transitions can emit a pause event on some browsers.
+      // The pause is a browser transition, not a user request to stop playback.
+      if (videoWasPlayingBeforeFullscreenRef.current && video.paused) {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            if (video.paused) void video.play().catch(() => {});
+          });
+        });
+      }
+    };
+
     const onFullscreenChange = () => {
-      const isThisVideoFullscreen = document.fullscreenElement === video.parentElement;
+      const fullscreenElement = document.fullscreenElement;
+      const isThisVideoFullscreen =
+        fullscreenElement === video ||
+        fullscreenElement === video.parentElement;
       videoIsFullscreenRef.current = isThisVideoFullscreen;
 
       if (isThisVideoFullscreen) {
-        // Some desktop browsers briefly pause a video while moving its
-        // container into fullscreen. Restore playback if it was already playing.
-        if (videoWasPlayingBeforeFullscreenRef.current && video.paused) {
-          window.requestAnimationFrame(() => {
-            void video.play().catch(() => {});
-          });
-        }
-      } else if (videoWasPlayingBeforeFullscreenRef.current && videoIsFocused) {
-        // Resume when returning from fullscreen if this was the video that
-        // was playing before fullscreen was opened.
-        window.requestAnimationFrame(() => {
-          if (video.paused) void video.play().catch(() => {});
-        });
+        resumeAfterFullscreen();
+      } else if (videoWasPlayingBeforeFullscreenRef.current) {
+        // Returning from fullscreen should restore the exact playback state
+        // the user had before opening fullscreen.
+        resumeAfterFullscreen();
+        videoWasPlayingBeforeFullscreenRef.current = false;
+      }
+    };
+
+    // Safari/iOS uses native video fullscreen events instead of the standard
+    // document fullscreen API in some cases.
+    const onWebkitBeginFullscreen = () => {
+      videoIsFullscreenRef.current = true;
+      resumeAfterFullscreen();
+    };
+    const onWebkitEndFullscreen = () => {
+      videoIsFullscreenRef.current = false;
+      if (videoWasPlayingBeforeFullscreenRef.current) {
+        resumeAfterFullscreen();
         videoWasPlayingBeforeFullscreenRef.current = false;
       }
     };
 
     document.addEventListener("fullscreenchange", onFullscreenChange);
+    video.addEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
+    video.addEventListener("webkitendfullscreen", onWebkitEndFullscreen);
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
@@ -160,6 +183,8 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       window.removeEventListener("revvam:video-muted-change", applyPreference);
       window.removeEventListener("revvam:video-play", stopIfAnotherVideoStarts);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+      video.removeEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
+      video.removeEventListener("webkitendfullscreen", onWebkitEndFullscreen);
       observer.disconnect();
     };
   }, [post.video, post.id]);
@@ -219,16 +244,47 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   function toggleFullscreen() {
     const video = videoRef.current;
     if (!video) return;
+
     const container = video.parentElement;
-    if (!document.fullscreenElement) {
-      // Remember whether the user was watching before entering fullscreen so
-      // desktop browsers cannot accidentally turn a playing video into a
-      // paused one during the fullscreen transition.
-      videoWasPlayingBeforeFullscreenRef.current = !video.paused && !video.ended;
-      void container?.requestFullscreen?.();
-    } else {
+    const standardFullscreenActive =
+      document.fullscreenElement === video ||
+      document.fullscreenElement === container;
+
+    if (standardFullscreenActive) {
       void document.exitFullscreen?.();
+      return;
     }
+
+    // Capture playback state BEFORE asking the browser for fullscreen.
+    // Some browsers pause the element during the transition; the fullscreen
+    // handlers above will restore it if it was playing.
+    videoWasPlayingBeforeFullscreenRef.current = !video.paused && !video.ended;
+    videoIsFullscreenRef.current = true;
+
+    if (container?.requestFullscreen) {
+      void container.requestFullscreen().catch(() => {
+        videoIsFullscreenRef.current = false;
+        videoWasPlayingBeforeFullscreenRef.current = false;
+      });
+      return;
+    }
+
+    // iOS Safari exposes native video fullscreen through this WebKit API.
+    const webkitVideo = video as HTMLVideoElement & {
+      webkitEnterFullscreen?: () => void;
+    };
+    if (webkitVideo.webkitEnterFullscreen) {
+      try {
+        webkitVideo.webkitEnterFullscreen();
+      } catch {
+        videoIsFullscreenRef.current = false;
+        videoWasPlayingBeforeFullscreenRef.current = false;
+      }
+      return;
+    }
+
+    videoIsFullscreenRef.current = false;
+    videoWasPlayingBeforeFullscreenRef.current = false;
   }
 
   function formatVideoTime(value: number) {

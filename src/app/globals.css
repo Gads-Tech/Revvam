@@ -37,7 +37,7 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
   border-radius: 0;
   background: transparent url("/revvam-video-car.svg") center / contain no-repeat;
   cursor: grab;
-  filter: drop-shadow(0 3px 6px rgba(14,165,233,.42));
+  filter: drop-shadow(0 3px 6px rgba(239,68,68,.52));
 }
 .revvam-video-seek:active::-webkit-slider-thumb { cursor: grabbing; }
 .revvam-video-seek::-moz-range-track { height: 4px; background: transparent; border: 0; }
@@ -48,7 +48,7 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
   border-radius: 0;
   background: transparent url("/revvam-video-car.svg") center / contain no-repeat;
   cursor: grab;
-  filter: drop-shadow(0 3px 6px rgba(14,165,233,.42));
+  filter: drop-shadow(0 3px 6px rgba(239,68,68,.52));
 }
 .revvam-video-seek:active::-moz-range-thumb { cursor: grabbing; }
 @media (max-width: 639px) {

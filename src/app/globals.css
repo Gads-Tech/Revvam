@@ -55,3 +55,27 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
   .revvam-video-seek::-webkit-slider-thumb { width: 32px; height: 16px; margin-top: -6px; }
   .revvam-video-seek::-moz-range-thumb { width: 32px; height: 16px; }
 }
+
+
+@keyframes revvamVideoControlsPop {
+  0% { opacity: 0; transform: translate3d(0, 18px, 0) scale(.985); }
+  55% { opacity: 1; transform: translate3d(0, -2px, 0) scale(1.006); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+.revvam-video-controls-pop {
+  animation: revvamVideoControlsPop 360ms cubic-bezier(.2,.8,.2,1) both;
+}
+.revvam-video-controls-pop > div > div:first-child {
+  animation: revvamVideoSeekPop 420ms cubic-bezier(.2,.85,.2,1) 45ms both;
+}
+@keyframes revvamVideoSeekPop {
+  0% { opacity: 0; transform: translate3d(0, 8px, 0) scaleX(.94); }
+  70% { opacity: 1; transform: translate3d(0, -1px, 0) scaleX(1.015); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0) scaleX(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .revvam-video-controls-pop,
+  .revvam-video-controls-pop > div > div:first-child {
+    animation: none !important;
+  }
+}

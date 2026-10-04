@@ -30,9 +30,9 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
 .revvam-video-seek::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 64px;
-  height: 30px;
-  margin-top: -13px;
+  width: 46px;
+  height: 22px;
+  margin-top: -9px;
   border: 0;
   border-radius: 0;
   background: transparent url("/revvam-video-car.svg") center / contain no-repeat;
@@ -42,8 +42,8 @@ body { background: #020202; color: #ededed; font-family: Arial, Helvetica, sans-
 .revvam-video-seek:active::-webkit-slider-thumb { cursor: grabbing; }
 .revvam-video-seek::-moz-range-track { height: 4px; background: transparent; border: 0; }
 .revvam-video-seek::-moz-range-thumb {
-  width: 64px;
-  height: 30px;
+  width: 46px;
+  height: 22px;
   border: 0;
   border-radius: 0;
   background: transparent url("/revvam-video-car.svg") center / contain no-repeat;

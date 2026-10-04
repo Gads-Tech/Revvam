@@ -45,6 +45,8 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const videoControlsTimerRef = useRef<number | null>(null);
   const commentsOpenRef = useRef(false);
   const videoWasPlayingBeforeCommentsRef = useRef(false);
+  const videoIsFullscreenRef = useRef(false);
+  const videoWasPlayingBeforeFullscreenRef = useRef(false);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
   useEffect(() => {
@@ -101,6 +103,30 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     window.addEventListener("revvam:video-play", stopIfAnotherVideoStarts);
 
     const isMobile = window.matchMedia("(max-width: 639px)").matches;
+    const onFullscreenChange = () => {
+      const isThisVideoFullscreen = document.fullscreenElement === video.parentElement;
+      videoIsFullscreenRef.current = isThisVideoFullscreen;
+
+      if (isThisVideoFullscreen) {
+        // Some desktop browsers briefly pause a video while moving its
+        // container into fullscreen. Restore playback if it was already playing.
+        if (videoWasPlayingBeforeFullscreenRef.current && video.paused) {
+          window.requestAnimationFrame(() => {
+            void video.play().catch(() => {});
+          });
+        }
+      } else if (videoWasPlayingBeforeFullscreenRef.current && videoIsFocused) {
+        // Resume when returning from fullscreen if this was the video that
+        // was playing before fullscreen was opened.
+        window.requestAnimationFrame(() => {
+          if (video.paused) void video.play().catch(() => {});
+        });
+        videoWasPlayingBeforeFullscreenRef.current = false;
+      }
+    };
+
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
       const threshold = isMobile ? 0.5 : 0.5;
@@ -116,7 +142,9 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       } else {
         setVideoIsFocused(false);
         // Opening the mobile comments sheet must not pause the video.
-        if (!commentsOpenRef.current) video.pause();
+        // Fullscreen is also allowed to temporarily change intersection
+        // geometry, so never let the observer pause a fullscreen video.
+        if (!commentsOpenRef.current && !videoIsFullscreenRef.current) video.pause();
       }
     }, { threshold: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1] });
     observer.observe(video);
@@ -131,6 +159,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       window.removeEventListener("storage", applyPreference);
       window.removeEventListener("revvam:video-muted-change", applyPreference);
       window.removeEventListener("revvam:video-play", stopIfAnotherVideoStarts);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
       observer.disconnect();
     };
   }, [post.video, post.id]);
@@ -191,8 +220,15 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     const video = videoRef.current;
     if (!video) return;
     const container = video.parentElement;
-    if (!document.fullscreenElement) void container?.requestFullscreen?.();
-    else void document.exitFullscreen?.();
+    if (!document.fullscreenElement) {
+      // Remember whether the user was watching before entering fullscreen so
+      // desktop browsers cannot accidentally turn a playing video into a
+      // paused one during the fullscreen transition.
+      videoWasPlayingBeforeFullscreenRef.current = !video.paused && !video.ended;
+      void container?.requestFullscreen?.();
+    } else {
+      void document.exitFullscreen?.();
+    }
   }
 
   function formatVideoTime(value: number) {

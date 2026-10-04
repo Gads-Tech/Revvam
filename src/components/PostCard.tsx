@@ -300,7 +300,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:h-auto [&:fullscreen]:w-auto [&:fullscreen]:max-h-[100dvh] [&:fullscreen]:max-w-[100vw] [&:fullscreen]:object-contain"
           aria-label="Revvam car video"
         />
-        <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16 transition-opacity duration-300 ${videoControlsVisible ? "opacity-100" : "opacity-0"}`}>
+        <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16 transition-opacity duration-300 ${videoControlsVisible ? "opacity-100 revvam-video-controls-pop" : "opacity-0"}`}>
           <div className="pointer-events-auto px-3 pb-3 sm:px-4 sm:pb-4">
             <div className="mb-2 flex items-center gap-2">
               <div className="relative h-11 min-w-0 flex-1">

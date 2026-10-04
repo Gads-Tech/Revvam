@@ -426,7 +426,6 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       <div className="p-5 sm:p-6"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{post.content}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
       {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div
         className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[72vh] [&:fullscreen]:flex [&:fullscreen]:h-[100dvh] [&:fullscreen]:w-screen [&:fullscreen]:items-center [&:fullscreen]:justify-center [&:fullscreen]:overflow-hidden [&:fullscreen]:border-0 [&:fullscreen]:bg-black"
-        onPointerDown={() => armVideoControlsHide()}
         onMouseMove={() => videoControlsVisible && armVideoControlsHide()}
       >
         <video
@@ -437,7 +436,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           playsInline
           loop
           preload="metadata"
-          onClick={() => { armVideoControlsHide(); setVideoIsFocused(true); }}
+          onClick={() => { setVideoIsFocused(true); setVideoControlsVisible((visible) => { const next = !visible; if (next) armVideoControlsHide(); return next; }); }}
           className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:h-auto [&:fullscreen]:w-auto [&:fullscreen]:max-h-[100dvh] [&:fullscreen]:max-w-[100vw] [&:fullscreen]:object-contain"
           aria-label="Revvam car video"
         />

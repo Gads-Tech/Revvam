@@ -43,6 +43,8 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoControlsVisible, setVideoControlsVisible] = useState(true);
   const videoControlsTimerRef = useRef<number | null>(null);
+  const commentsOpenRef = useRef(false);
+  const videoWasPlayingBeforeCommentsRef = useRef(false);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
   useEffect(() => {
@@ -113,7 +115,8 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         });
       } else {
         setVideoIsFocused(false);
-        video.pause();
+        // Opening the mobile comments sheet must not pause the video.
+        if (!commentsOpenRef.current) video.pause();
       }
     }, { threshold: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1] });
     observer.observe(video);
@@ -199,6 +202,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     return `${minutes}:${seconds}`;
   }
 
+  useEffect(() => { commentsOpenRef.current = showComments; }, [showComments]);
   useEffect(() => { const onOtherPostOpened = (event: Event) => { const custom = event as CustomEvent<{ postId: string }>; if (custom.detail?.postId !== post.id) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }; window.addEventListener("revvam:comments-open", onOtherPostOpened); return () => window.removeEventListener("revvam:comments-open", onOtherPostOpened); }, [post.id]);
   useEffect(() => { if (!showComments) return; const observer = new IntersectionObserver(([entry]) => { if (!entry.isIntersecting) { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); } }, { threshold: 0.05 }); if (articleRef.current) observer.observe(articleRef.current); return () => observer.disconnect(); }, [showComments]);
   useEffect(() => () => { if (videoControlsTimerRef.current !== null) window.clearTimeout(videoControlsTimerRef.current); }, []);
@@ -238,7 +242,24 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
   async function toggleLike() { if (publicMode) { window.location.href = "/login"; return; } if (busy) return; setBusy(true); setNotice(""); try { const response = await fetch(`/api/posts/${post.id}/like`, { method: "POST", credentials: "include" }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to like post."); const next: Counts = { likes: Number(data.likes) || 0, comments: Number(data.comments) || counts.comments, shares: Number(data.shares) || counts.shares }; setLiked(Boolean(data.liked)); setCounts(next); onChanged?.({ ...post, liked: Boolean(data.liked), _count: next }); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to like post."); } finally { setBusy(false); } }
   async function loadComments() { try { const response = await fetch(`/api/posts/${post.id}/comments?_=${Date.now()}`, { cache: "no-store", credentials: "include" }); const data = await response.json(); if (response.ok && data.success) { const ordered = [...(data.comments ?? [])].sort((a: Comment, b: Comment) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); setComments(ordered); setCurrentUserId(data.currentUserId ?? null); setCounts((current) => ({ ...current, comments: ordered.length })); } } catch { setNotice("Unable to load comments."); } }
-  async function toggleComments() { const next = !showComments; if (next) window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } })); setShowComments(next); if (next) await loadComments(); else { setReplyingTo(null); setMenuCommentId(null); } }
+  async function toggleComments() {
+    const next = !showComments;
+    const video = videoRef.current;
+    if (next) {
+      videoWasPlayingBeforeCommentsRef.current = Boolean(video && !video.paused && !video.ended);
+      commentsOpenRef.current = true;
+      window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } }));
+      setShowComments(true);
+      await loadComments();
+      if (videoWasPlayingBeforeCommentsRef.current && video?.paused) void video.play().catch(() => {});
+    } else {
+      commentsOpenRef.current = false;
+      setShowComments(false);
+      setReplyingTo(null);
+      setMenuCommentId(null);
+      if (videoWasPlayingBeforeCommentsRef.current && video?.paused) void video.play().catch(() => {});
+    }
+  }
   function startReply(item: Comment) { setReplyingTo(item); setMenuCommentId(null); const ids: string[] = []; let cursor: Comment | undefined = item; while (cursor?.parentId) { ids.push(cursor.parentId); cursor = comments.find((candidate) => candidate.id === cursor?.parentId); } ids.push(item.id); setExpandedReplies((current) => ({ ...current, ...Object.fromEntries(ids.map((id) => [id, true])) })); setComment((current) => current.startsWith(`@${item.author.username} `) ? current : `@${item.author.username} ${current}`); window.setTimeout(() => document.getElementById(`comment-input-${post.id}`)?.focus(), 0); }
   function cancelReply() { setReplyingTo(null); setComment(""); }
   async function addComment(event: React.FormEvent) { event.preventDefault(); if (publicMode) { window.location.href = "/login"; return; } if (!comment.trim() || commentBusy) return; setCommentBusy(true); setNotice(""); try { const response = await fetch(`/api/posts/${post.id}/comments`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: comment, parentId: replyingTo?.id ?? null }) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || "Unable to comment."); setComments((current) => [data.comment, ...current]); setCounts((current) => ({ ...current, comments: current.comments + 1 })); if (replyingTo) setExpandedReplies((current) => ({ ...current, [replyingTo.id]: true })); setComment(""); setReplyingTo(null); } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to comment."); } finally { setCommentBusy(false); } }
@@ -263,7 +284,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     <div className="min-w-0 max-[639px]:min-h-0 max-[639px]:overflow-y-auto">
       <div className="p-5 sm:p-6"><Link href={`/users/${encodeURIComponent(post.author.username)}`} className="flex items-center gap-3">{post.author.image ? <img src={post.author.image} alt="" className="h-10 w-10 rounded-full object-cover" /> : <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-600/15 text-xs font-bold text-red-300">{post.author.name.charAt(0).toUpperCase()}</div>}<div className="min-w-0"><p className="truncate text-sm font-semibold">{post.author.name}</p><p className="truncate text-xs text-white/25">@{post.author.username} · {formatDate(post.createdAt)}</p></div></Link><p className="mt-5 whitespace-pre-wrap text-[15px] leading-7 text-white/75">{post.content}</p>{post.mentions?.length ? <div className="mt-3 flex flex-wrap gap-1.5">{post.mentions.map(({ mentionedUser }) => <Link key={mentionedUser.username} href={`/users/${encodeURIComponent(mentionedUser.username)}`} className="rounded-full border border-red-400/15 bg-red-500/[0.06] px-2.5 py-1 text-[10px] text-red-300">@{mentionedUser.username}</Link>)}</div> : null}</div>
       {post.image && <div className="max-h-[620px] overflow-hidden border-t border-white/[0.06] bg-black"><img src={post.image} alt="Post" className="mx-auto max-h-[620px] w-full object-contain" /></div>}{post.video && <div
-        className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[72vh] [&:fullscreen]:flex [&:fullscreen]:h-[100dvh] [&:fullscreen]:w-screen [&:fullscreen]:items-center [&:fullscreen]:justify-center [&:fullscreen]:border-0 [&:fullscreen]:bg-black"
+        className="group relative overflow-hidden border-t border-white/[0.06] bg-[#030303] max-[639px]:max-h-[72vh] [&:fullscreen]:flex [&:fullscreen]:h-[100dvh] [&:fullscreen]:w-screen [&:fullscreen]:items-center [&:fullscreen]:justify-center [&:fullscreen]:overflow-hidden [&:fullscreen]:border-0 [&:fullscreen]:bg-black"
         onPointerDown={() => armVideoControlsHide()}
         onMouseMove={() => videoControlsVisible && armVideoControlsHide()}
       >
@@ -276,7 +297,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           loop
           preload="metadata"
           onClick={() => { armVideoControlsHide(); setVideoIsFocused(true); }}
-          className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:max-h-none [&:fullscreen]:h-full [&:fullscreen]:w-full [&:fullscreen]:object-contain"
+          className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:h-auto [&:fullscreen]:w-auto [&:fullscreen]:max-h-[100dvh] [&:fullscreen]:max-w-[100vw] [&:fullscreen]:object-contain"
           aria-label="Revvam car video"
         />
         <div className={`pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent pt-16 transition-opacity duration-300 ${videoControlsVisible ? "opacity-100" : "opacity-0"}`}>
@@ -284,7 +305,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
             <div className="mb-2 flex items-center gap-2">
               <div className="relative h-11 min-w-0 flex-1">
                 <div className="absolute inset-x-8 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-sky-500 transition-[width] duration-100" style={{ width: `${videoProgress * 100}%` }} />
+                  <div className="h-full rounded-full bg-red-500 transition-[width] duration-100" style={{ width: `${videoProgress * 100}%` }} />
                 </div>
                 <input
                   aria-label="Video progress"

@@ -71,7 +71,7 @@ export default async function HomePage() {
               <section className="overflow-hidden rounded-[1.7rem] border border-white/[0.08] bg-white/[0.025]">
                 <div className="border-b border-white/[0.07] p-4"><div className="flex items-center gap-2"><SearchIcon className="h-4 w-4 text-white/35" /><span className="text-xs font-semibold text-white/60">Explore Revvam</span></div></div>
                 <div className="p-2">
-                  <SideLink href="/home" label="Discover" active />
+                  <SideLink href="/discover" label="Discover" active />
                   <SideLink href="/map" label="Live map" badge={liveEmergencies.length ? String(liveEmergencies.length) : undefined} />
                   <SideLink href="/profile/mechanic" label="Mechanics" />
                   <SideLink href="/map" label="Dealerships" />

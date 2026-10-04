@@ -464,12 +464,12 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
             </div>
             <div className="flex items-center gap-2 rounded-2xl border border-red-400/10 bg-black/75 px-2.5 py-2 shadow-[0_8px_30px_rgba(0,0,0,.45)] backdrop-blur-xl">
               <button type="button" onClick={toggleVideoPlayback} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-600/15 text-red-200 transition hover:bg-red-600/25" aria-label={videoPlaying ? "Pause video" : "Play video"}>
-                <img src="/icons/revvam-play.svg" alt="" className="h-7 w-7" />
+                <img src={videoPlaying ? "/icons/revvam-pause.svg" : "/icons/revvam-play.svg"} alt="" className="h-7 w-7" />
               </button>
               <span className="hidden text-[8px] font-black uppercase tracking-[0.16em] text-red-300/70 sm:inline">REVVAM</span>
               <span className="hidden h-3 w-px bg-white/10 sm:inline" />
               <button type="button" onClick={() => { toggleVideoMute(); armVideoControlsHide(); }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/[0.06] hover:text-white" aria-label={videoMuted ? "Unmute video" : "Mute video"}>
-                <img src="/icons/revvam-mute.svg" alt="" className="h-7 w-7" />
+                <img src={videoMuted ? "/icons/revvam-mute.svg" : "/icons/revvam-sound.svg"} alt="" className="h-7 w-7" />
               </button>
               <input aria-label="Video volume" type="range" min="0" max="1" step="0.05" value={videoMuted ? 0 : videoVolume} onChange={(event) => changeVideoVolume(Number(event.target.value))} className="revvam-video-range hidden h-1.5 w-20 cursor-pointer appearance-none rounded-full bg-white/15 sm:block" />
               <span className="ml-auto font-mono text-[8px] uppercase tracking-[0.16em] text-white/25">DRIVE • MEDIA</span>

@@ -182,7 +182,7 @@ export default function MobileNav() {
           </div>}
 
           <nav aria-label="Mobile navigation" className="relative z-[2147483647] flex h-16 w-full items-stretch overflow-hidden rounded-[22px] border border-white/[0.12] bg-[#080808]/95 p-1 shadow-[0_10px_40px_rgba(0,0,0,0.9)] backdrop-blur-xl" style={{ pointerEvents: "auto", touchAction: "manipulation", zIndex: 2147483647 }}>
-            <MobileNavItem icon={<SearchIcon className="h-4 w-4" />} label="Discover" href="/home" active={pathname === "/home"} />
+            <MobileNavItem icon={<SearchIcon className="h-4 w-4" />} label="Discover" href="/discover" active={pathname === "/discover"} />
             <MobileNavItem icon={<LocationIcon className="h-4 w-4" />} label="Map" href="/map" active={pathname === "/map"} />
             <Link href="/emergency" aria-label="Revvam emergency" className="flex h-full min-w-0 flex-1 items-center justify-center px-1">
               <span className="flex h-12 w-12 items-center justify-center rounded-full border border-red-500/45 bg-black shadow-[0_0_28px_rgba(239,68,68,.18)]">

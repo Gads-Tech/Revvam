@@ -39,7 +39,7 @@ export default function DiscoverLink({
         },
       });
 
-      router.push(response.ok ? "/home" : "/");
+      router.push(response.ok ? "/discover" : "/");
     } catch {
       router.push("/");
     } finally {

@@ -47,6 +47,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const videoWasPlayingBeforeCommentsRef = useRef(false);
   const videoIsFullscreenRef = useRef(false);
   const videoWasPlayingBeforeFullscreenRef = useRef(false);
+  const videoFullscreenTransitionRef = useRef(false);
 
   useEffect(() => { setLiked(Boolean(post.liked)); setCounts({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 }); }, [post.id, post.liked, post._count?.likes, post._count?.comments, post._count?.shares]);
   useEffect(() => {
@@ -121,6 +122,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         fullscreenElement === video ||
         fullscreenElement === video.parentElement;
       videoIsFullscreenRef.current = isThisVideoFullscreen;
+      videoFullscreenTransitionRef.current = false;
 
       if (isThisVideoFullscreen) {
         resumeAfterFullscreen();
@@ -136,10 +138,12 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     // document fullscreen API in some cases.
     const onWebkitBeginFullscreen = () => {
       videoIsFullscreenRef.current = true;
+      videoFullscreenTransitionRef.current = false;
       resumeAfterFullscreen();
     };
     const onWebkitEndFullscreen = () => {
       videoIsFullscreenRef.current = false;
+      videoFullscreenTransitionRef.current = false;
       if (videoWasPlayingBeforeFullscreenRef.current) {
         resumeAfterFullscreen();
         videoWasPlayingBeforeFullscreenRef.current = false;
@@ -167,7 +171,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         // Opening the mobile comments sheet must not pause the video.
         // Fullscreen is also allowed to temporarily change intersection
         // geometry, so never let the observer pause a fullscreen video.
-        if (!commentsOpenRef.current && !videoIsFullscreenRef.current) video.pause();
+        if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) video.pause();
       }
     }, { threshold: [0, 0.2, 0.35, 0.5, 0.65, 0.8, 0.9, 1] });
     observer.observe(video);
@@ -256,13 +260,21 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     }
 
     // Capture playback state BEFORE asking the browser for fullscreen.
-    // Some browsers pause the element during the transition; the fullscreen
-    // handlers above will restore it if it was playing.
-    videoWasPlayingBeforeFullscreenRef.current = !video.paused && !video.ended;
+    // Some browsers pause the element during the transition. Keep the
+    // intersection observer from treating that transition as an instruction
+    // to stop playback, then restore playback immediately after fullscreen
+    // has been entered if it was playing before the transition.
+    const wasPlaying = !video.paused && !video.ended;
+    videoWasPlayingBeforeFullscreenRef.current = wasPlaying;
+    videoFullscreenTransitionRef.current = true;
     videoIsFullscreenRef.current = true;
 
     if (container?.requestFullscreen) {
-      void container.requestFullscreen().catch(() => {
+      void container.requestFullscreen().then(() => {
+        videoFullscreenTransitionRef.current = false;
+        if (wasPlaying && video.paused) void video.play().catch(() => {});
+      }).catch(() => {
+        videoFullscreenTransitionRef.current = false;
         videoIsFullscreenRef.current = false;
         videoWasPlayingBeforeFullscreenRef.current = false;
       });
@@ -277,12 +289,14 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       try {
         webkitVideo.webkitEnterFullscreen();
       } catch {
+        videoFullscreenTransitionRef.current = false;
         videoIsFullscreenRef.current = false;
         videoWasPlayingBeforeFullscreenRef.current = false;
       }
       return;
     }
 
+    videoFullscreenTransitionRef.current = false;
     videoIsFullscreenRef.current = false;
     videoWasPlayingBeforeFullscreenRef.current = false;
   }

@@ -7,7 +7,7 @@ import AppHeader from "@/components/AppHeader";
 
 type Data = {
   query: string;
-  search: { users: any[]; vehicles: any[]; events: any[] };
+  search: { users: any[]; vehicles: any[]; posts: any[]; events: any[] };
   personalized: any[];
   marketplace: any[];
   topRated: any[];
@@ -87,6 +87,7 @@ export default function DiscoverPage() {
               <div className="mt-3 flex gap-2"><Link href={"/users/" + u.username} className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-center text-[10px] font-bold">Profile</Link><button onClick={() => trust("block", u.id)} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] text-white/45">Block</button><button onClick={() => trust("report", u.id)} className="rounded-lg border border-red-500/15 px-3 py-2 text-[10px] text-red-300">Report</button></div>
             </div>)}
             {data.search.vehicles.map((v) => <div key={v.id} className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div className="text-sm font-bold">{v.year ? v.year + " " : ""}{v.make} {v.model}</div><div className="mt-1 text-[10px] text-white/35">Owned by @{v.user.username}</div>{v.listingStatus === "FOR_SALE" && <div className="mt-3 text-sm font-black text-red-300">{v.listingCurrency} {v.listingPrice?.toLocaleString()}</div>}</div>)}
+            {data.search.posts.map((p) => <Link key={p.id} href={"/posts/" + p.id} className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div className="flex items-center gap-2"><Avatar src={p.author.image} small/><span className="text-xs font-bold">{p.author.name}</span></div><p className="mt-3 line-clamp-4 text-xs leading-5 text-white/55">{p.content}</p></Link>)}
             {data.search.events.map((e) => <div key={e.id} className="rounded-2xl border border-white/10 bg-white/[.025] p-4"><div className="text-sm font-bold">{e.title}</div><div className="mt-2 text-[10px] text-white/35">{e.locationLabel ?? "Location TBA"} · {new Date(e.startsAt).toLocaleDateString()}</div></div>)}
           </div>
         </section>}

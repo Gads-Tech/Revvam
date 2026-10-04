@@ -123,6 +123,17 @@ export async function GET(
     };
 
     const currentUser = await getCurrentUser();
+    const reputation = await prisma.review.aggregate({
+      where: { targetId: user.id },
+      _avg: { rating: true },
+      _count: { rating: true },
+    });
+    const reviews = await prisma.review.findMany({
+      where: { targetId: user.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: { author: { select: { id: true, name: true, username: true, image: true } } },
+    });
     const online = Boolean(user.lastSeenAt && user.lastSeenAt.getTime() >= Date.now() - 90_000);
     const visibleOnline = user.showOnlineStatus ? online : null;
     const visibleLastSeen = user.showLastSeen && (!online || user.showOnlineStatus)
@@ -153,6 +164,11 @@ export async function GET(
         presence: {
           online: visibleOnline,
           lastSeenAt: visibleLastSeen,
+        },
+        reputation: {
+          average: Number((reputation._avg.rating ?? 0).toFixed(1)),
+          count: reputation._count.rating,
+          reviews,
         },
       },
       following,

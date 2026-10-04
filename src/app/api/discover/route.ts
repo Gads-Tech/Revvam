@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     });
     const blockedIds = blocked.map((b) => b.blockerId === user.id ? b.blockedId : b.blockerId);
 
-    const [users, vehicles, events, posts, following] = await Promise.all([
+    const [users, vehicles, events, posts, following, myVehicles] = await Promise.all([
       q ? prisma.user.findMany({
         where: { id: { notIn: [user.id, ...blockedIds] }, OR: [
           { name: { contains: q, mode: "insensitive" } },
@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         },
       }),
       prisma.follow.findMany({ where: { followerId: user.id }, select: { followingId: true } }),
+      prisma.vehicle.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, select: { id: true, make: true, model: true, year: true, listingStatus: true, listingPrice: true, listingCurrency: true, listingLocation: true, listingDescription: true } }),
     ]);
 
     const followingIds = new Set(following.map((f) => f.followingId));
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
       search: { users, vehicles: vehicles.map(serializeVehicle), events },
       personalized: personalized.map(({ score, ...post }) => post),
       marketplace: marketplace.map(serializeVehicle),
+      myVehicles: myVehicles.map(serializeVehicle),
       topRated: topRated.filter(Boolean),
     });
   } catch (error) {

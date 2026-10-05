@@ -356,16 +356,18 @@ export default function IndividualMessagePage() {
       try {
         const bitmap = await createImageBitmap(pendingPhoto);
         const canvas = document.createElement("canvas");
+        let cropW = bitmap.width, cropH = bitmap.height;
+        if (pendingPhotoCrop === "SQUARE") { const s = Math.min(bitmap.width, bitmap.height); cropW = cropH = s; }
+        if (pendingPhotoCrop === "PORTRAIT") { cropW = Math.min(bitmap.width, bitmap.height * 4 / 5); cropH = cropW * 5 / 4; if (cropH > bitmap.height) { cropH = bitmap.height; cropW = cropH * 4 / 5; } }
+        if (pendingPhotoCrop === "LANDSCAPE") { cropH = Math.min(bitmap.height, bitmap.width * 9 / 16); cropW = cropH * 16 / 9; if (cropW > bitmap.width) { cropW = bitmap.width; cropH = cropW * 9 / 16; } }
+        const cropCanvas = document.createElement("canvas"); cropCanvas.width = Math.round(cropW); cropCanvas.height = Math.round(cropH);
+        const cropCtx = cropCanvas.getContext("2d"); if (!cropCtx) throw new Error("Unable to edit photo.");
+        cropCtx.drawImage(bitmap, (bitmap.width - cropW) / 2, (bitmap.height - cropH) / 2, cropW, cropH, 0, 0, cropW, cropH);
         const rotated = Math.abs(pendingPhotoRotation) % 180 === 90;
-        const rw = rotated ? bitmap.height : bitmap.width, rh = rotated ? bitmap.width : bitmap.height;
-        let cropW = rw, cropH = rh;
-        if (pendingPhotoCrop === "SQUARE") { const s = Math.min(rw, rh); cropW = cropH = s; }
-        if (pendingPhotoCrop === "PORTRAIT") { cropW = Math.min(rw, rh * 4 / 5); cropH = cropW * 5 / 4; if (cropH > rh) { cropH = rh; cropW = cropH * 4 / 5; } }
-        if (pendingPhotoCrop === "LANDSCAPE") { cropH = Math.min(rh, rw * 9 / 16); cropW = cropH * 16 / 9; if (cropW > rw) { cropW = rw; cropH = cropW * 9 / 16; } }
-        canvas.width = Math.round(cropW); canvas.height = Math.round(cropH);
+        canvas.width = rotated ? Math.round(cropH) : Math.round(cropW); canvas.height = rotated ? Math.round(cropW) : Math.round(cropH);
         const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Unable to edit photo.");
         ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(pendingPhotoRotation * Math.PI / 180);
-        ctx.drawImage(bitmap, -cropW / 2, -cropH / 2, cropW, cropH); bitmap.close();
+        ctx.drawImage(cropCanvas, -cropW / 2, -cropH / 2); bitmap.close();
         const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, pendingPhoto.type || "image/jpeg", 0.92));
         if (blob) file = new File([blob], pendingPhoto.name, { type: pendingPhoto.type || "image/jpeg" });
       } catch { setError("Unable to apply the photo edit."); return; }

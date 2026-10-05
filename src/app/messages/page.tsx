@@ -73,7 +73,11 @@ function MessagesPageContent() {
       <div className="mx-auto max-w-5xl">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <button type="button" onClick={() => router.back()} className="text-xs text-white/30 transition hover:text-white"><BackIcon className="h-4 w-4" /> Back</button>
+            <button type="button" onClick={() => {
+              const referrer = document.referrer;
+              if (referrer.startsWith(window.location.origin) && referrer !== window.location.href) router.back();
+              else router.replace("/home");
+            }} className="text-xs text-white/30 transition hover:text-white"><BackIcon className="h-4 w-4" /> Back</button>
             <p className="mt-5 text-xs uppercase tracking-[0.22em] text-red-400/70">Revvam social</p>
             <h1 className="mt-1 text-3xl font-black tracking-[-0.045em]">Messages</h1>
             <p className="mt-2 text-sm text-white/30">Your private conversations.</p>

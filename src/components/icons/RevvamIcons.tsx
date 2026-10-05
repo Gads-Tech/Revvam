@@ -44,3 +44,6 @@ export const EditIcon=(p:P)=><I {...p}><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-
 export const ArrowRightIcon=(p:P)=><I {...p}><path d="M5 12h14M13 6l6 6-6 6"/></I>;
 
 export const ExpandIcon=(p:P)=><I {...p}><path d="M8 3H3v5M3 3l6 6M16 21h5v-5M21 21l-6-6M21 8V3h-5M21 3l-6 6M3 16v5h5M3 21l6-6"/></I>;
+
+export const FlameIcon=(p:P)=><I {...p}><path d="M12.5 21c4.2 0 7-2.8 7-6.7 0-3.2-1.8-5.8-4.7-8.8.1 2.2-.8 3.8-2.3 4.8.2-3.1-1.1-6.1-4.2-8.3.4 3.5-1.2 5.2-2.6 7.2A8.4 8.4 0 0 0 4 14.6C4 18.5 7.4 21 12.5 21Z"/><path d="M9.5 16.5c0-1.5 1-2.7 2.7-4 .7 1.2 1.8 2 1.8 3.6 0 1.7-1.1 2.9-2.6 2.9s-1.9-1-1.9-2.5Z"/></I>;
+export const CheckCircleIcon=(p:P)=><I {...p}><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16.5 9"/></I>;

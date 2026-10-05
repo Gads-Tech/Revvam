@@ -190,14 +190,18 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      // A post at the end of the feed should keep autoplaying while any
-      // meaningful portion remains on screen. For posts with another video
-      // below, require the current video to be the dominant visible video.
+      // Landscape videos occupy less vertical space, so using the same
+      // "center" threshold as portrait videos makes them miss autoplay.
+      // Treat landscape media as active when it is substantially visible,
+      // while portrait media keeps the stronger dominant-visibility rule.
+      const rect = entry.boundingClientRect;
+      const isLandscape = rect.width > rect.height * 1.15;
       const isNearFeedEnd = entry.rootBounds
-        ? entry.boundingClientRect.bottom >= entry.rootBounds.bottom - 24
+        ? rect.bottom >= entry.rootBounds.bottom - 24
         : false;
+      const visibilityThreshold = isLandscape ? 0.35 : 0.5;
       shouldAutoplay = entry.isIntersecting &&
-        (entry.intersectionRatio >= 0.5 || isNearFeedEnd);
+        (entry.intersectionRatio >= visibilityThreshold || isNearFeedEnd);
       if (shouldAutoplay) {
         setVideoIsFocused(true);
         tryAutoplay();

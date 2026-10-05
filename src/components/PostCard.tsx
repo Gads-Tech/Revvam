@@ -200,8 +200,17 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         ? rect.bottom >= entry.rootBounds.bottom - 24
         : false;
       const visibilityThreshold = isLandscape ? 0.35 : 0.5;
+      const viewportCenter = entry.rootBounds
+        ? entry.rootBounds.top + entry.rootBounds.height / 2
+        : window.innerHeight / 2;
+      const videoCenter = rect.top + rect.height / 2;
+      const centerDistance = Math.abs(videoCenter - viewportCenter);
+      const centerWindow = isLandscape
+        ? Math.max(140, rect.height * 0.9)
+        : Math.max(90, rect.height * 0.35);
+      const isCenterAligned = centerDistance <= centerWindow;
       shouldAutoplay = entry.isIntersecting &&
-        (entry.intersectionRatio >= visibilityThreshold || isNearFeedEnd);
+        ((entry.intersectionRatio >= visibilityThreshold && isCenterAligned) || isNearFeedEnd);
       if (shouldAutoplay) {
         setVideoIsFocused(true);
         tryAutoplay();

@@ -177,29 +177,24 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      const threshold = 0.85;
-      const rect = entry.boundingClientRect;
-      const viewportCenter = window.innerHeight / 2;
-      const videoCenter = rect.top + rect.height / 2;
-      const centerDistance = Math.abs(videoCenter - viewportCenter);
-      const isCentered = centerDistance <= Math.max(80, rect.height * 0.12);
-      if (entry.isIntersecting && entry.intersectionRatio >= threshold && isCentered) {
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.85) {
         setVideoIsFocused(true);
-        void video.play().catch(() => {
-          if (!video.muted) {
-            video.muted = true;
-            setVideoMuted(true);
-            void video.play().catch(() => {});
-          }
-        });
+        // Feed autoplay must always begin muted; the user can unmute manually.
+        video.muted = true;
+        setVideoMuted(true);
+        void video.play().catch(() => {});
       } else {
         setVideoIsFocused(false);
-        // Opening the mobile comments sheet must not pause the video.
-        // Fullscreen is also allowed to temporarily change intersection
-        // geometry, so never let the observer pause a fullscreen video.
-        if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) video.pause();
+        if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) {
+          video.pause();
+        }
       }
-    }, { threshold: [0, 0.5, 0.75, 0.85, 0.9, 1] });
+    }, {
+      // Only report when the video enters the center 30% of the viewport.
+      // This makes scrolling activate the video only when it reaches the feed center.
+      rootMargin: "-35% 0px -35% 0px",
+      threshold: [0.5, 0.75, 0.85, 0.9, 1],
+    });
     observer.observe(video);
 
     return () => {

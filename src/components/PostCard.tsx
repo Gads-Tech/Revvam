@@ -177,9 +177,10 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.85) {
+      // Autoplay whenever the video is meaningfully in view. Pause it once
+      // it leaves the viewport so the currently visible content owns playback.
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.15) {
         setVideoIsFocused(true);
-        // Feed autoplay must always begin muted; the user can unmute manually.
         video.muted = true;
         setVideoMuted(true);
         void video.play().catch(() => {});
@@ -190,10 +191,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         }
       }
     }, {
-      // Only report when the video enters the center 30% of the viewport.
-      // This makes scrolling activate the video only when it reaches the feed center.
-      rootMargin: "-35% 0px -35% 0px",
-      threshold: [0.5, 0.75, 0.85, 0.9, 1],
+      threshold: [0, 0.15, 0.3, 0.5, 0.75, 0.9],
     });
     observer.observe(video);
 

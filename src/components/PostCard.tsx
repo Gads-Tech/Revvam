@@ -219,10 +219,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
             shouldAutoplay = false;
             setVideoIsFocused(false);
           }
-          const owner = el.closest("[data-revvam-feed-video='true']");
-          if (!document.fullscreenElement && el !== videoRef.current || el !== videoRef.current) {
-            if (!el.closest("[data-revvam-comments-open]")) el.pause();
-          }
+          if (!document.fullscreenElement) el.pause();
         }
       });
     };
@@ -241,7 +238,11 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       void video.play().catch(() => {});
     };
 
-    const onCanPlay = () => tryAutoplay();
+    const onCanPlay = () => {
+      tryAutoplay();
+      scheduleActiveVideoUpdate();
+    };
+    video.addEventListener("canplay", onCanPlay);
     const observer = new IntersectionObserver(() => scheduleActiveVideoUpdate(), {
       threshold: [0, 0.25, 0.5, 0.75, 1],
     });

@@ -190,30 +190,22 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      // Landscape videos occupy less vertical space, so using the same
-      // "center" threshold as portrait videos makes them miss autoplay.
-      // Treat landscape media as active when it is substantially visible,
-      // while portrait media keeps the stronger dominant-visibility rule.
       const rect = entry.boundingClientRect;
-      const isLandscape = rect.width > rect.height * 1.15;
+      // The most-visible video owns playback. This works naturally for both
+      // portrait and landscape media without relying on a fixed center point.
+      const visibility = entry.intersectionRatio;
       const isNearFeedEnd = entry.rootBounds
         ? rect.bottom >= entry.rootBounds.bottom - 24
         : false;
-      const visibilityThreshold = isLandscape ? 0.35 : 0.5;
-      const viewportCenter = entry.rootBounds
-        ? entry.rootBounds.top + entry.rootBounds.height / 2
-        : window.innerHeight / 2;
-      const videoCenter = rect.top + rect.height / 2;
-      const centerDistance = Math.abs(videoCenter - viewportCenter);
-      const centerWindow = isLandscape
-        ? Math.max(140, rect.height * 0.9)
-        : Math.max(90, rect.height * 0.35);
-      const isCenterAligned = centerDistance <= centerWindow;
-      shouldAutoplay = entry.isIntersecting &&
-        ((entry.intersectionRatio >= visibilityThreshold && isCenterAligned) || isNearFeedEnd);
+      shouldAutoplay = entry.isIntersecting && (visibility >= 0.5 || isNearFeedEnd);
+
       if (shouldAutoplay) {
         setVideoIsFocused(true);
-        tryAutoplay();
+        const savedMuted = window.localStorage.getItem("revvam:video-muted");
+        const muted = savedMuted === null ? true : savedMuted === "true";
+        video.muted = muted;
+        setVideoMuted(muted);
+        void video.play().catch(() => {});
       } else {
         setVideoIsFocused(false);
         if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) {
@@ -221,7 +213,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         }
       }
     }, {
-      threshold: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.95],
+      threshold: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.95, 1],
     });
     observer.observe(video);
 

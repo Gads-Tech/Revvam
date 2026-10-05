@@ -333,9 +333,39 @@ export default function IndividualMessagePage() {
   }
   function chooseMedia(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]; event.target.value = ""; setAttachmentsOpen(false); if (!file) return;
-    if (file.type.startsWith("image/")) return void sendMedia(file, "IMAGE");
+    if (file.type.startsWith("image/")) {
+      if (pendingPhotoUrlRef.current) URL.revokeObjectURL(pendingPhotoUrlRef.current);
+      const url = URL.createObjectURL(file);
+      pendingPhotoUrlRef.current = url;
+      setPendingPhoto(file); setPendingPhotoUrl(url); setPendingPhotoCaption(""); setPendingPhotoRotation(0);
+      return;
+    }
     if (file.type.startsWith("video/")) { const url = URL.createObjectURL(file); const video = document.createElement("video"); video.preload = "metadata"; video.onloadedmetadata = () => { const d = video.duration * 1000; URL.revokeObjectURL(url); void sendMedia(file, "VIDEO", d); }; video.src = url; return; }
     setError("Choose an image or video.");
+  }
+  function cancelPendingPhoto() {
+    if (pendingPhotoUrlRef.current) URL.revokeObjectURL(pendingPhotoUrlRef.current);
+    pendingPhotoUrlRef.current = ""; setPendingPhoto(null); setPendingPhotoUrl(""); setPendingPhotoCaption(""); setPendingPhotoRotation(0);
+  }
+  async function sendPendingPhoto() {
+    if (!pendingPhoto || mediaBusy) return;
+    let file = pendingPhoto;
+    if (pendingPhotoRotation % 360 !== 0) {
+      try {
+        const bitmap = await createImageBitmap(pendingPhoto);
+        const canvas = document.createElement("canvas");
+        const swap = Math.abs(pendingPhotoRotation) % 180 === 90;
+        canvas.width = swap ? bitmap.height : bitmap.width; canvas.height = swap ? bitmap.width : bitmap.height;
+        const ctx = canvas.getContext("2d"); if (!ctx) throw new Error("Unable to edit photo.");
+        ctx.translate(canvas.width / 2, canvas.height / 2); ctx.rotate(pendingPhotoRotation * Math.PI / 180);
+        ctx.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2); bitmap.close();
+        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, pendingPhoto.type || "image/jpeg", 0.92));
+        if (blob) file = new File([blob], pendingPhoto.name, { type: pendingPhoto.type || "image/jpeg" });
+      } catch { setError("Unable to apply the photo edit."); return; }
+    }
+    const caption = pendingPhotoCaption.trim();
+    cancelPendingPhoto();
+    await sendMedia(file, "IMAGE", undefined, caption);
   }
   function shareLocation() {
     setAttachmentsOpen(false);

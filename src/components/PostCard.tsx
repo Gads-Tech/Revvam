@@ -177,8 +177,13 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      const threshold = isMobile ? 0.35 : 0.5;
-      if (entry.isIntersecting && entry.intersectionRatio >= threshold) {
+      const threshold = 0.85;
+      const rect = entry.boundingClientRect;
+      const viewportCenter = window.innerHeight / 2;
+      const videoCenter = rect.top + rect.height / 2;
+      const centerDistance = Math.abs(videoCenter - viewportCenter);
+      const isCentered = centerDistance <= Math.max(80, rect.height * 0.12);
+      if (entry.isIntersecting && entry.intersectionRatio >= threshold && isCentered) {
         setVideoIsFocused(true);
         void video.play().catch(() => {
           if (!video.muted) {
@@ -194,7 +199,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         // geometry, so never let the observer pause a fullscreen video.
         if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) video.pause();
       }
-    }, { threshold: [0, 0.2, 0.3, 0.35, 0.5, 0.65, 0.8, 0.9, 1] });
+    }, { threshold: [0, 0.5, 0.75, 0.85, 0.9, 1] });
     observer.observe(video);
 
     return () => {

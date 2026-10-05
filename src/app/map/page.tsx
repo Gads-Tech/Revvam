@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { CarIcon, WarningIcon, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import RevvamMap from "@/components/RevvamMap";
 import MobileNav from "@/components/MobileNav";
@@ -219,7 +219,7 @@ export default function MapPage() {
               </div>
               <div className="space-y-2">
                 <button type="button" onClick={() => setContentMode(contentMode === "emergencies" ? "both" : "emergencies")} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-sm transition ${contentMode !== "events" ? "border-red-500/20 bg-red-500/[.06] text-white" : "border-white/[.06] bg-white/[.02] text-white/45"}`}>
-                  <span className="flex items-center gap-3"><span className="text-red-400">⚠</span> Emergencies</span><span className="rounded-full bg-red-500/15 px-2 py-1 text-[9px] font-bold text-red-300">{filteredEmergencies.length}</span>
+                  <span className="flex items-center gap-3"><WarningIcon className="h-4 w-4 text-red-400" /> Emergencies</span><span className="rounded-full bg-red-500/15 px-2 py-1 text-[9px] font-bold text-red-300">{filteredEmergencies.length}</span>
                 </button>
                 <button type="button" onClick={() => setContentMode(contentMode === "events" ? "both" : "events")} className={`flex w-full items-center justify-between rounded-xl border px-3 py-3 text-sm transition ${contentMode !== "emergencies" ? "border-purple-400/20 bg-purple-400/[.05] text-white" : "border-white/[.06] bg-white/[.02] text-white/45"}`}>
                   <span className="flex items-center gap-3"><span className="text-purple-300">▦</span> Events</span><span className="rounded-full bg-purple-400/10 px-2 py-1 text-[9px] font-bold text-purple-200">{filteredEvents.length}</span>
@@ -234,7 +234,7 @@ export default function MapPage() {
             </section>
 
             <section className="rounded-[1.5rem] border border-red-500/25 bg-gradient-to-br from-red-950/45 to-black p-5">
-              <div className="mb-3 text-2xl">🚗</div><h2 className="text-lg font-bold">Need Help on the Road?</h2><p className="mt-2 text-sm leading-5 text-white/40">Report a live issue and get nearby support fast.</p><Link href="/emergency" className="mt-5 flex h-11 items-center justify-center rounded-xl border border-red-500 bg-red-600/15 text-sm font-semibold text-red-100 hover:bg-red-600/25">Report Issue</Link>
+              <div className="mb-3"><CarIcon className="h-8 w-8 text-red-300" /></div><h2 className="text-lg font-bold">Need Help on the Road?</h2><p className="mt-2 text-sm leading-5 text-white/40">Report a live issue and get nearby support fast.</p><Link href="/emergency" className="mt-5 flex h-11 items-center justify-center rounded-xl border border-red-500 bg-red-600/15 text-sm font-semibold text-red-100 hover:bg-red-600/25">Report Issue</Link>
             </section>
           </aside>
 
@@ -262,7 +262,7 @@ export default function MapPage() {
                 {loading ? <div className="py-8 text-center text-xs text-white/25">Loading live issues…</div> : filteredEmergencies.slice(0, 4).map(e => {
                   const km = distance(e.latitude, e.longitude);
                   return <button key={e.id} type="button" onClick={() => document.getElementById(`emergency-${e.id}`)?.scrollIntoView({ behavior: "smooth" })} className="flex w-full gap-3 py-4 text-left">
-                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-red-500/30 bg-white/[.03]">{e.photo ? <img src={e.photo} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-red-400">⚠</div>}</div>
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-red-500/30 bg-white/[.03]">{e.photo ? <img src={e.photo} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-red-400"><WarningIcon className="h-7 w-7" /></div>}</div>
                     <div className="min-w-0 flex-1"><div className="truncate text-sm font-bold">{labels[e.type] || e.type}</div><div className="mt-1 truncate text-xs text-white/35">{e.description}</div><div className="mt-2 flex items-center gap-2 text-[10px]"><span className="rounded-full bg-red-500 px-2 py-1 font-bold">Live</span><span className="text-white/35">{km == null ? "Nearby" : `${km.toFixed(1)} km`}</span></div></div><span className="self-center text-white/25">›</span>
                   </button>;
                 })}

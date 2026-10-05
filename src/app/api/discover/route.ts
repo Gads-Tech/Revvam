@@ -14,14 +14,24 @@ export async function GET(request: NextRequest) {
     });
     const blockedIds = blocked.map((b) => b.blockerId === user.id ? b.blockedId : b.blockerId);
 
-    const [users, vehicles, events, searchPosts, posts, following, myVehicles] = await Promise.all([
+    const [following, followers, likedPosts, commentedPosts, sharedPosts] = await Promise.all([
+      prisma.follow.findMany({ where: { followerId: user.id }, select: { followingId: true } }),
+      prisma.follow.findMany({ where: { followingId: user.id }, select: { followerId: true } }),
+      prisma.postLike.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 50, select: { postId: true } }),
+      prisma.postComment.findMany({ where: { authorId: user.id }, orderBy: { createdAt: "desc" }, take: 50, select: { postId: true } }),
+      prisma.postShare.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 50, select: { postId: true } }),
+    ]);
+    const friendIds = new Set([...following.map((f) => f.followingId), ...followers.map((f) => f.followerId)]);
+    const interactedPostIds = [...new Set([...likedPosts.map((x) => x.postId), ...commentedPosts.map((x) => x.postId), ...sharedPosts.map((x) => x.postId)])];
+
+    const [users, vehicles, events, searchPosts, posts, myVehicles] = await Promise.all([
       q ? prisma.user.findMany({
         where: { id: { notIn: [user.id, ...blockedIds] }, OR: [
           { name: { contains: q, mode: "insensitive" } },
           { username: { contains: q, mode: "insensitive" } },
           { bio: { contains: q, mode: "insensitive" } },
         ]},
-        take: 8,
+        take: 20,
         select: { id: true, name: true, username: true, image: true, bio: true, role: true, onboardingType: true },
       }) : [],
       q ? prisma.vehicle.findMany({
@@ -61,11 +71,25 @@ export async function GET(request: NextRequest) {
           _count: { select: { likes: true, comments: true, shares: true } },
         },
       }),
-      prisma.follow.findMany({ where: { followerId: user.id }, select: { followingId: true } }),
       prisma.vehicle.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, select: { id: true, make: true, model: true, year: true, listingStatus: true, listingPrice: true, listingCurrency: true, listingLocation: true, listingDescription: true } }),
     ]);
 
     const followingIds = new Set(following.map((f) => f.followingId));
+    const interactionAuthorIds = interactedPostIds.length
+      ? new Set((await prisma.post.findMany({ where: { id: { in: interactedPostIds } }, select: { authorId: true } })).map((p) => p.authorId))
+      : new Set<string>();
+
+    const rankedUsers = users
+      .map((u) => ({
+        ...u,
+        _priority:
+          (friendIds.has(u.id) ? 1000 : 0) +
+          (interactionAuthorIds.has(u.id) ? 500 : 0) +
+          (u.username.toLowerCase() === q.replace(/^@/, "").toLowerCase() ? 250 : 0),
+      }))
+      .sort((a, b) => b._priority - a._priority || a.username.localeCompare(b.username))
+      .slice(0, 8)
+      .map(({ _priority, ...u }) => u);
     const personalized = posts.map((post) => {
       const engagement = post._count.likes * 3 + post._count.comments * 4 + post._count.shares * 2;
       const freshness = Math.max(0, 48 - (Date.now() - post.createdAt.getTime()) / 3600000);
@@ -96,7 +120,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       query: q,
-      search: { users, vehicles: vehicles.map(serializeVehicle), posts: searchPosts.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() })), events },
+      search: { users: rankedUsers, vehicles: vehicles.map(serializeVehicle), posts: searchPosts.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() })), events },
       personalized: personalized.map(({ score, ...post }) => post),
       marketplace: marketplace.map(serializeVehicle),
       myVehicles: myVehicles.map(serializeVehicle),

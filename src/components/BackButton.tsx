@@ -2,11 +2,14 @@
 
 export default function BackButton() {
   function goBack() {
-    if (window.history.length > 1) {
+    const referrer = document.referrer;
+    const sameOrigin = referrer.startsWith(window.location.origin);
+    const current = window.location.href;
+    if (sameOrigin && referrer && referrer !== current) {
       window.history.back();
-    } else {
-      window.location.href = "/home";
+      return;
     }
+    window.location.replace("/home");
   }
 
   return (
@@ -15,7 +18,7 @@ export default function BackButton() {
       onClick={goBack}
       className="text-sm text-white/40 hover:text-white"
     >
-      ← Back
+      Back
     </button>
   );
 }

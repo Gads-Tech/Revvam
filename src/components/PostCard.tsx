@@ -177,9 +177,9 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
 
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      // Autoplay whenever the video is meaningfully in view. Pause it once
-      // it leaves the viewport so the currently visible content owns playback.
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.15) {
+      // Favor the video that occupies most of the viewport. A small glimpse
+      // of a neighboring video should never steal playback.
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
         setVideoIsFocused(true);
         video.muted = true;
         setVideoMuted(true);
@@ -191,7 +191,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         }
       }
     }, {
-      threshold: [0, 0.15, 0.3, 0.5, 0.75, 0.9],
+      threshold: [0, 0.25, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
     });
     observer.observe(video);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CarIcon, WarningIcon, useEffect, useMemo, useState } from "react";
+import { MechanicIcon, CarIcon, WarningIcon, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import RevvamMap from "@/components/RevvamMap";
 import MobileNav from "@/components/MobileNav";
@@ -226,7 +226,7 @@ export default function MapPage() {
                 </button>
               </div>
               {[
-                ["Mechanic Shops", "🔧"],
+                ["Mechanic Shops", "mechanic"],
                 ["Dealerships", "▣"],
                 ["Events", "▦"],
               ].map(([name, icon]) => <div key={name} className="flex items-center justify-between border-t border-white/[.06] py-4 text-sm text-white/55"><span className="flex items-center gap-3"><span>{icon}</span>{name}</span><span className="h-5 w-9 rounded-full bg-white/15 p-1"><span className="block h-3 w-3 rounded-full bg-white/75" /></span></div>)}

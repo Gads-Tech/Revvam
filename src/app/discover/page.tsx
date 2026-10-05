@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { CarIcon, useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
 import AppHeader from "@/components/AppHeader";
 
@@ -110,7 +110,7 @@ export default function DiscoverPage() {
         <section className="mb-8">
           <SectionTitle eyebrow="3 · Marketplace" title="Cars for sale" />
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {data?.marketplace.map((v) => <div key={v.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.025]">{v.image ? <img src={v.image} alt="" className="h-40 w-full object-cover" /> : <div className="flex h-40 items-center justify-center bg-white/[.03] text-4xl">🚗</div>}<div className="p-4"><div className="text-sm font-bold">{v.year ? v.year + " " : ""}{v.make} {v.model}</div><div className="mt-2 text-lg font-black text-red-300">{v.listingCurrency} {v.listingPrice?.toLocaleString() ?? "Price on request"}</div><div className="mt-1 text-[10px] text-white/30">{v.listingLocation ?? "Location not provided"} · @{v.user.username}</div></div></div>)}
+            {data?.marketplace.map((v) => <div key={v.id} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.025]">{v.image ? <img src={v.image} alt="" className="h-40 w-full object-cover" /> : <div className="flex h-40 items-center justify-center bg-white/[.03] text-4xl"><CarIcon className="h-10 w-10 text-red-300/70" /></div>}<div className="p-4"><div className="text-sm font-bold">{v.year ? v.year + " " : ""}{v.make} {v.model}</div><div className="mt-2 text-lg font-black text-red-300">{v.listingCurrency} {v.listingPrice?.toLocaleString() ?? "Price on request"}</div><div className="mt-1 text-[10px] text-white/30">{v.listingLocation ?? "Location not provided"} · @{v.user.username}</div></div></div>)}
             {!data?.marketplace.length && <Empty text="No cars are listed for sale yet." />}
           </div>
           {data?.myVehicles.length ? <div className="mt-4 rounded-2xl border border-white/10 bg-white/[.02] p-4"><div className="mb-3 text-xs font-bold">Your marketplace controls</div><div className="flex flex-wrap gap-2">{data.myVehicles.map(v => <button key={v.id} onClick={() => listVehicle(v.id, v.listingStatus === "FOR_SALE" ? "NONE" : "FOR_SALE")} className="rounded-xl border border-white/10 px-3 py-2 text-[10px] font-bold hover:border-red-500/30">{v.make} {v.model}: {v.listingStatus === "FOR_SALE" ? "Remove listing" : "List for sale"}</button>)}</div></div> : null}

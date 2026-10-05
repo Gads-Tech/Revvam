@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { CarIcon, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { CarIcon } from "@/components/icons";
 import MobileNav from "@/components/MobileNav";
 import AppHeader from "@/components/AppHeader";
 
@@ -22,6 +23,8 @@ export default function DiscoverPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [message, setMessage] = useState("");
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   async function load(search = q) {
     setLoading(true);
@@ -32,6 +35,26 @@ export default function DiscoverPage() {
   }
 
   useEffect(() => { load(""); }, []);
+
+  useEffect(() => {
+    const value = q.trim();
+    if (!value) {
+      setSuggestionsOpen(false);
+      setSearching(false);
+      return;
+    }
+    setSuggestionsOpen(true);
+    setSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch("/api/discover?q=" + encodeURIComponent(value), { cache: "no-store" });
+        const json = await res.json();
+        if (json.success) setData(json);
+      } catch {}
+      finally { setSearching(false); }
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [q]);
 
   async function trust(action: string, targetId: string) {
     const res = await fetch("/api/trust", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, targetId, reason: "Inappropriate or unwanted behaviour" }) });
@@ -69,7 +92,18 @@ export default function DiscoverPage() {
           <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div><h1 className="text-3xl font-black tracking-tight sm:text-5xl">Find your road.</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-white/40">People, cars, builds, events and trusted Revvam services — with a feed that learns what you care about.</p></div>
             <form onSubmit={(e) => { e.preventDefault(); load(); }} className="flex w-full max-w-md gap-2">
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search people, cars, posts or events..." className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm outline-none placeholder:text-white/25 focus:border-red-500/40" />
+              <div className="relative min-w-0 flex-1">
+                <input value={q} onChange={(e) => setQ(e.target.value)} onFocus={() => q.trim() && setSuggestionsOpen(true)} placeholder="Search people, cars, posts or events..." className="w-full rounded-xl border border-white/10 bg-black/50 px-4 py-3 text-sm outline-none placeholder:text-white/25 focus:border-red-500/40" />
+                {suggestionsOpen && q.trim() && (
+                  <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#090909] shadow-2xl">
+                    {searching && !data ? <div className="px-4 py-4 text-xs text-white/30">Finding matches…</div> : data?.search.users.length || data?.search.vehicles.length || data?.search.posts.length ? <>
+                      {data?.search.users.slice(0, 5).map((u: any) => <Link key={u.id} href={"/users/" + u.username} onClick={() => { setSuggestionsOpen(false); setQ(""); }} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 hover:bg-white/[0.04]"><Avatar src={u.image} /><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{u.name}</span><span className="block truncate text-[9px] text-white/30">@{u.username}</span></span><span className="text-[8px] font-black uppercase tracking-widest text-red-300/60">People</span></Link>)}
+                      {data?.search.vehicles.slice(0, 2).map((v: any) => <div key={v.id} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10"><CarIcon className="h-4 w-4 text-red-300" /></span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{v.year ? v.year + " " : ""}{v.make} {v.model}</span><span className="block truncate text-[9px] text-white/30">@{v.user.username}</span></span><span className="text-[8px] font-black uppercase tracking-widest text-white/30">Car</span></div>)}
+                      {data?.search.posts.slice(0, 2).map((p: any) => <Link key={p.id} href={"/posts/" + p.id} onClick={() => setSuggestionsOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04]"><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{p.content || "Post"}</span><span className="block truncate text-[9px] text-white/25">@{p.author.username}</span></span><span className="text-[8px] font-black uppercase tracking-widest text-white/30">Post</span></Link>)}
+                    </> : <div className="px-4 py-4 text-xs text-white/30">No matches yet.</div>}
+                  </div>
+                )}
+              </div>
               <button className="rounded-xl bg-red-600 px-5 text-xs font-black hover:bg-red-500">Search</button>
             </form>
           </div>

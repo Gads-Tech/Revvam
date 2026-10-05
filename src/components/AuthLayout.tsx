@@ -124,10 +124,11 @@ export default function AuthLayout({
       <button
         type="button"
         onClick={() => {
-          if (window.history.length > 1) {
+          const referrer = document.referrer;
+          if (referrer.startsWith(window.location.origin) && referrer !== window.location.href) {
             window.history.back();
           } else {
-            window.location.href = "/";
+            window.location.replace("/");
           }
         }}
         className="
@@ -169,14 +170,7 @@ export default function AuthLayout({
           sm:top-8
         "
       >
-        <span
-          className="
-            text-lg
-            leading-none
-          "
-        >
-          ←
-        </span>
+        <span className="text-lg leading-none">‹</span>
 
         Back
       </button>

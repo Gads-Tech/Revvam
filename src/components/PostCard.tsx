@@ -175,15 +175,25 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     video.addEventListener("webkitbeginfullscreen", onWebkitBeginFullscreen);
     video.addEventListener("webkitendfullscreen", onWebkitEndFullscreen);
 
+    let shouldAutoplay = false;
+    const tryAutoplay = () => {
+      if (!shouldAutoplay || videoIsFullscreenRef.current) return;
+      video.muted = true;
+      setVideoMuted(true);
+      void video.play().catch(() => {
+        // If the browser waits for media readiness, retry on the next
+        // canplay event rather than requiring the user to tap.
+      });
+    };
+    const onCanPlay = () => tryAutoplay();
+    video.addEventListener("canplay", onCanPlay);
+
     const observer = new IntersectionObserver((entries) => {
       const entry = entries[0];
-      // Favor the video that occupies most of the viewport. A small glimpse
-      // of a neighboring video should never steal playback.
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+      shouldAutoplay = entry.isIntersecting && entry.intersectionRatio >= 0.5;
+      if (shouldAutoplay) {
         setVideoIsFocused(true);
-        video.muted = true;
-        setVideoMuted(true);
-        void video.play().catch(() => {});
+        tryAutoplay();
       } else {
         setVideoIsFocused(false);
         if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) {
@@ -191,12 +201,13 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
         }
       }
     }, {
-      threshold: [0, 0.25, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+      threshold: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.95],
     });
     observer.observe(video);
 
     return () => {
       video.pause();
+      video.removeEventListener("canplay", onCanPlay);
       video.removeEventListener("volumechange", syncPreference);
       video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("loadedmetadata", onLoadedMetadata);
@@ -432,8 +443,10 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           onPause={() => setVideoPlaying(false)}
           src={post.video}
           playsInline
+          autoPlay
+          muted
           loop
-          preload="metadata"
+          preload="auto"
           onClick={() => { setVideoIsFocused(true); setVideoControlsVisible((visible) => { const next = !visible; if (next) armVideoControlsHide(); return next; }); }}
           className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:h-auto [&:fullscreen]:w-auto [&:fullscreen]:max-h-[100dvh] [&:fullscreen]:max-w-[100vw] [&:fullscreen]:object-contain"
           aria-label="Revvam car video"

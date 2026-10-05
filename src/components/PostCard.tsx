@@ -176,49 +176,87 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
     video.addEventListener("webkitendfullscreen", onWebkitEndFullscreen);
 
     let shouldAutoplay = false;
-    const tryAutoplay = () => {
-      if (!shouldAutoplay || videoIsFullscreenRef.current) return;
-      video.muted = true;
-      setVideoMuted(true);
-      void video.play().catch(() => {
-        // If the browser waits for media readiness, retry on the next
-        // canplay event rather than requiring the user to tap.
+    let autoplayFrame: number | null = null;
+
+    const getVisibility = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const visibleTop = Math.max(rect.top, 0);
+      const visibleBottom = Math.min(rect.bottom, viewportHeight);
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      return {
+        ratio: rect.height > 0 ? visibleHeight / rect.height : 0,
+        centerDistance: Math.abs((rect.top + rect.height / 2) - viewportHeight / 2),
+      };
+    };
+
+    const updateActiveFeedVideo = () => {
+      autoplayFrame = null;
+      const videos = Array.from(document.querySelectorAll<HTMLVideoElement>("[data-revvam-feed-video='true']"));
+      const candidates = videos
+        .map((el) => ({ el, ...getVisibility(el) }))
+        .filter(({ el, ratio }) => ratio >= 0.5 && !el.hidden);
+
+      // Instagram-style: only the most visible in-view video owns playback.
+      // If visibility ties, prefer the one closest to the viewport center.
+      candidates.sort((a, b) => b.ratio - a.ratio || a.centerDistance - b.centerDistance);
+      const active = candidates[0]?.el ?? null;
+
+      videos.forEach((el) => {
+        const isActive = el === active;
+        if (isActive) {
+          const savedMuted = window.localStorage.getItem("revvam:video-muted");
+          const muted = savedMuted === null ? true : savedMuted === "true";
+          el.muted = muted;
+          if (el === video) {
+            shouldAutoplay = true;
+            setVideoIsFocused(true);
+            setVideoMuted(muted);
+          }
+          if (el.paused && !el.ended) void el.play().catch(() => {});
+        } else {
+          if (el === video) {
+            shouldAutoplay = false;
+            setVideoIsFocused(false);
+          }
+          const owner = el.closest("[data-revvam-feed-video='true']");
+          if (!document.fullscreenElement && el !== videoRef.current || el !== videoRef.current) {
+            if (!el.closest("[data-revvam-comments-open]")) el.pause();
+          }
+        }
       });
     };
+
+    const scheduleActiveVideoUpdate = () => {
+      if (autoplayFrame !== null) return;
+      autoplayFrame = window.requestAnimationFrame(updateActiveFeedVideo);
+    };
+
+    const tryAutoplay = () => {
+      if (!shouldAutoplay || videoIsFullscreenRef.current) return;
+      const savedMuted = window.localStorage.getItem("revvam:video-muted");
+      const muted = savedMuted === null ? true : savedMuted === "true";
+      video.muted = muted;
+      setVideoMuted(muted);
+      void video.play().catch(() => {});
+    };
+
     const onCanPlay = () => tryAutoplay();
-    video.addEventListener("canplay", onCanPlay);
-
-    const observer = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      const rect = entry.boundingClientRect;
-      // The most-visible video owns playback. This works naturally for both
-      // portrait and landscape media without relying on a fixed center point.
-      const visibility = entry.intersectionRatio;
-      const isNearFeedEnd = entry.rootBounds
-        ? rect.bottom >= entry.rootBounds.bottom - 24
-        : false;
-      shouldAutoplay = entry.isIntersecting && (visibility >= 0.5 || isNearFeedEnd);
-
-      if (shouldAutoplay) {
-        setVideoIsFocused(true);
-        const savedMuted = window.localStorage.getItem("revvam:video-muted");
-        const muted = savedMuted === null ? true : savedMuted === "true";
-        video.muted = muted;
-        setVideoMuted(muted);
-        void video.play().catch(() => {});
-      } else {
-        setVideoIsFocused(false);
-        if (!commentsOpenRef.current && !videoIsFullscreenRef.current && !videoFullscreenTransitionRef.current) {
-          video.pause();
-        }
-      }
-    }, {
-      threshold: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.95, 1],
+    const observer = new IntersectionObserver(() => scheduleActiveVideoUpdate(), {
+      threshold: [0, 0.25, 0.5, 0.75, 1],
     });
+
     observer.observe(video);
+    window.addEventListener("scroll", scheduleActiveVideoUpdate, { passive: true });
+    window.addEventListener("resize", scheduleActiveVideoUpdate);
+
+    scheduleActiveVideoUpdate();
 
     return () => {
       video.pause();
+      if (autoplayFrame !== null) window.cancelAnimationFrame(autoplayFrame);
+      window.removeEventListener("scroll", scheduleActiveVideoUpdate);
+      window.removeEventListener("resize", scheduleActiveVideoUpdate);
       video.removeEventListener("canplay", onCanPlay);
       video.removeEventListener("volumechange", syncPreference);
       video.removeEventListener("timeupdate", onTimeUpdate);
@@ -451,6 +489,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       >
         <video
           ref={videoRef}
+          data-revvam-feed-video="true"
           onPlay={() => setVideoPlaying(true)}
           onPause={() => setVideoPlaying(false)}
           src={post.video}

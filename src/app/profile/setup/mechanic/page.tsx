@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { MechanicIcon, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import MobileNav from "@/components/MobileNav";
 import { MechanicIcon, CarIcon, CheckIcon } from "@/components/icons/RevvamIcons";
@@ -143,7 +143,7 @@ export default function MechanicSetupPage() {
           {step === 2 && (
             <section>
               <div className="mb-8">
-                <p className="mb-3 text-4xl">🛠️</p>
+                <div className="mb-3"><MechanicIcon className="h-10 w-10 text-red-300" /></div>
                 <h1 className="text-4xl font-black tracking-[-0.045em] sm:text-5xl">How do you help?</h1>
                 <p className="mt-4 max-w-lg text-sm leading-6 text-white/40 sm:text-base">These services help drivers understand what they can ask you for, especially during an emergency.</p>
               </div>

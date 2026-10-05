@@ -14,6 +14,8 @@ export default function DiscoverySections() {
   const [q, setQ] = useState("");
   const [data, setData] = useState<Data | null>(null);
   const [open, setOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<any | null>(null);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -22,12 +24,34 @@ export default function DiscoverySections() {
   async function search(e?: FormEvent) {
     e?.preventDefault();
     const value = q.trim();
-    if (!value) { setData(null); setOpen(false); return; }
+    if (!value) { setData(null); setOpen(false); setPreviewOpen(false); return; }
     setOpen(true);
+    setPreviewOpen(false);
     const r = await fetch("/api/discover?q=" + encodeURIComponent(value), { cache: "no-store" });
     const j = await r.json();
     if (j.success) setData(j);
   }
+
+  useEffect(() => {
+    const value = q.trim();
+    if (!value) {
+      setPreviewOpen(false);
+      setSearching(false);
+      return;
+    }
+    setPreviewOpen(true);
+    setSearching(true);
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const r = await fetch("/api/discover?q=" + encodeURIComponent(value), { cache: "no-store", signal: controller.signal });
+        const j = await r.json();
+        if (j.success) setData(j);
+      } catch {}
+      finally { if (!controller.signal.aborted) setSearching(false); }
+    }, 180);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [q]);
 
   async function submitReview() {
     if (!reviewTarget) return;
@@ -54,7 +78,26 @@ export default function DiscoverySections() {
             <p className="mt-1 text-xs text-white/30">Search people, cars, posts and events without leaving Discover.</p>
           </div>
           <form onSubmit={search} className="flex w-full gap-2 md:max-w-xl">
-            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search Revvam…" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-xs outline-none placeholder:text-white/20 focus:border-red-500/30" />
+            <div className="relative min-w-0 flex-1">
+              <input value={q} onChange={e => setQ(e.target.value)} onFocus={() => q.trim() && setPreviewOpen(true)} placeholder="Search Revvam…" className="w-full min-w-0 rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-xs outline-none placeholder:text-white/20 focus:border-red-500/30" />
+              {previewOpen && q.trim() && (
+                <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-white/[0.10] bg-[#090909] shadow-[0_24px_70px_rgba(0,0,0,.7)]">
+                  {searching && !data ? <div className="px-4 py-4 text-[10px] text-white/30">Finding matches…</div> : data?.search?.users?.length || data?.search?.vehicles?.length || data?.search?.posts?.length ? (
+                    <>
+                      {data?.search.users.slice(0, 4).map((u: any) => (
+                        <Link key={u.id} href={"/users/" + u.username} onClick={() => { setPreviewOpen(false); setQ(""); }} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 hover:bg-white/[0.04]">
+                          <Avatar src={u.image} />
+                          <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{u.name || u.username}</span><span className="block truncate text-[9px] text-white/30">@{u.username}</span></span>
+                          <span className="text-[8px] font-black uppercase tracking-[.16em] text-red-300/60">People</span>
+                        </Link>
+                      ))}
+                      {data?.search.vehicles.slice(0, 2).map((v: any) => <Link key={v.id} href={"/profile/cars/" + v.id} onClick={() => setPreviewOpen(false)} className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3 hover:bg-white/[0.04]"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-300">Car</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{v.year ? v.year + " " : ""}{v.make} {v.model}</span><span className="block truncate text-[9px] text-white/30">@{v.user.username}</span></span><span className="text-[8px] font-black uppercase tracking-[.16em] text-white/30">Car</span></Link>)}
+                      {data?.search.posts.slice(0, 2).map((p: any) => <Link key={p.id} href={"/posts/" + p.id} onClick={() => setPreviewOpen(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04]"><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold">{p.content || "Post"}</span><span className="block truncate text-[9px] text-white/25">@{p.author.username}</span></span><span className="text-[8px] font-black uppercase tracking-[.16em] text-white/30">Post</span></Link>)}
+                    </>
+                  ) : <div className="px-4 py-4 text-[10px] text-white/30">No matches yet.</div>}
+                </div>
+              )}
+            </div>
             <button className="rounded-xl bg-red-600 px-4 py-2.5 text-[10px] font-black">Search</button>
           </form>
         </div>

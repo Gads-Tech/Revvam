@@ -159,7 +159,7 @@ export default function MechanicSetupPage() {
           {step === 3 && (
             <section>
               <div className="mb-8">
-                <p className="mb-3 text-4xl">👨🏾‍🔧</p>
+                <div className="mb-3"><MechanicIcon className="h-10 w-10 text-red-300" /></div>
                 <h1 className="text-4xl font-black tracking-[-0.045em] sm:text-5xl">Tell people about you.</h1>
                 <p className="mt-4 max-w-lg text-sm leading-6 text-white/40 sm:text-base">Give drivers a quick reason to trust your profile. You can still post your cars and update your skills later.</p>
               </div>

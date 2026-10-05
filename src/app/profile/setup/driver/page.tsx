@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import { CarIcon, FlameIcon,
   FormEvent,
   useState,
 } from "react";
@@ -395,7 +395,7 @@ export default function DriverSetupPage() {
             <section>
               <div className="mb-8">
                 <p className="mb-3 text-4xl">
-                  🚗
+                  <CarIcon className="h-9 w-9 text-red-300" />
                 </p>
 
                 <h1
@@ -538,7 +538,7 @@ export default function DriverSetupPage() {
             <section>
               <div className="mb-8">
                 <p className="mb-3 text-4xl">
-                  🏎️
+                  <CarIcon className="h-9 w-9 text-red-300" />
                 </p>
 
                 <h1
@@ -780,7 +780,7 @@ export default function DriverSetupPage() {
             <section>
               <div className="mb-8">
                 <p className="mb-3 text-4xl">
-                  🔥
+                  <FlameIcon className="h-9 w-9 text-red-300" />
                 </p>
 
                 <h1

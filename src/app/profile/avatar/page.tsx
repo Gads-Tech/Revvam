@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import MobileNav from "@/components/MobileNav";
+import { BackIcon } from "@/components/icons";
 
 const MAX_FILE_SIZE = 2_000_000;
 const MAX_DATA_URL_LENGTH = 3_000_000;

@@ -1,4 +1,3 @@
-import { BackIcon } from "@/components/icons";
 "use client";
 
 import Link from "next/link";

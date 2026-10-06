@@ -17,10 +17,10 @@ export default function OnlineMembers() {
 
   async function load() {
     try {
-      const response = await fetch("/api/presence/online?_=" + Date.now(), {
+      const response = await fetch("/api/presence/online", {
         credentials: "include",
         cache: "no-store",
-        headers: { Accept: "application/json", "Cache-Control": "no-cache" },
+        headers: { Accept: "application/json" },
       });
       const data = await response.json().catch(() => null);
       if (response.ok && data?.success) setUsers(Array.isArray(data.users) ? data.users : []);
@@ -31,8 +31,10 @@ export default function OnlineMembers() {
 
   useEffect(() => {
     void load();
-    const timer = window.setInterval(() => void load(), 15_000);
-    return () => window.clearInterval(timer);
+    const timer = window.setInterval(() => void load(), 30_000);
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") void load(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
   }, []);
 
   return (

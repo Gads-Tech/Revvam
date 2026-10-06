@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MobileNav from "@/components/MobileNav";
+import { BackIcon } from "@/components/icons";
 
 type Person = { id: string; name: string; username: string; image: string | null };
 type Override = { targetId: string; enabled: boolean; user: Person };

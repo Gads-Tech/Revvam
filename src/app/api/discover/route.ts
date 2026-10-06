@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         ]},
         take: 8,
         orderBy: { startsAt: "asc" },
-        select: { id: true, title: true, description: true, locationLabel: true, startsAt: true, image: true, host: { select: { username: true, name: true } } },
+        select: { id: true, title: true, description: true, locationLabel: true, startsAt: true, createdAt: true, image: true, host: { select: { username: true, name: true } } },
       }) : [],
       prisma.post.findMany({
         where: { authorId: { notIn: [user.id, ...blockedIds] } },

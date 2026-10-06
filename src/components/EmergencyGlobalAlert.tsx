@@ -10,6 +10,7 @@ type AlertData = {
     id: string;
     type: string;
     description: string;
+    createdAt: string;
     locationLabel: string | null;
     ghostMode: boolean;
     radiusMeters: number;

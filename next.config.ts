@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  poweredByHeader: false,
+  compress: true,
+  generateEtags: true,
+  experimental: {
+    optimizePackageImports: [],
+  },
 };
 
 export default nextConfig;

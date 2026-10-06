@@ -1,6 +1,6 @@
 "use client";
 
-import { MechanicIcon, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import MobileNav from "@/components/MobileNav";
 import { MechanicIcon, CarIcon, CheckIcon } from "@/components/icons/RevvamIcons";

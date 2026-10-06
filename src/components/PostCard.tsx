@@ -495,10 +495,9 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
           onPause={() => setVideoPlaying(false)}
           src={post.video}
           playsInline
-          autoPlay
           muted
           loop
-          preload="auto"
+          preload="metadata"
           onClick={() => { setVideoIsFocused(true); setVideoControlsVisible((visible) => { const next = !visible; if (next) armVideoControlsHide(); return next; }); }}
           className="block max-h-[620px] max-[639px]:max-h-[72vh] w-full cursor-pointer object-contain [&:fullscreen]:h-auto [&:fullscreen]:w-auto [&:fullscreen]:max-h-[100dvh] [&:fullscreen]:max-w-[100vw] [&:fullscreen]:object-contain"
           aria-label="Revvam car video"

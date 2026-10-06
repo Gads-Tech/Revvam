@@ -10,6 +10,7 @@ export default function EmergencyHelpLive({ initialCount, enabled }: { initialCo
     if (!enabled) return;
     let active = true;
     const check = async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const response = await fetch("/api/emergencies/help", { cache: "no-store", credentials: "include" });
         if (!response.ok) return;
@@ -18,8 +19,10 @@ export default function EmergencyHelpLive({ initialCount, enabled }: { initialCo
       } catch {}
     };
     check();
-    const timer = window.setInterval(check, 3000);
-    return () => { active = false; window.clearInterval(timer); };
+    const timer = window.setInterval(check, 10000);
+    const onVisibilityChange = () => { if (document.visibilityState === "visible") void check(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => { active = false; window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
   }, [enabled]);
 
   if (!enabled || count < 1) return null;

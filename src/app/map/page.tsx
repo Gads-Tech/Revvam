@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { MechanicIcon, CarIcon, WarningIcon } from "@/components/icons";
 import { useSearchParams } from "next/navigation";
@@ -60,7 +61,7 @@ const labels: Record<string, string> = {
   OTHER: "Other",
 };
 
-export default function MapPage() {
+function MapPageContent() {
   const [emergencies, setEmergencies] = useState<Emergency[]>([]);
   const [mechanics, setMechanics] = useState<Mechanic[]>([]);
   const [events, setEvents] = useState<RevvamEvent[]>([]);
@@ -286,5 +287,14 @@ export default function MapPage() {
       </div>
       <div className="md:hidden"><MobileNav /></div>
     </main>
+  );
+}
+
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-[#030303] text-white" />}>
+      <MapPageContent />
+    </Suspense>
   );
 }

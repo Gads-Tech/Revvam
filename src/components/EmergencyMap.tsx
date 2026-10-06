@@ -197,7 +197,7 @@ export default function EmergencyMap({
 
       mapRef.current.innerHTML = "";
 
-      const center = userLocation
+      const center = activeUserLocation
         ? { lat: activeUserLocation.latitude, lng: activeUserLocation.longitude, altitude: 0 }
         : markers[0]
           ? { lat: markers[0].latitude, lng: markers[0].longitude, altitude: 0 }
@@ -224,8 +224,8 @@ export default function EmergencyMap({
       if (activeUserLocation) {
         const you = new Marker3DElement({
           position: {
-            lat: userLocation.latitude,
-            lng: userLocation.longitude,
+            lat: activeUserLocation.latitude,
+            lng: activeUserLocation.longitude,
             altitude: 50,
           },
           drawsWhenOccluded: true,

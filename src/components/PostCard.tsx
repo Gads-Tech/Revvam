@@ -14,6 +14,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
   const articleRef = useRef<HTMLElement | null>(null);
   const commentsRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const commentsPreviewVideoRef = useRef<HTMLVideoElement | null>(null);
   const [liked, setLiked] = useState(Boolean(post.liked));
   const [counts, setCounts] = useState<Counts>({ likes: post._count?.likes ?? 0, comments: post._count?.comments ?? 0, shares: post._count?.shares ?? 0 });
   const [comments, setComments] = useState<Comment[]>([]);
@@ -468,6 +469,7 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       videoWasPlayingBeforeCommentsRef.current = Boolean(video && !video.paused && !video.ended);
       commentsOpenRef.current = true;
       window.dispatchEvent(new CustomEvent("revvam:comments-open", { detail: { postId: post.id } }));
+      video?.pause();
       setShowComments(true);
       await loadComments();
       if (videoWasPlayingBeforeCommentsRef.current && video?.paused) void video.play().catch(() => {});
@@ -559,6 +561,10 @@ export default function PostCard({ post, onChanged, publicMode = false }: { post
       </div>}
       <div className="flex items-center gap-1 border-t border-white/[0.06] px-4 py-2 sm:px-5"><button type="button" onClick={toggleLike} disabled={busy} className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold transition ${liked ? "text-red-300" : "text-white/35 hover:bg-white/[0.04] hover:text-white"}`}><LikeIcon className="h-4 w-4" filled={liked} />{counts.likes || "Like"}</button><button type="button" onClick={toggleComments} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><CommentIcon className="h-4 w-4" />{counts.comments || "Comment"}</button><button type="button" onClick={openShare} className="flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl text-xs font-semibold text-white/35 transition hover:bg-white/[0.04] hover:text-white"><ShareIcon className="h-4 w-4" />{counts.shares || "Share"}</button></div>{notice && <p className="border-t border-white/[0.06] px-5 py-2 text-[10px] text-red-300">{notice}</p>}
     </div>
+    {showComments && <div className="fixed inset-x-0 top-0 z-[95] hidden h-[35dvh] bg-black max-[639px]:block">
+      {post.video ? <video ref={commentsPreviewVideoRef} src={post.video} autoPlay muted playsInline loop preload="metadata" className="h-full w-full object-contain" aria-label="Video being commented on" /> : post.image ? <img src={post.image} alt="Post being commented on" className="h-full w-full object-contain" /> : <div className="flex h-full items-center justify-center px-8 text-center text-sm text-white/30">{post.content}</div>}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40" />
+    </div>}
     {showComments && <div className="flex min-w-0 min-h-0 max-h-[58svh] max-[639px]:fixed max-[639px]:inset-x-0 max-[639px]:bottom-0 max-[639px]:z-[100] max-[639px]:h-[65dvh] max-[639px]:max-h-[65dvh] max-[639px]:rounded-t-[1.75rem] max-[639px]:border-t max-[639px]:border-white/[0.10] max-[639px]:bg-[#080808] max-[639px]:shadow-[0_-20px_60px_rgba(0,0,0,0.55)] max-[639px]:pb-[env(safe-area-inset-bottom)] md:max-h-[85svh] flex-col border-t border-white/[0.06] px-4 pb-4 pt-3 sm:px-5 md:border-l md:border-t-0"><div className="flex items-center justify-between gap-3 pb-2"><div><p className="text-[9px] uppercase tracking-[0.18em] text-white/20">Conversation</p><p className="text-xs font-semibold text-white/60">{counts.comments} comment{counts.comments === 1 ? "" : "s"}</p></div><button type="button" onClick={() => { setShowComments(false); setReplyingTo(null); setMenuCommentId(null); }} className="flex h-8 w-12 items-center justify-center rounded-full border border-white/[0.06] bg-white/[0.02]" aria-label="Collapse comments"><CloseIcon className="h-4 w-4" /></button></div>
       <div ref={commentsRef} className="min-h-0 flex-1 overflow-y-auto space-y-2 overscroll-contain pr-1 [scrollbar-width:thin] [touch-action:pan-y]" style={{ WebkitOverflowScrolling: "touch" }}>{topComments.map((item) => <CommentThread key={item.id} item={item} comments={comments} currentUserId={currentUserId} expandedReplies={expandedReplies} menuCommentId={menuCommentId} deletingCommentId={deletingCommentId} onToggle={(id) => setExpandedReplies((current) => ({ ...current, [id]: !current[id] }))} onReply={startReply} onDelete={deleteComment} onMenu={(id) => setMenuCommentId(menuCommentId === id ? null : id)} onPointer={handleCommentPointer} />)}{!comments.length && <p className="py-6 text-center text-xs text-white/20">No comments yet.</p>}</div>
       {replyingTo && <div className="mt-3 flex items-center justify-between rounded-xl border border-red-400/10 bg-red-500/[0.05] px-3 py-2 text-[10px] text-red-200"><span>Replying to @{replyingTo.author.username}</span><button type="button" onClick={cancelReply} className="text-white/40 hover:text-white"><CloseIcon className="h-3.5 w-3.5" /></button></div>}

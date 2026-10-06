@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { MechanicIcon, CarIcon, WarningIcon, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { MechanicIcon, CarIcon, WarningIcon } from "@/components/icons";
 import { useSearchParams } from "next/navigation";
 import RevvamMap from "@/components/RevvamMap";
 import MobileNav from "@/components/MobileNav";

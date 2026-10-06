@@ -1,9 +1,7 @@
 "use client";
 
-import { CarIcon, FlameIcon,
-  FormEvent,
-  useState,
-} from "react";
+import { FormEvent, useState } from "react";
+import { CarIcon, FlameIcon } from "@/components/icons";
 
 import { useRouter } from "next/navigation";
 

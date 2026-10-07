@@ -46,7 +46,7 @@ try {
   const user = await prisma.user.upsert({
     where: { username },
     update: { name, email, passwordHash, role: "SUPER_ADMIN" },
-    create: { name, username, email, passwordHash, role: "ADMIN" },
+    create: { name, username, email, passwordHash, role: "SUPER_ADMIN" },
     select: { id: true, username: true, email: true, role: true },
   });
 

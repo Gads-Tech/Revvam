@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const sections = [["overview","Overview"],["users","Users"],["content","Posts"],["comments","Comments"],["reports","Reports"],["emergencies","Emergencies"],["notifications","Notifications"],["broadcast","Broadcast"],["analytics","Analytics"],["security","Security"],["diagnostics","Diagnostics"],["governance","Governance"],["audit","Audit"]] as const;
+const sections = [["overview","Overview"],["attention","Needs Attention"],["users","Users"],["content","Posts"],["comments","Comments"],["reports","Reports"],["emergencies","Emergencies"],["notifications","Notifications"],["broadcast","Broadcast"],["analytics","Analytics"],["security","Security"],["diagnostics","Diagnostics"],["governance","Governance"],["audit","Audit"]] as const;
 type Section=typeof sections[number][0];
 
 function Btn({children,onClick,danger=false,disabled=false}:{children:any;onClick:()=>void;danger?:boolean;disabled?:boolean}){
@@ -40,6 +40,8 @@ export default function ControlCenterClient({initialStats,superAdmin}:{initialSt
    </aside>
 
    <section className="min-w-0">
+    {section==="attention"&&<div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[["Reports",data.attention?.reports,"reports"],["Reported posts",data.attention?.reportedPosts,"content"],["Reported comments",data.attention?.reportedComments,"comments"],["Active emergencies",data.attention?.emergencies,"emergencies"]].map(([label,count,target]:any)=><button key={label} onClick={()=>setSection(target)} className="rounded-2xl border border-white/[.08] bg-white/[.025] p-5 text-left hover:bg-white/[.045]"><p className="text-[9px] uppercase tracking-[.18em] text-white/30">{label}</p><p className="mt-2 text-3xl font-black">{String(count??0)}</p><p className="mt-2 text-[10px] text-red-300/60">Review now →</p></button>)}</div><div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-5"><p className="text-sm font-bold">Needs Attention</p><p className="mt-2 text-xs leading-5 text-white/35">This queue is intentionally small. It points you toward content that may require action instead of flooding the console with every record on Revvam.</p></div></div>}
+
     {section==="overview"&&<div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{Object.entries(data.stats||{}).map(([k,v])=><div key={k} className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><p className="text-[9px] uppercase tracking-[.18em] text-white/25">{k}</p><p className="mt-2 text-2xl font-black">{String(v)}</p></div>)}</div><div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-5"><p className="text-sm font-bold">Command overview</p><p className="mt-2 max-w-2xl text-xs leading-5 text-white/35">Manage accounts, content, reports, emergencies, platform announcements and administrative history from one protected console. Destructive actions require confirmation.</p></div></div>}
 
     {(section==="users"||section==="content")&&<div>

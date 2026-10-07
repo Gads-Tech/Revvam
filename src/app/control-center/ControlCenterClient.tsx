@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const sections = [["overview","Overview"],["users","Users"],["content","Posts"],["comments","Comments"],["reports","Reports"],["emergencies","Emergencies"],["broadcast","Broadcast"],["audit","Audit"]] as const;
 type Section=typeof sections[number][0];
@@ -10,21 +11,23 @@ function Btn({children,onClick,danger=false,disabled=false}:{children:any;onClic
 }
 
 export default function ControlCenterClient({initialStats,superAdmin}:{initialStats:any;superAdmin:boolean}){
+ const router=useRouter();
  const [section,setSection]=useState<Section>("overview"); const [data,setData]=useState<any>({stats:initialStats});
  const [q,setQ]=useState(""); const [busy,setBusy]=useState(false); const [message,setMessage]=useState("");
  const [selected,setSelected]=useState<any>(null); const [confirm,setConfirm]=useState<{action:string;label:string}|null>(null);
- const [title,setTitle]=useState(""); const [body,setBody]=useState(""); const [href,setHref]=useState("");
+ const [title,setTitle]=useState(""); const [body,setBody]=useState(""); const [href,setHref]=useState(""); const [reason,setReason]=useState(""); const [userSuggestions,setUserSuggestions]=useState<any[]>([]);
 
  async function load(s=section){const r=await fetch("/api/control-center?section="+s+(q?"&q="+encodeURIComponent(q):""),{cache:"no-store"});setData(await r.json());}
  useEffect(()=>{void load()},[section]);
+ useEffect(()=>{if(section!=="users"||q.trim().length<2){setUserSuggestions([]);return;} const timer=setTimeout(async()=>{const r=await fetch("/api/control-center?section=users&q="+encodeURIComponent(q.trim()),{cache:"no-store"});const d=await r.json();setUserSuggestions((d.users||[]).slice(0,6));},180);return()=>clearTimeout(timer)},[q,section]);
 
  async function act(action:string,extra:any={}){
   setBusy(true);setMessage("Working...");
-  const r=await fetch("/api/control-center",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,targetId:selected?.id,...extra})});
+  const r=await fetch("/api/control-center",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,targetId:selected?.id,reason,...extra})});
   const d=await r.json();setMessage(r.ok?(d.sent?"Sent to "+d.sent+" users.":"Done."):(d.error||"Action failed."));
-  setBusy(false);setConfirm(null);setSelected(null);if(r.ok)void load();
+  setBusy(false);setConfirm(null);setSelected(null);setReason("");if(r.ok)void load();
  }
- function guarded(action:string,label:string){setConfirm({action,label});}
+ function guarded(action:string,label:string){setReason("");setConfirm({action,label});}
 
  return <div className="mt-7">
   <div className="grid gap-5 lg:grid-cols-[190px_1fr]">
@@ -33,15 +36,15 @@ export default function ControlCenterClient({initialStats,superAdmin}:{initialSt
      <p className="px-3 pb-2 pt-2 text-[9px] font-black uppercase tracking-[.2em] text-red-300/60">Command</p>
      {sections.map(([id,label])=><button key={id} onClick={()=>{setSection(id);setSelected(null)}} className={section===id?"mb-1 flex w-full items-center rounded-xl bg-red-500/10 px-3 py-2.5 text-left text-xs font-bold text-red-100":"mb-1 flex w-full items-center rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-white/40 hover:bg-white/[.04] hover:text-white"}>{label}</button>)}
     </div>
-    <div className="mt-3 rounded-2xl border border-red-500/15 bg-red-500/[.035] p-4"><p className="text-[9px] font-black uppercase tracking-[.18em] text-red-300">Authority</p><p className="mt-2 text-sm font-black">{superAdmin?"SUPER ADMIN":"ADMIN"}</p><p className="mt-1 text-[10px] leading-4 text-white/30">Server-authorized controls with audit logging.</p></div>
+    <div className="mt-3 rounded-2xl border border-red-500/15 bg-red-500/[.035] p-4"><p className="text-[9px] font-black uppercase tracking-[.18em] text-red-300">Authority</p><p className="mt-2 text-sm font-black">{superAdmin?"SUPER ADMIN":"ADMIN"}</p><p className="mt-1 text-[10px] leading-4 text-white/30">Use only for legitimate platform operations. Actions are audited.</p></div>
    </aside>
 
    <section className="min-w-0">
     {section==="overview"&&<div className="space-y-4"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{Object.entries(data.stats||{}).map(([k,v])=><div key={k} className="rounded-2xl border border-white/[.08] bg-white/[.025] p-4"><p className="text-[9px] uppercase tracking-[.18em] text-white/25">{k}</p><p className="mt-2 text-2xl font-black">{String(v)}</p></div>)}</div><div className="rounded-2xl border border-white/[.08] bg-white/[.025] p-5"><p className="text-sm font-bold">Command overview</p><p className="mt-2 max-w-2xl text-xs leading-5 text-white/35">Manage accounts, content, reports, emergencies, platform announcements and administrative history from one protected console. Destructive actions require confirmation.</p></div></div>}
 
     {(section==="users"||section==="content")&&<div>
-     <div className="mb-4 flex gap-2"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&load(section==="users"?"users":"content")} placeholder={section==="users"?"Search users...":"Search posts or usernames..."} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-sm outline-none"/><Btn onClick={()=>load(section==="users"?"users":"content")}>Search</Btn></div>
-     {section==="users"&&<div className="space-y-2">{(data.users||[]).map((u:any)=><div key={u.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-bold">{u.name}</p><p className="truncate text-xs text-white/35">@{u.username} · {u.email}</p></div><span className="shrink-0 text-[9px] font-black uppercase text-red-300">{u.role}</span></div><div className="mt-3 flex flex-wrap gap-2"><Btn onClick={()=>setSelected(u)}>Manage</Btn><Btn onClick={()=>{setSelected(u);guarded(u.suspendedAt?"restore_user":"suspend_user",u.suspendedAt?"Restore account":"Suspend account")}} danger={!u.suspendedAt}>{u.suspendedAt?"Restore":"Suspend"}</Btn></div></div>)}</div>}
+     <div className="relative mb-4 flex gap-2"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&load(section==="users"?"users":"content")} placeholder={section==="users"?"Search users by name, @username or email...":"Search posts or usernames..."} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-sm outline-none"/><Btn onClick={()=>load(section==="users"?"users":"content")}>Search</Btn>{section==="users"&&userSuggestions.length>0&&<div className="absolute left-0 right-14 top-[calc(100%+6px)] z-40 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0b0b]/98 p-1 shadow-2xl backdrop-blur-xl">{userSuggestions.map((u:any)=><button key={u.id} onClick={()=>{setQ(u.username);setUserSuggestions([]);router.push("/users/"+encodeURIComponent(u.username));}} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-white/[.05]"><img src={u.image||"/logo_mark.svg"} alt="" className="h-8 w-8 rounded-full object-cover"/><span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold">{u.name}</span><span className="block truncate text-[10px] text-white/30">@{u.username} · {u.email}</span></span><span className="text-[8px] uppercase tracking-[.14em] text-red-300/60">Profile</span></button>)}</div>}</div>
+     {section==="users"&&<div className="space-y-2">{(data.users||[]).map((u:any)=><div key={u.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-bold">{u.name}</p><p className="truncate text-xs text-white/35">@{u.username} · {u.email}</p></div><span className="shrink-0 text-[9px] font-black uppercase text-red-300">{u.role}</span></div><div className="mt-3 flex flex-wrap gap-2"><Btn onClick={()=>router.push("/users/"+encodeURIComponent(u.username))}>Open profile</Btn><Btn onClick={()=>setSelected(u)}>Manage</Btn><Btn onClick={()=>{setSelected(u);guarded(u.suspendedAt?"restore_user":"suspend_user",u.suspendedAt?"Restore account":"Suspend account")}} danger={!u.suspendedAt}>{u.suspendedAt?"Restore":"Suspend"}</Btn></div></div>)}</div>}
      {section==="content"&&<div className="space-y-2">{(data.posts||[]).map((p:any)=><div key={p.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold">@{p.author.username}</p><p className="mt-2 text-sm leading-5 text-white/60">{p.content||"Media post"}</p></div><span className="text-[9px] text-white/25">{p._count.comments} comments</span></div><div className="mt-3 flex gap-2"><Btn onClick={()=>setSelected(p)}>View</Btn><Btn onClick={()=>{setSelected(p);guarded("delete_post","Delete post")}} danger>Delete</Btn></div></div>)}</div>}
     </div>}
 
@@ -62,7 +65,7 @@ export default function ControlCenterClient({initialStats,superAdmin}:{initialSt
    {selected.content&&<div className="mt-5"><p className="text-sm leading-6 text-white/55">{selected.content}</p>{selected.post&&<p className="mt-2 text-xs text-white/30">Comment on: {selected.post.content||"Media post"}</p>}<Btn danger onClick={()=>guarded(selected.post?"delete_comment":"delete_post",selected.post?"Delete comment":"Delete post")}>{selected.post?"Delete comment":"Delete post"}</Btn></div>}
   </div></div>}
 
-  {confirm&&<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"><div className="w-full max-w-sm rounded-3xl border border-red-500/20 bg-[#090909] p-5"><p className="text-[9px] font-black uppercase tracking-[.2em] text-red-300">Confirm action</p><h3 className="mt-2 text-lg font-black">{confirm.label}</h3><p className="mt-2 text-xs leading-5 text-white/35">This action is recorded in the Revvam audit log. Destructive actions cannot be undone.</p><div className="mt-5 flex gap-2"><Btn danger disabled={busy} onClick={()=>act(confirm.action)}>{busy?"Working...":"Confirm"}</Btn><Btn onClick={()=>setConfirm(null)}>Cancel</Btn></div></div></div>}
+  {confirm&&<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"><div className="w-full max-w-sm rounded-3xl border border-red-500/20 bg-[#090909] p-5"><p className="text-[9px] font-black uppercase tracking-[.2em] text-red-300">Confirm action</p><h3 className="mt-2 text-lg font-black">{confirm.label}</h3><p className="mt-2 text-xs leading-5 text-white/35">This action is recorded in the Revvam audit log. Use platform rules consistently, document the factual reason, and avoid changing private credentials or using moderation tools for personal disputes.</p><textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="Required reason (minimum 8 characters)" rows={3} className="mt-4 w-full rounded-xl border border-white/10 bg-white/[.03] px-3 py-2.5 text-xs text-white outline-none"/><div className="mt-5 flex gap-2"><Btn danger disabled={busy||reason.trim().length<8} onClick={()=>act(confirm.action)}>{busy?"Working...":"Confirm"}</Btn><Btn onClick={()=>setConfirm(null)}>Cancel</Btn></div></div></div>}
   {message&&<div className="fixed bottom-5 left-1/2 z-[70] -translate-x-1/2 rounded-full border border-white/10 bg-[#111]/95 px-4 py-2 text-xs text-white/70 shadow-xl">{message}</div>}
  </div>
 }

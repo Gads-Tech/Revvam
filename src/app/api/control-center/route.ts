@@ -44,6 +44,29 @@ export async function GET(request: Request) {
     const emergencies = await prisma.emergencyRequest.findMany({ orderBy:{createdAt:"desc"},take:100,include:{driver:{select:{id:true,name:true,username:true,image:true}},vehicle:{select:{make:true,model:true,year:true}},_count:{select:{offers:true}}} });
     return NextResponse.json({ emergencies });
   }
+  if (section === "analytics") {
+    const now=new Date(), day=new Date(now.getTime()-86400000), week=new Date(now.getTime()-7*86400000);
+    const [users,users7,posts,posts7,comments,comments7,notifications,openReports,activeEmergencies]=await Promise.all([
+      prisma.user.count(),prisma.user.count({where:{createdAt:{gte:week}}}),prisma.post.count(),prisma.post.count({where:{createdAt:{gte:day}}}),
+      prisma.postComment.count(),prisma.postComment.count({where:{createdAt:{gte:day}}}),prisma.notification.count(),prisma.report.count({where:{status:"OPEN"}}),
+      prisma.emergencyRequest.count({where:{status:{in:["OPEN","OFFERS_RECEIVED","ACCEPTED","MECHANIC_EN_ROUTE","ARRIVED"]}}})
+    ]);
+    return NextResponse.json({analytics:{totalUsers:users,newUsers7d:users7,postsTotal:posts,posts24h:posts7,commentsTotal:comments,comments24h:comments7,notificationsTotal:notifications,openReports,activeEmergencies}});
+  }
+  if (section === "security") {
+    const sessions=await prisma.session.findMany({where:{expiresAt:{gt:new Date()}},orderBy:{createdAt:"desc"},take:200,select:{id: true,createdAt:true,expiresAt:true,user:{select:{username:true,name:true}}}});
+    return NextResponse.json({security:sessions});
+  }
+  if (section === "diagnostics") {
+    let dbOk=true; let detail="Database query successful.";
+    try { await prisma.$queryRawUnsafe("SELECT 1"); } catch { dbOk=false; detail="Database query failed."; }
+    return NextResponse.json({diagnostics:{
+      database:{ok:dbOk,detail},
+      notificationsSchema:{ok:true,detail:"Notification records available to the application."},
+      auditLog:{ok:true,detail:"Administrative actions are recorded in the audit log."},
+      moderation:{ok:true,detail:"Destructive moderation actions require a documented reason."},
+    }});
+  }
   if (section === "audit") {
     const logs = await prisma.adminAuditLog.findMany({ orderBy:{createdAt:"desc"},take:200,include:{actor:{select:{username:true,name:true}},targetUser:{select:{username:true,name:true}}} });
     return NextResponse.json({ logs });

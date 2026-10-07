@@ -49,7 +49,22 @@ export async function GET(request: Request) {
     return NextResponse.json({ logs });
   }
   if (section === "notifications") {
-    const notifications = await prisma.notification.findMany({ where:{isSystem:true},orderBy:{createdAt:"desc"},take:100,select:{id:true,title:true,body:true,createdAt:true} });
+    const notifications = await prisma.notification.findMany({
+      where: q ? {
+        OR: [
+          { title:{contains:q,mode:"insensitive"} },
+          { body:{contains:q,mode:"insensitive"} },
+          { user:{username:{contains:q,mode:"insensitive"}} },
+          { actor:{username:{contains:q,mode:"insensitive"}} },
+        ],
+      } : undefined,
+      orderBy:{createdAt:"desc"}, take:200,
+      select:{
+        id:true,title:true,body:true,type:true,isSystem:true,createdAt:true,readAt:true,href:true,
+        user:{select:{id:true,name:true,username:true,image:true}},
+        actor:{select:{id:true,name:true,username:true,image:true}},
+      },
+    });
     return NextResponse.json({ notifications });
   }
   return NextResponse.json({ stats:{

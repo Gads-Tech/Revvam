@@ -65,13 +65,16 @@ export async function POST(request: Request) {
   if (!auth.authorized) return NextResponse.json({ error:"Forbidden" },{status:403});
   const body = await request.json().catch(()=>({}));
   const action=String(body.action||""), targetId=body.targetId?String(body.targetId):null;
+  const reason=String(body.reason||"").trim();
+  const requiresReason=["suspend_user","delete_user","delete_post","delete_comment","close_emergency","resolve_report","dismiss_report"].includes(action);
+  if(requiresReason && reason.length<8) return NextResponse.json({error:"A moderation reason of at least 8 characters is required."},{status:400});
 
   const audit=(details:string,targetType?:string,targetUserId?:string)=>prisma.adminAuditLog.create({data:{actorId:auth.user!.id,targetUserId:targetUserId??(targetType==="USER"?targetId:null),action,targetType,targetId,details}});
 
   if(action==="suspend_user"){ if(!targetId)return NextResponse.json({error:"User required."},{status:400}); const target=await prisma.user.findUnique({where:{id:targetId},select:{role:true}}); if(!target)return NextResponse.json({error:"User not found."},{status:404}); if(target.role==="SUPER_ADMIN")return NextResponse.json({error:"The Super Admin cannot be suspended."},{status:403}); await prisma.user.update({where:{id:targetId},data:{suspendedAt:new Date(),suspendedReason:String(body.reason||"Platform moderation")}}); await prisma.session.deleteMany({where:{userId:targetId}}); await audit("User suspended","USER",targetId); return NextResponse.json({success:true}); }
   if(action==="restore_user"){ if(!targetId)return NextResponse.json({error:"User required."},{status:400}); await prisma.user.update({where:{id:targetId},data:{suspendedAt:null,suspendedReason:null}}); await audit("User restored","USER",targetId); return NextResponse.json({success:true}); }
   if(action==="revoke_sessions"){ if(!targetId)return NextResponse.json({error:"User required."},{status:400}); await prisma.session.deleteMany({where:{userId:targetId}}); await audit("All user sessions revoked","USER",targetId); return NextResponse.json({success:true}); }
-  if(action==="delete_user"){ if(!targetId)return NextResponse.json({error:"User required."},{status:400}); const target=await prisma.user.findUnique({where:{id:targetId},select:{role:true}}); if(!target)return NextResponse.json({error:"User not found."},{status:404}); if(target.role==="SUPER_ADMIN")return NextResponse.json({error:"The Super Admin cannot be deleted."},{status:403}); await prisma.user.delete({where:{id:targetId}}); await audit("User account permanently deleted","USER",targetId); return NextResponse.json({success:true}); }
+  if(action==="delete_user"){ if(!targetId)return NextResponse.json({error:"User required."},{status:400}); const target=await prisma.user.findUnique({where:{id:targetId},select:{role:true}}); if(!target)return NextResponse.json({error:"User not found."},{status:404}); if(target.role==="SUPER_ADMIN")return NextResponse.json({error:"The Super Admin cannot be deleted."},{status:403}); await prisma.user.delete({where:{id:targetId}}); await audit("User account permanently deleted: "+reason,"USER",targetId); return NextResponse.json({success:true}); }
   if(action==="broadcast_notification"){
     const superAuth=await requireSuperAdmin();
     if(!superAuth.authorized) return NextResponse.json({error:"Super Admin authority required."},{status:403});
@@ -101,9 +104,9 @@ export async function POST(request: Request) {
     return NextResponse.json({success:true});
   }
 
-  if(action==="delete_post"){if(!targetId)return NextResponse.json({error:"Post required."},{status:400});await prisma.post.delete({where:{id:targetId}});await audit("Post deleted","POST");return NextResponse.json({success:true});}
-  if(action==="delete_comment"){if(!targetId)return NextResponse.json({error:"Comment required."},{status:400});await prisma.postComment.delete({where:{id:targetId}});await audit("Comment deleted","COMMENT");return NextResponse.json({success:true});}
-  if(action==="resolve_report"||action==="dismiss_report"){if(!targetId)return NextResponse.json({error:"Report required."},{status:400});await prisma.report.update({where:{id:targetId},data:{status:action==="resolve_report"?"RESOLVED":"DISMISSED"}});await audit("Report "+(action==="resolve_report"?"resolved":"dismissed"),"REPORT");return NextResponse.json({success:true});}
-  if(action==="close_emergency"){if(!targetId)return NextResponse.json({error:"Emergency required."},{status:400});await prisma.emergencyRequest.update({where:{id:targetId},data:{status:"COMPLETED",completedAt:new Date()}});await audit("Emergency closed by platform","EMERGENCY");return NextResponse.json({success:true});}
+  if(action==="delete_post"){if(!targetId)return NextResponse.json({error:"Post required."},{status:400});await prisma.post.delete({where:{id:targetId}});await audit("Post deleted: "+reason,"POST");return NextResponse.json({success:true});}
+  if(action==="delete_comment"){if(!targetId)return NextResponse.json({error:"Comment required."},{status:400});await prisma.postComment.delete({where:{id:targetId}});await audit("Comment deleted: "+reason,"COMMENT");return NextResponse.json({success:true});}
+  if(action==="resolve_report"||action==="dismiss_report"){if(!targetId)return NextResponse.json({error:"Report required."},{status:400});await prisma.report.update({where:{id:targetId},data:{status:action==="resolve_report"?"RESOLVED":"DISMISSED"}});await audit("Report "+(action==="resolve_report"?"resolved":"dismissed")+": "+reason,"REPORT");return NextResponse.json({success:true});}
+  if(action==="close_emergency"){if(!targetId)return NextResponse.json({error:"Emergency required."},{status:400});await prisma.emergencyRequest.update({where:{id:targetId},data:{status:"COMPLETED",completedAt:new Date()}});await audit("Emergency closed by platform: "+reason,"EMERGENCY");return NextResponse.json({success:true});}
   return NextResponse.json({error:"Unknown admin action."},{status:400});
 }

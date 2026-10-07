@@ -1,44 +1,26 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
-type Props = { initialStats: { users:number; posts:number; comments:number; reports:number; emergencies:number }; superAdmin:boolean };
-export default function ControlCenterClient({ initialStats, superAdmin }: Props) {
-  const [stats,setStats]=useState(initialStats);
-  const [message,setMessage]=useState("");
-  const [target,setTarget]=useState("");
-  const [reason,setReason]=useState("");
+const tabs=[["overview","Overview"],["users","Users"],["posts","Posts & Comments"],["reports","Reports"],["emergencies","Emergencies"],["notifications","Broadcast"],["audit","Audit Log"]] as const;
+type Tab=typeof tabs[number][0];
 
-  async function act(action:string, extra:Record<string,string>={}) {
-    setMessage("Processing…");
-    const res=await fetch("/api/control-center",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,targetId:target,...extra})});
-    const data=await res.json();
-    if(!res.ok){setMessage(data.error||"Action failed.");return;}
-    setMessage("Action completed.");
-    const fresh=await fetch("/api/control-center").then(r=>r.json());
-    if(fresh.stats) setStats(fresh.stats);
-  }
-
-  return <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_.6fr]">
-    <section className="rounded-3xl border border-white/[.08] bg-white/[.025] p-5">
-      <div className="mb-5"><p className="text-[10px] font-black uppercase tracking-[.2em] text-red-400">Command console</p><p className="mt-1 text-sm text-white/35">Protected platform controls. Every action is server-authorized.</p></div>
-      <input value={target} onChange={e=>setTarget(e.target.value)} placeholder="Target ID" className="mb-3 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-sm outline-none placeholder:text-white/20"/>
-      <input value={reason} onChange={e=>setReason(e.target.value)} placeholder="Reason / audit note" className="mb-5 w-full rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-sm outline-none placeholder:text-white/20"/>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button onClick={()=>act("suspend_user",{reason})} className="rounded-xl border border-red-500/20 bg-red-500/[.07] px-4 py-3 text-xs font-bold text-red-200">Suspend user</button>
-        <button onClick={()=>act("restore_user")} className="rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-white/65">Restore user</button>
-        <button onClick={()=>act("delete_post")} className="rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-white/65">Remove post</button>
-        <button onClick={()=>act("delete_comment")} className="rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-white/65">Remove comment</button>
-        <button onClick={()=>act("resolve_report")} className="rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-white/65">Resolve report</button>
-        <button onClick={()=>act("close_emergency")} className="rounded-xl border border-orange-500/20 bg-orange-500/[.06] px-4 py-3 text-xs font-bold text-orange-200">Close emergency</button>
-        {superAdmin && <button onClick={()=>act("change_role",{role:"ADMIN"})} className="rounded-xl border border-red-500/25 bg-red-600/[.10] px-4 py-3 text-xs font-black text-red-100 sm:col-span-2">Promote target to ADMIN</button>}
-      </div>
-      {message && <p className="mt-4 text-xs text-white/40">{message}</p>}
-    </section>
-    <section className="rounded-3xl border border-red-500/15 bg-red-500/[.035] p-5">
-      <p className="text-[10px] font-black uppercase tracking-[.2em] text-red-300">Live authority</p>
-      <div className="mt-5 space-y-3">{Object.entries(stats).map(([k,v])=><div key={k} className="flex items-center justify-between rounded-xl border border-white/[.06] bg-black/20 px-4 py-3"><span className="text-xs capitalize text-white/40">{k}</span><strong className="text-lg">{v}</strong></div>)}</div>
-      <p className="mt-5 text-[10px] leading-5 text-white/25">{superAdmin ? "SUPER ADMIN • unrestricted platform authority layer" : "ADMIN • moderation authority layer"}</p>
-    </section>
-  </div>;
+export default function ControlCenterClient({initialStats,superAdmin}:{initialStats:any;superAdmin:boolean}){
+ const [tab,setTab]=useState<Tab>("overview"); const [data,setData]=useState<any>({stats:initialStats}); const [q,setQ]=useState(""); const [target,setTarget]=useState(""); const [message,setMessage]=useState("");
+ const [title,setTitle]=useState(""); const [body,setBody]=useState(""); const [href,setHref]=useState(""); const [edit,setEdit]=useState<any>(null); const [saving,setSaving]=useState(false);
+ async function load(section=tab){const r=await fetch("/api/control-center?section="+section+(q?"&q="+encodeURIComponent(q):""),{cache:"no-store"});setData(await r.json());}
+ useEffect(()=>{void load()},[tab]);
+ async function act(action:string,extra:any={}){setSaving(true);setMessage("Processing…");const r=await fetch("/api/control-center",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,targetId:target,...extra})});const d=await r.json();setMessage(r.ok?(d.sent?("Sent to "+d.sent+" users."):"Action completed."):(d.error||"Action failed."));setSaving(false);if(r.ok)void load();}
+ async function broadcast(){await act("broadcast_notification",{title,message:body,href:href||null});}
+ return <div className="mt-7">
+  <nav className="flex gap-2 overflow-x-auto pb-2">{tabs.map(([id,label])=><button key={id} onClick={()=>setTab(id)} className={tab===id?"shrink-0 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2.5 text-xs font-bold text-red-100":"shrink-0 rounded-xl border border-white/[.08] bg-white/[.025] px-4 py-2.5 text-xs font-bold text-white/40"}>{label}</button>)}</nav>
+  {tab==="overview"&&<section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{Object.entries(data.stats||{}).map(([k,v])=><div key={k} className="rounded-2xl border border-white/[.08] bg-white/[.025] p-5"><p className="text-[10px] uppercase tracking-[.18em] text-white/30">{k}</p><p className="mt-2 text-3xl font-black">{String(v)}</p></div>)}</section>}
+  {tab==="users"&&<section className="mt-5"><div className="mb-3 flex gap-2"><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&load("users")} placeholder="Search name, username or email" className="flex-1 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-sm outline-none"/><button onClick={()=>load("users")} className="rounded-xl bg-red-600 px-4 text-xs font-bold">Search</button></div><div className="space-y-2">{(data.users||[]).map((u:any)=><div key={u.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><b>{u.name}</b><p className="text-xs text-white/35">@{u.username} · {u.email}</p></div><span className="text-[10px] font-bold uppercase text-red-300">{u.role}</span></div><div className="mt-3 flex gap-2"><button onClick={()=>setEdit(u)} className="rounded-lg border border-white/10 px-3 py-2 text-xs">Edit</button>{u.suspendedAt?<button onClick={()=>{setTarget(u.id);act("restore_user")}} className="rounded-lg border border-white/10 px-3 py-2 text-xs">Restore</button>:<button onClick={()=>{setTarget(u.id);act("suspend_user",{reason:"Platform moderation"})}} className="rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-200">Suspend</button>}</div></div>)}</div></section>}
+  {tab==="posts"&&<section className="mt-5 space-y-2">{(data.posts||[]).map((p:any)=><div key={p.id} className="rounded-2xl border border-white/[.07] bg-white/[.025] p-4"><b>@{p.author.username}</b><p className="mt-2 text-sm text-white/60">{p.content}</p><p className="mt-2 text-[10px] text-white/25">{p._count.likes} likes · {p._count.comments} comments · {p._count.reports} reports</p><button onClick={()=>{setTarget(p.id);act("delete_post")}} className="mt-3 rounded-lg border border-red-500/20 px-3 py-2 text-xs text-red-200">Remove post</button></div>)}</section>}
+  {tab==="reports"&&<section className="mt-5 space-y-2">{(data.reports||[]).map((r:any)=><div key={r.id} className="rounded-2xl border border-white/[.07] p-4"><div className="flex justify-between"><b>{r.reason}</b><span className="text-[10px] uppercase text-white/30">{r.status}</span></div><p className="mt-2 text-xs text-white/45">{r.details||"No additional details."}</p><p className="mt-2 text-[10px] text-white/25">Reporter @{r.reporter.username}</p><div className="mt-3 flex gap-2"><button onClick={()=>{setTarget(r.id);act("resolve_report")}} className="rounded-lg border border-white/10 px-3 py-2 text-xs">Resolve</button><button onClick={()=>{setTarget(r.id);act("dismiss_report")}} className="rounded-lg border border-white/10 px-3 py-2 text-xs">Dismiss</button></div></div>)}</section>}
+  {tab==="emergencies"&&<section className="mt-5 space-y-2">{(data.emergencies||[]).map((e:any)=><div key={e.id} className="rounded-2xl border border-white/[.07] p-4"><b>{e.type}</b><p className="text-xs text-white/40">@{e.driver.username} · {e.status} · {e._count.offers} offers</p><p className="mt-2 text-sm text-white/60">{e.description}</p><button onClick={()=>{setTarget(e.id);act("close_emergency")}} className="mt-3 rounded-lg border border-orange-500/20 px-3 py-2 text-xs text-orange-200">Close emergency</button></div>)}</section>}
+  {tab==="notifications"&&<section className="mt-5 rounded-3xl border border-red-500/15 bg-red-500/[.03] p-5"><p className="text-[10px] font-black uppercase tracking-[.2em] text-red-300">Revvam Broadcast</p><h2 className="mt-2 text-xl font-black">Send a notification to everyone</h2><p className="mt-1 text-sm text-white/35">It appears in each user’s normal Revvam notifications.</p><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Notification title" className="mt-5 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm"/><textarea value={body} onChange={e=>setBody(e.target.value)} placeholder="Message" rows={5} className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm"/><input value={href} onChange={e=>setHref(e.target.value)} placeholder="Optional Revvam link, e.g. /home" className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm"/><button disabled={!superAdmin||saving} onClick={broadcast} className="mt-4 rounded-xl bg-red-600 px-5 py-3 text-xs font-black disabled:opacity-40">{superAdmin?"Send to all users":"Super Admin only"}</button></section>}
+  {tab==="audit"&&<section className="mt-5 space-y-2">{(data.logs||[]).map((l:any)=><div key={l.id} className="rounded-xl border border-white/[.06] p-3 text-xs"><b>{l.action}</b><span className="ml-2 text-white/35">by @{l.actor.username}</span><p className="mt-1 text-white/30">{l.details||""}</p><time className="text-[10px] text-white/20">{new Date(l.createdAt).toLocaleString()}</time></div>)}</section>}
+  {message&&<p className="mt-4 text-xs text-white/45">{message}</p>}
+  {edit&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"><div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#0a0a0a] p-6"><h3 className="text-lg font-black">Edit @{edit.username}</h3>{["name","username","email","bio","location"].map(k=><input key={k} value={edit[k]||""} onChange={e=>setEdit({...edit,[k]:e.target.value})} placeholder={k} className="mt-3 w-full rounded-xl border border-white/10 bg-white/[.03] px-3 py-2.5 text-sm"/>)}<div className="mt-4 flex gap-2"><button onClick={async()=>{await act("update_user",edit);setEdit(null)}} className="rounded-xl bg-red-600 px-4 py-2.5 text-xs font-bold">Save</button><button onClick={()=>setEdit(null)} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs">Cancel</button></div></div></div>}
+ </div>
 }

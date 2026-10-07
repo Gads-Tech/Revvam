@@ -37,39 +37,6 @@ export default async function RevvamControlCenterPage() {
 
         <ControlCenterClient initialStats={{ users, posts, comments: await prisma.postComment.count(), reports, emergencies }} superAdmin={auth.user.role === "SUPER_ADMIN"} />
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            ["Users", users],
-            ["Posts", posts],
-            ["Reports", reports],
-            ["Open emergencies", emergencies],
-          ].map(([label, value]) => (
-            <div key={String(label)} className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/25">{label}</p>
-              <p className="mt-3 text-3xl font-black">{value}</p>
-            </div>
-          ))}
-        </section>
-
-        <section className="mt-6 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025]">
-          <div className="border-b border-white/[0.07] px-5 py-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-red-400/70">Latest accounts</p>
-          </div>
-          <div className="divide-y divide-white/[0.06]">
-            {recentUsers.map((member) => (
-              <div key={member.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold">{member.name}</p>
-                  <p className="truncate text-xs text-white/30">@{member.username}</p>
-                </div>
-                <div className="flex shrink-0 items-center gap-3">
-                  <span className="rounded-full border border-white/[0.08] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white/40">{member.role}</span>
-                  <span className="hidden text-xs text-white/20 sm:inline">{member.createdAt.toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
     </main>
   );

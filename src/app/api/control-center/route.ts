@@ -13,6 +13,15 @@ export async function GET(request: Request) {
   const section = searchParams.get("section") || "overview";
   const q = searchParams.get("q")?.trim() || "";
 
+  if (section === "attention") {
+    const [reports,reportedPosts,reportedComments,emergencies]=await Promise.all([
+      prisma.report.count({where:{status:"OPEN"}}),
+      prisma.report.count({where:{status:"OPEN",postId:{not:null}}}),
+      prisma.report.count({where:{status:"OPEN",postId:{not:null},reason:{contains:"comment",mode:"insensitive"}}}),
+      prisma.emergencyRequest.count({where:{status:{in:["OPEN","OFFERS_RECEIVED","ACCEPTED","MECHANIC_EN_ROUTE","ARRIVED"]}}}),
+    ]);
+    return NextResponse.json({attention:{reports,reportedPosts,reportedComments,emergencies}});
+  }
   if (section === "users") {
     const users = await prisma.user.findMany({
       where: q ? { OR: [{ username: { contains: q, mode: "insensitive" } }, { name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] } : undefined,

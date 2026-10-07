@@ -41,7 +41,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ logs });
   }
   if (section === "notifications") {
-    const notifications = await prisma.notification.findMany({ where:{isSystem:true},orderBy:{createdAt:"desc"},take:100,select:{id:title:true} });
+    const notifications = await prisma.notification.findMany({ where:{isSystem:true},orderBy:{createdAt:"desc"},take:100,select:{id:true,title:true,body:true,createdAt:true} });
     return NextResponse.json({ notifications });
   }
   return NextResponse.json({ stats:{

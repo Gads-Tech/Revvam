@@ -87,6 +87,12 @@ export async function getCurrentUser() {
     return null;
   }
 
+  if (session.user.suspendedAt) {
+    await prisma.session.deleteMany({ where: { userId: session.userId } });
+    cookieStore.delete(SESSION_COOKIE_NAME);
+    return null;
+  }
+
   /*
    * Session has expired.
    * Remove it from the database.

@@ -28,6 +28,14 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ posts });
   }
+  if (section === "comments") {
+    const comments = await prisma.postComment.findMany({
+      where: q ? { OR: [{ content: { contains:q, mode:"insensitive" } }, { author:{ username:{ contains:q, mode:"insensitive" } } }] } : undefined,
+      orderBy:{createdAt:"desc"}, take:100,
+      include:{author:{select:{id:true,name:true,username:true,image:true}},post:{select:{id:true,content:true}}},
+    });
+    return NextResponse.json({ comments });
+  }
   if (section === "reports") {
     const reports = await prisma.report.findMany({ orderBy:{createdAt:"desc"},take:100,include:{reporter:{select:{id:true,name:true,username:true}},target:{select:{id:true,name:true,username:true}},post:{select:{id:true,content:true,author:{select:{username:true}}}}} });
     return NextResponse.json({ reports });

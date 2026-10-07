@@ -381,6 +381,7 @@ model Notification {
   readAt        DateTime?
   createdAt     DateTime         @default(now())
   chatRequestId String?          @unique
+  isSystem      Boolean          @default(false)
   actor         User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
   chatRequest   ChatRequest?     @relation(fields: [chatRequestId], references: [id], onDelete: Cascade)
   user          User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
@@ -581,6 +582,7 @@ enum NotificationType {
   EMERGENCY_OFFER
   EMERGENCY_ACCEPTED
   EMERGENCY_DECLINED
+  ADMIN_ANNOUNCEMENT
 }
 
 enum ChatRequestStatus {

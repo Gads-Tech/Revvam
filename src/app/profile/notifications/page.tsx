@@ -105,6 +105,8 @@ export default function ProfileNotificationsPage() {
 
   function renderNotification(item: Notification) {
     const actor = item.actor;
+    const displayName = item.isSystem ? "Revvam" : actor.name;
+    const displayUsername = item.isSystem ? "Official announcement" : "@" + actor.username;
     const checked = selected.includes(item.id);
     const actionable = ["POST_LIKE", "POST_COMMENT", "POST_SHARE", "POST_MENTION", "EMERGENCY_ACCEPTED"].includes(item.type);
     const follow = item.type === "FOLLOW";
@@ -115,7 +117,7 @@ export default function ProfileNotificationsPage() {
     const body = (
       <>
         <span className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full ${emergencyOffer ? "bg-red-500/10 text-red-300" : "bg-white/[0.05] text-white/65"}`}>
-          {actor.image && !["POST_LIKE", "POST_SHARE", "POST_MENTION"].includes(item.type) ? <img src={actor.image} alt="" className="h-full w-full object-cover" /> : icon(item.type)}
+          {item.isSystem ? <BellIcon className="h-5 w-5 text-red-300" /> : actor.image && !["POST_LIKE", "POST_SHARE", "POST_MENTION"].includes(item.type) ? <img src={actor.image} alt="" className="h-full w-full object-cover" /> : icon(item.type)}
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-3">
@@ -140,7 +142,7 @@ export default function ProfileNotificationsPage() {
             </Link>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-3">
-                <div><p className="font-semibold">{item.title}</p><p className="mt-1 text-sm text-white/35">{item.body}</p></div>
+                <div><p className="font-semibold">{item.title}</p><p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-red-300/50">{displayName} · {displayUsername}</p><p className="mt-1 text-sm text-white/35">{item.body}</p></div>
                 <span className="text-[10px] text-white/20">{timeLabel(item.createdAt)}</span>
               </div>
               <button type="button" disabled={busy === item.id} onClick={() => void sendEmergencyChatRequest(item)} className="mt-3 rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[10px] font-semibold text-red-200 disabled:opacity-40">

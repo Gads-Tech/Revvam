@@ -119,6 +119,9 @@ export async function GET(
 
     const publicUser = {
       ...user,
+      // Never expose privileged roles publicly. Admin identities appear as ordinary drivers.
+      role: user.role === "ADMIN" || user.role === "SUPER_ADMIN" ? "USER" : user.role,
+      onboardingType: user.role === "ADMIN" || user.role === "SUPER_ADMIN" ? "DRIVER" : user.onboardingType,
       vehicles: normalizedVehicles,
     };
 

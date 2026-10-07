@@ -45,7 +45,7 @@ try {
   const passwordHash = await argon2.hash(password);
   const user = await prisma.user.upsert({
     where: { username },
-    update: { name, email, passwordHash, role: "ADMIN" },
+    update: { name, email, passwordHash, role: "SUPER_ADMIN" },
     create: { name, username, email, passwordHash, role: "ADMIN" },
     select: { id: true, username: true, email: true, role: true },
   });

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import ControlCenterClient from "./ControlCenterClient";
 
 export default async function RevvamControlCenterPage() {
   const auth = await requireAdmin();
@@ -33,6 +34,8 @@ export default async function RevvamControlCenterPage() {
           </div>
           <Link href="/home" className="rounded-xl border border-white/[0.09] bg-white/[0.035] px-4 py-2.5 text-xs font-semibold text-white/60 hover:text-white">Back to Revvam</Link>
         </header>
+
+        <ControlCenterClient initialStats={{ users, posts, comments: await prisma.postComment.count(), reports, emergencies }} superAdmin={auth.user.role === "SUPER_ADMIN"} />
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[

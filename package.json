@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "dev:lan": "next dev --hostname 0.0.0.0",
-    "start:lan": "next start --hostname 0.0.0.0"
+    "start:lan": "next start --hostname 0.0.0.0",
+    "admin:create": "node scripts/create-admin.mjs"
   },
   "dependencies": {
     "@oslojs/crypto": "^1.0.1",

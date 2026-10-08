@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ users });
   }
-  if (section === "posts") {
+  if (section === "content") {
     const posts = await prisma.post.findMany({
       where: q ? { OR: [{ content: { contains:q, mode:"insensitive" } }, { author:{ username:{ contains:q, mode:"insensitive" } } }] } : undefined,
       orderBy:{createdAt:"desc"},take:100,include:{author:{select:{id:true,name:true,username:true,image:true}},comments:{orderBy:{createdAt:"asc"},take:50,include:{author:{select:{id:true,name:true,username:true,image:true}}}},_count:{select:{likes:true,comments:true,reports:true}}},

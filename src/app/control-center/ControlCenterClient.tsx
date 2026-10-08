@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const sections = [
+ ["overview","Overview"],["attention","Needs Attention"],["users","Users"],["content","Feed"],
+ ["reports","Reports"],["emergencies","Emergencies"],["audit","Audit"],["broadcast","Broadcast"],["governance","Governance"]
+] as const;
 type Section=typeof sections[number][0];
 
 function Btn({children,onClick,danger=false,disabled=false}:{children:any;onClick:()=>void;danger?:boolean;disabled?:boolean}){

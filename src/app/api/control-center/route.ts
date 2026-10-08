@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     const [reports,reportedPosts,reportedComments,emergencies]=await Promise.all([
       prisma.report.count({where:{status:"OPEN"}}),
       prisma.report.count({where:{status:"OPEN",postId:{not:null}}}),
-      prisma.report.count({where:{status:"OPEN",postId:{not:null},reason:{contains:"comment",mode:"insensitive"}}}),
+      prisma.report.count({where:{status:"OPEN",postId:{not:null}}}),
       prisma.emergencyRequest.count({where:{status:{in:["OPEN","OFFERS_RECEIVED","ACCEPTED","MECHANIC_EN_ROUTE","ARRIVED"]}}}),
     ]);
     return NextResponse.json({attention:{reports,reportedPosts,reportedComments,emergencies}});
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   if (section === "posts") {
     const posts = await prisma.post.findMany({
       where: q ? { OR: [{ content: { contains:q, mode:"insensitive" } }, { author:{ username:{ contains:q, mode:"insensitive" } } }] } : undefined,
-      orderBy:{createdAt:"desc"},take:100,include:{author:{select:{id:true,name:true,username:true,image:true}},_count:{select:{likes:true,comments:true,reports:true}}},
+      orderBy:{createdAt:"desc"},take:100,include:{author:{select:{id:true,name:true,username:true,image:true}},comments:{orderBy:{createdAt:"asc"},take:50,include:{author:{select:{id:true,name:true,username:true,image:true}}}},_count:{select:{likes:true,comments:true,reports:true}}},
     });
     return NextResponse.json({ posts });
   }
